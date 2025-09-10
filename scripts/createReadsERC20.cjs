@@ -63,11 +63,12 @@ import { queryClient } from "@/lib/react-query";
 ${hasInputs ? `type Fn = ExtractAbiFunction<typeof TokenABI, "${functionName}">;` : ""}
 ${hasInputs ? `const abiFunction = extractAbiFunction(TokenABI,"${functionName}");` : ""}
 
-export const get${capitalizeFirstLetter(functionName)}QueryOptions = (tokenAddress: \`0x\${string}\`${hasInputs ? ', params: AbiInputsToParams<Fn["inputs"]>' : ""}) =>
+export const get${capitalizeFirstLetter(functionName)}QueryOptions = ({address, chainId}: {address: \`0x\${string}\`, chainId?: number}${hasInputs ? ', params: AbiInputsToParams<Fn["inputs"]>' : ''}) =>
   readContractQueryOptions(config, {
     abi: TokenABI,
-    address: tokenAddress,
+    address,
     functionName: "${functionName}",
+    chainId,
     ${hasInputs ? "args: paramsToArray({ params, abiFunction })," : ""}
   });
 
@@ -76,27 +77,28 @@ type QueryOptions = UseReadContractParameters<
   "${functionName}"
 >["query"];
 
-export const fetch${capitalizeFirstLetter(functionName)} = (tokenAddress: \`0x\${string}\`${hasInputs ? ', params: AbiInputsToParams<Fn["inputs"]>' : ""}) =>
-  queryClient.fetchQuery(get${capitalizeFirstLetter(functionName)}QueryOptions(tokenAddress${hasInputs ? ", params" : ""}));
+export const fetch${capitalizeFirstLetter(functionName)} = ({address, chainId}: {address: \`0x\${string}\`, chainId?: number}${hasInputs ? ', params: AbiInputsToParams<Fn["inputs"]>' : ''}) =>
+  queryClient.fetchQuery(get${capitalizeFirstLetter(functionName)}QueryOptions({address, chainId}${hasInputs ? ", params" : ""}));
 
 export const ${hookName} = (
-  ${hasInputs ? '{tokenAddress, ...params}: AbiInputsToParams<Fn["inputs"]> & {tokenAddress?: `0x${string}`},' : "{tokenAddress}: {tokenAddress?: `0x${string}`},"}
+  {address, chainId}: {address?: \`0x\${string}\`, chainId?: number},${hasInputs ? '\n  params: AbiInputsToParams<Fn["inputs"]>,' : ''}
   options: QueryOptions = {enabled: true}
 ) => {
   ${hasInputs ? "const args = paramsToArray({ params, abiFunction })" : ""}
 
   return useReadContract({
     abi: TokenABI,
-    address: tokenAddress,
+    address,
     functionName: "${functionName}",
+    chainId,
     ${hasInputs ? "args," : ""}
     ${
       hasInputs
         ? `query: {
       ...options,
-      enabled: tokenAddress && options?.enabled && args.every((arg) => !isUndefined(arg)),
+      enabled: address && options?.enabled && args.every((arg) => !isUndefined(arg)),
     },`
-        : "query: {...options, enabled: tokenAddress && options?.enabled},"
+        : "query: {...options, enabled: address && options?.enabled},"
     }
   });
 };

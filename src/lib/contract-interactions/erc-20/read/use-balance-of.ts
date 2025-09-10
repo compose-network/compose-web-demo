@@ -20,13 +20,14 @@ type Fn = ExtractAbiFunction<typeof TokenABI, "balanceOf">;
 const abiFunction = extractAbiFunction(TokenABI, "balanceOf");
 
 export const getBalanceOfQueryOptions = (
-  tokenAddress: `0x${string}`,
+  { address, chainId }: { address: `0x${string}`; chainId?: number },
   params: AbiInputsToParams<Fn["inputs"]>,
 ) =>
   readContractQueryOptions(config, {
     abi: TokenABI,
-    address: tokenAddress,
+    address,
     functionName: "balanceOf",
+    chainId,
     args: paramsToArray({ params, abiFunction }),
   });
 
@@ -36,30 +37,30 @@ type QueryOptions = UseReadContractParameters<
 >["query"];
 
 export const fetchBalanceOf = (
-  tokenAddress: `0x${string}`,
+  { address, chainId }: { address: `0x${string}`; chainId?: number },
   params: AbiInputsToParams<Fn["inputs"]>,
-) => queryClient.fetchQuery(getBalanceOfQueryOptions(tokenAddress, params));
+) =>
+  queryClient.fetchQuery(
+    getBalanceOfQueryOptions({ address, chainId }, params),
+  );
 
 export const useBalanceOf = (
-  {
-    tokenAddress,
-    ...params
-  }: AbiInputsToParams<Fn["inputs"]> & { tokenAddress?: `0x${string}` },
+  { address, chainId }: { address?: `0x${string}`; chainId?: number },
+  params: AbiInputsToParams<Fn["inputs"]>,
   options: QueryOptions = { enabled: true },
 ) => {
   const args = paramsToArray({ params, abiFunction });
 
   return useReadContract({
     abi: TokenABI,
-    address: tokenAddress,
+    address,
     functionName: "balanceOf",
+    chainId,
     args,
     query: {
       ...options,
       enabled:
-        tokenAddress &&
-        options?.enabled &&
-        args.every((arg) => !isUndefined(arg)),
+        address && options?.enabled && args.every((arg) => !isUndefined(arg)),
     },
   });
 };

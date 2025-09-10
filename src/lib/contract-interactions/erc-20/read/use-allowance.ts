@@ -20,13 +20,14 @@ type Fn = ExtractAbiFunction<typeof TokenABI, "allowance">;
 const abiFunction = extractAbiFunction(TokenABI, "allowance");
 
 export const getAllowanceQueryOptions = (
-  tokenAddress: `0x${string}`,
+  { address, chainId }: { address: `0x${string}`; chainId?: number },
   params: AbiInputsToParams<Fn["inputs"]>,
 ) =>
   readContractQueryOptions(config, {
     abi: TokenABI,
-    address: tokenAddress,
+    address,
     functionName: "allowance",
+    chainId,
     args: paramsToArray({ params, abiFunction }),
   });
 
@@ -36,30 +37,30 @@ type QueryOptions = UseReadContractParameters<
 >["query"];
 
 export const fetchAllowance = (
-  tokenAddress: `0x${string}`,
+  { address, chainId }: { address: `0x${string}`; chainId?: number },
   params: AbiInputsToParams<Fn["inputs"]>,
-) => queryClient.fetchQuery(getAllowanceQueryOptions(tokenAddress, params));
+) =>
+  queryClient.fetchQuery(
+    getAllowanceQueryOptions({ address, chainId }, params),
+  );
 
 export const useAllowance = (
-  {
-    tokenAddress,
-    ...params
-  }: AbiInputsToParams<Fn["inputs"]> & { tokenAddress?: `0x${string}` },
+  { address, chainId }: { address?: `0x${string}`; chainId?: number },
+  params: AbiInputsToParams<Fn["inputs"]>,
   options: QueryOptions = { enabled: true },
 ) => {
   const args = paramsToArray({ params, abiFunction });
 
   return useReadContract({
     abi: TokenABI,
-    address: tokenAddress,
+    address,
     functionName: "allowance",
+    chainId,
     args,
     query: {
       ...options,
       enabled:
-        tokenAddress &&
-        options?.enabled &&
-        args.every((arg) => !isUndefined(arg)),
+        address && options?.enabled && args.every((arg) => !isUndefined(arg)),
     },
   });
 };

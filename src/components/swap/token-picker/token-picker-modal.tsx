@@ -5,37 +5,36 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogClose
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import type { FC } from 'react';
+import type { ComponentPropsWithoutRef, FC } from "react";
 
 export type TokenPickerModalProps = {
-  
+  dialog: ComponentPropsWithoutRef<typeof Dialog>;
 };
 
-export const TokenPickerModal: FC<TokenPickerModalProps> = () => {
-  const modal = /* TODO: Add modal hook */
-  
+export const TokenPickerModal: FC<TokenPickerModalProps> = ({ dialog }) => {
   return (
-    <Dialog {...modal}>
+    <Dialog {...dialog}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Dialog Title</DialogTitle>
           <DialogClose />
         </DialogHeader>
-        <DialogDescription>
-          
-        </DialogDescription>
+        <DialogDescription></DialogDescription>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button
+            variant="outline"
+            onClick={() => dialog.onOpenChange?.(false)}
+          >
             Close
           </Button>
           <Button>Secondary Action</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 };
 
-TokenPickerModal.displayName = 'TokenPickerModal';
+TokenPickerModal.displayName = "TokenPickerModal";

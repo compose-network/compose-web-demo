@@ -11,11 +11,18 @@ import { readContractQueryOptions } from "wagmi/query";
 import { config } from "@/wagmi/config";
 import { queryClient } from "@/lib/react-query";
 
-export const getOwnerQueryOptions = (tokenAddress: `0x${string}`) =>
+export const getOwnerQueryOptions = ({
+  address,
+  chainId,
+}: {
+  address: `0x${string}`;
+  chainId?: number;
+}) =>
   readContractQueryOptions(config, {
     abi: TokenABI,
-    address: tokenAddress,
+    address,
     functionName: "owner",
+    chainId,
   });
 
 type QueryOptions = UseReadContractParameters<
@@ -23,19 +30,25 @@ type QueryOptions = UseReadContractParameters<
   "owner"
 >["query"];
 
-export const fetchOwner = (tokenAddress: `0x${string}`) =>
-  queryClient.fetchQuery(getOwnerQueryOptions(tokenAddress));
+export const fetchOwner = ({
+  address,
+  chainId,
+}: {
+  address: `0x${string}`;
+  chainId?: number;
+}) => queryClient.fetchQuery(getOwnerQueryOptions({ address, chainId }));
 
 export const useOwner = (
-  { tokenAddress }: { tokenAddress?: `0x${string}` },
+  { address, chainId }: { address?: `0x${string}`; chainId?: number },
   options: QueryOptions = { enabled: true },
 ) => {
   return useReadContract({
     abi: TokenABI,
-    address: tokenAddress,
+    address,
     functionName: "owner",
+    chainId,
 
-    query: { ...options, enabled: tokenAddress && options?.enabled },
+    query: { ...options, enabled: address && options?.enabled },
   });
 };
 

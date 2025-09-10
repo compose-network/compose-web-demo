@@ -11,11 +11,18 @@ import { readContractQueryOptions } from "wagmi/query";
 import { config } from "@/wagmi/config";
 import { queryClient } from "@/lib/react-query";
 
-export const getTotalSupplyQueryOptions = (tokenAddress: `0x${string}`) =>
+export const getTotalSupplyQueryOptions = ({
+  address,
+  chainId,
+}: {
+  address: `0x${string}`;
+  chainId?: number;
+}) =>
   readContractQueryOptions(config, {
     abi: TokenABI,
-    address: tokenAddress,
+    address,
     functionName: "totalSupply",
+    chainId,
   });
 
 type QueryOptions = UseReadContractParameters<
@@ -23,19 +30,25 @@ type QueryOptions = UseReadContractParameters<
   "totalSupply"
 >["query"];
 
-export const fetchTotalSupply = (tokenAddress: `0x${string}`) =>
-  queryClient.fetchQuery(getTotalSupplyQueryOptions(tokenAddress));
+export const fetchTotalSupply = ({
+  address,
+  chainId,
+}: {
+  address: `0x${string}`;
+  chainId?: number;
+}) => queryClient.fetchQuery(getTotalSupplyQueryOptions({ address, chainId }));
 
 export const useTotalSupply = (
-  { tokenAddress }: { tokenAddress?: `0x${string}` },
+  { address, chainId }: { address?: `0x${string}`; chainId?: number },
   options: QueryOptions = { enabled: true },
 ) => {
   return useReadContract({
     abi: TokenABI,
-    address: tokenAddress,
+    address,
     functionName: "totalSupply",
+    chainId,
 
-    query: { ...options, enabled: tokenAddress && options?.enabled },
+    query: { ...options, enabled: address && options?.enabled },
   });
 };
 

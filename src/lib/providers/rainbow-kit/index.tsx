@@ -6,6 +6,7 @@ import type { FC } from "react";
 import React from "react";
 import { rainbowKitTheme } from "./themes";
 import { useTheme } from "@/hooks/app/use-theme";
+import { rollupB } from "@/wagmi/config";
 
 const Disclaimer: DisclaimerComponent = ({ Text, Link }) => (
   <Text>
@@ -23,9 +24,10 @@ export const RainbowKitProvider: FC<{ children: React.ReactNode }> = ({
     <OriginalRainbowKitProvider
       modalSize="compact"
       appInfo={{
-        appName: "RainbowKit Demo",
+        appName: "SSV Rollup B",
         disclaimer: Disclaimer,
       }}
+      initialChain={rollupB}
       theme={theme.dark ? rainbowKitTheme.dark : rainbowKitTheme.light}
     >
       {children}

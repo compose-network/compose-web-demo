@@ -19,13 +19,14 @@ export const useInitialize = () => {
   const mutation = useWriteContract();
 
   const send = (
-    { tokenAddress }: { tokenAddress: `0x${string}` },
+    { address, chainId }: { address: `0x${string}`; chainId?: number },
     options: MutationOptions<MainnetEvent> = {},
   ) => {
     return mutation.writeContractAsync(
       {
         abi: TokenABI,
-        address: tokenAddress,
+        address,
+        chainId,
         functionName: "initialize",
       },
       {
@@ -36,7 +37,7 @@ export const useInitialize = () => {
   };
 
   const write = (
-    { tokenAddress }: { tokenAddress: `0x${string}` },
+    { address, chainId }: { address: `0x${string}`; chainId?: number },
     options: MutationOptions<MainnetEvent> = {},
   ) => {
     options.onInitiated?.();
@@ -44,7 +45,8 @@ export const useInitialize = () => {
       .writeContractAsync(
         {
           abi: TokenABI,
-          address: tokenAddress,
+          address,
+          chainId,
           functionName: "initialize",
         },
         {

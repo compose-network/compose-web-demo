@@ -7,9 +7,7 @@ import type { RouteObject } from "react-router-dom";
 import { createBrowserRouter, Outlet } from "react-router-dom";
 import { NotFound } from "./not-found";
 import type { RoutePaths, WritableRoutePaths } from "./router/route-types";
-import { TokenPicker } from "@/components/swap/token-picker/token-picker";
-import { tokens } from "@/wagmi/tokens";
-import { rollupB } from "@/wagmi/config";
+import { Swap } from "@/components/swap/swap";
 
 const routes = [
   {
@@ -22,15 +20,7 @@ const routes = [
     children: [
       {
         path: "",
-        element: (
-          <div>
-            <TokenPicker
-              chainId={rollupB.id}
-              selectedToken={tokens[rollupB.id][0]}
-              tokens={tokens[rollupB.id]}
-            />
-          </div>
-        ),
+        element: <Swap />,
       },
     ],
   },

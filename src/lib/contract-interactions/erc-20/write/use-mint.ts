@@ -27,16 +27,15 @@ export const useMint = () => {
   const mutation = useWriteContract();
 
   const send = (
-    {
-      tokenAddress,
-      ...params
-    }: AbiInputsToParams<Fn["inputs"]> & { tokenAddress: `0x${string}` },
+    { address, chainId }: { address: `0x${string}`; chainId?: number },
+    params: AbiInputsToParams<Fn["inputs"]>,
     options: MutationOptions<MainnetEvent> = {},
   ) => {
     return mutation.writeContractAsync(
       {
         abi: TokenABI,
-        address: tokenAddress,
+        address,
+        chainId,
         functionName: "mint",
         args: paramsToArray({ params, abiFunction }),
       },
@@ -48,10 +47,8 @@ export const useMint = () => {
   };
 
   const write = (
-    {
-      tokenAddress,
-      ...params
-    }: AbiInputsToParams<Fn["inputs"]> & { tokenAddress: `0x${string}` },
+    { address, chainId }: { address: `0x${string}`; chainId?: number },
+    params: AbiInputsToParams<Fn["inputs"]>,
     options: MutationOptions<MainnetEvent> = {},
   ) => {
     options.onInitiated?.();
@@ -59,7 +56,8 @@ export const useMint = () => {
       .writeContractAsync(
         {
           abi: TokenABI,
-          address: tokenAddress,
+          address,
+          chainId,
           functionName: "mint",
           args: paramsToArray({ params, abiFunction }),
         },

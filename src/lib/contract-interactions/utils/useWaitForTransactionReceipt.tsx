@@ -9,7 +9,7 @@ import type {
   DecodeEventLogReturnType,
   WaitForTransactionReceiptErrorType,
 } from "viem";
-import { useChainId, usePublicClient } from "wagmi";
+import { usePublicClient } from "wagmi";
 
 import type { WriteContractErrorType } from "@wagmi/core";
 import {
@@ -23,16 +23,17 @@ import type { MaybePromise } from "@tanstack/react-query-persist-client";
 import { isFunction } from "lodash-es";
 import { getErrorMessage } from "@/lib/utils/wagmi";
 import { Span } from "@/components/ui/text";
-import { mainnet_private_rpc_client } from "@/wagmi/config";
 import { isContractWallet } from "@/hooks/account/use-account";
 import type { DecodedReceipt } from "@/lib/utils/viem";
 import { addDecodedEventsToReceipt } from "@/lib/utils/viem";
+import type { SwapABI } from "@/lib/abi/swap/swap";
 
 export type MainnetEvent = DecodeEventLogReturnType<typeof MainnetV4SetterABI>;
 export type BAppEvent = DecodeEventLogReturnType<typeof BAppABI>;
 export type TestnetEvent = DecodeEventLogReturnType<typeof TestnetV4SetterABI>;
+export type SwapEvent = DecodeEventLogReturnType<typeof SwapABI>;
 
-export type AllEvents = MainnetEvent | TestnetEvent | BAppEvent;
+export type AllEvents = SwapEvent;
 
 export type MutationOptions<T extends AllEvents> = {
   onInitiated?: () => MaybePromise<unknown | (() => unknown)>;
@@ -55,12 +56,14 @@ export const withTransactionModal = <
 ) => {
   return {
     onInitiated: () => {
+      console.log("onInitiated:");
       options?.onInitiated?.();
       if (isContractWallet()) {
         useMultisigTransactionModal.state.open();
       }
     },
     onConfirmed: async (hash) => {
+      console.log("onConfirmed:", hash);
       if (isContractWallet()) {
         useMultisigTransactionModal.state.open();
       } else {
@@ -115,9 +118,8 @@ export const withTransactionModal = <
 };
 
 const useClient = () => {
-  const chain = useChainId();
   const publicClient = usePublicClient();
-  return chain === 1 ? mainnet_private_rpc_client : publicClient;
+  return publicClient;
 };
 
 export const useWaitForTransactionReceipt = <T extends AllEvents>(

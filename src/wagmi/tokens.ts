@@ -1,7 +1,12 @@
 import { rollupB } from "@/wagmi/config";
 import type { Address } from "abitype";
 
+export function isAddressEqual(a: Address, b: Address) {
+  return a.toLowerCase() === b.toLowerCase();
+}
+
 export interface ERC20Token {
+  id: number;
   symbol: string;
   name: string;
   icon: string;
@@ -13,6 +18,7 @@ export interface ERC20Token {
 export const tokens = {
   [rollupB.id]: [
     {
+      id: 0,
       symbol: "WETH",
       name: "Wrapped Ethereum",
       icon: "WETH",
@@ -22,6 +28,7 @@ export const tokens = {
       decimals: 18,
     },
     {
+      id: 1,
       symbol: "USDC",
       name: "USD Coin",
       icon: "USDC",
@@ -31,6 +38,7 @@ export const tokens = {
       decimals: 6,
     },
     {
+      id: 2,
       symbol: "SSV",
       name: "SSV Token",
       icon: "SSV",
@@ -41,3 +49,9 @@ export const tokens = {
     },
   ],
 } satisfies Record<number, ERC20Token[]>;
+
+export const getToken = (address: Address, chainId = rollupB.id) => {
+  return tokens[chainId].find((token) =>
+    isAddressEqual(token.address, address),
+  );
+};

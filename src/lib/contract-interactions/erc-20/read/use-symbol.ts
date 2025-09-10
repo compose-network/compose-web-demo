@@ -11,11 +11,18 @@ import { readContractQueryOptions } from "wagmi/query";
 import { config } from "@/wagmi/config";
 import { queryClient } from "@/lib/react-query";
 
-export const getSymbolQueryOptions = (tokenAddress: `0x${string}`) =>
+export const getSymbolQueryOptions = ({
+  address,
+  chainId,
+}: {
+  address: `0x${string}`;
+  chainId?: number;
+}) =>
   readContractQueryOptions(config, {
     abi: TokenABI,
-    address: tokenAddress,
+    address,
     functionName: "symbol",
+    chainId,
   });
 
 type QueryOptions = UseReadContractParameters<
@@ -23,19 +30,25 @@ type QueryOptions = UseReadContractParameters<
   "symbol"
 >["query"];
 
-export const fetchSymbol = (tokenAddress: `0x${string}`) =>
-  queryClient.fetchQuery(getSymbolQueryOptions(tokenAddress));
+export const fetchSymbol = ({
+  address,
+  chainId,
+}: {
+  address: `0x${string}`;
+  chainId?: number;
+}) => queryClient.fetchQuery(getSymbolQueryOptions({ address, chainId }));
 
 export const useSymbol = (
-  { tokenAddress }: { tokenAddress?: `0x${string}` },
+  { address, chainId }: { address?: `0x${string}`; chainId?: number },
   options: QueryOptions = { enabled: true },
 ) => {
   return useReadContract({
     abi: TokenABI,
-    address: tokenAddress,
+    address,
     functionName: "symbol",
+    chainId,
 
-    query: { ...options, enabled: tokenAddress && options?.enabled },
+    query: { ...options, enabled: address && options?.enabled },
   });
 };
 

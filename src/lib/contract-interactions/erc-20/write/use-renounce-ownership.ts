@@ -21,13 +21,14 @@ export const useRenounceOwnership = () => {
   const mutation = useWriteContract();
 
   const send = (
-    { tokenAddress }: { tokenAddress: `0x${string}` },
+    { address, chainId }: { address: `0x${string}`; chainId?: number },
     options: MutationOptions<MainnetEvent> = {},
   ) => {
     return mutation.writeContractAsync(
       {
         abi: TokenABI,
-        address: tokenAddress,
+        address,
+        chainId,
         functionName: "renounceOwnership",
       },
       {
@@ -38,7 +39,7 @@ export const useRenounceOwnership = () => {
   };
 
   const write = (
-    { tokenAddress }: { tokenAddress: `0x${string}` },
+    { address, chainId }: { address: `0x${string}`; chainId?: number },
     options: MutationOptions<MainnetEvent> = {},
   ) => {
     options.onInitiated?.();
@@ -46,7 +47,8 @@ export const useRenounceOwnership = () => {
       .writeContractAsync(
         {
           abi: TokenABI,
-          address: tokenAddress,
+          address,
+          chainId,
           functionName: "renounceOwnership",
         },
         {

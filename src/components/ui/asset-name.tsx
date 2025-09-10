@@ -6,19 +6,42 @@ import type { Address } from "abitype";
 import { cn } from "@/lib/utils/tw";
 
 export type AssetNameProps = {
-  address: Address;
+  tokenAddress: Address;
+  chainId: number;
+  symbolOnly?: boolean;
+  nameClassName?: string;
+  symbolClassName?: string;
 };
 
 type AssetNameFC = FC<
   Omit<ComponentPropsWithoutRef<"div">, keyof AssetNameProps> & AssetNameProps
 >;
 
-const AssetName: AssetNameFC = ({ address, className }) => {
-  const asset = useAsset(address);
+const AssetName: AssetNameFC = ({
+  tokenAddress,
+  symbolOnly,
+  chainId,
+  className,
+  nameClassName,
+  symbolClassName,
+}) => {
+  const asset = useAsset({ tokenAddress, chainId });
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <Text variant="body-3-medium">{asset.name}</Text>
-      <Text className="text-gray-500 font-medium">{asset.symbol}</Text>
+      {symbolOnly ? (
+        <Text variant="body-2-semibold" className={symbolClassName}>
+          {asset.symbol}
+        </Text>
+      ) : (
+        <>
+          <Text variant="body-3-semibold" className={nameClassName}>
+            {asset.name}
+          </Text>
+          <Text className={cn("text-gray-500 font-medium", symbolClassName)}>
+            {asset.symbol}
+          </Text>
+        </>
+      )}
     </div>
   );
 };

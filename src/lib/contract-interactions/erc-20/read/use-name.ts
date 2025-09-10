@@ -11,28 +11,41 @@ import { readContractQueryOptions } from "wagmi/query";
 import { config } from "@/wagmi/config";
 import { queryClient } from "@/lib/react-query";
 
-export const getNameQueryOptions = (tokenAddress: `0x${string}`) =>
+export const getNameQueryOptions = ({
+  address,
+  chainId,
+}: {
+  address: `0x${string}`;
+  chainId?: number;
+}) =>
   readContractQueryOptions(config, {
     abi: TokenABI,
-    address: tokenAddress,
+    address,
     functionName: "name",
+    chainId,
   });
 
 type QueryOptions = UseReadContractParameters<typeof TokenABI, "name">["query"];
 
-export const fetchName = (tokenAddress: `0x${string}`) =>
-  queryClient.fetchQuery(getNameQueryOptions(tokenAddress));
+export const fetchName = ({
+  address,
+  chainId,
+}: {
+  address: `0x${string}`;
+  chainId?: number;
+}) => queryClient.fetchQuery(getNameQueryOptions({ address, chainId }));
 
 export const useName = (
-  { tokenAddress }: { tokenAddress?: `0x${string}` },
+  { address, chainId }: { address?: `0x${string}`; chainId?: number },
   options: QueryOptions = { enabled: true },
 ) => {
   return useReadContract({
     abi: TokenABI,
-    address: tokenAddress,
+    address,
     functionName: "name",
+    chainId,
 
-    query: { ...options, enabled: tokenAddress && options?.enabled },
+    query: { ...options, enabled: address && options?.enabled },
   });
 };
 

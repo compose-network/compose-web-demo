@@ -1,5 +1,6 @@
 import type { InputProps } from "@/components/ui/input";
 import { Input } from "@/components/ui/input";
+import type { TooltipProps } from "@/components/ui/tooltip";
 import { Tooltip } from "@/components/ui/tooltip";
 import { formatBigintInput } from "@/lib/utils/number";
 import { mergeRefs } from "@/lib/utils/refs";
@@ -17,6 +18,7 @@ export type BigNumberInputProps = {
   onChange: (value: bigint) => void;
   decimals?: number;
   displayDecimals?: number;
+  tooltipPlacement?: TooltipProps["side"];
   render?: (
     props: {
       onInput: (ev: React.FormEvent<HTMLInputElement>) => void;
@@ -52,6 +54,7 @@ export const BigNumberInput: BigNumberInputFC = forwardRef<
       allowNegative = false,
       onChange,
       displayDecimals = 7,
+      tooltipPlacement = "left",
       render,
       ...props
     },
@@ -142,7 +145,7 @@ export const BigNumberInput: BigNumberInputFC = forwardRef<
         content={"Max value set"}
         open={showMaxSet}
         hasArrow
-        side="left"
+        side={tooltipPlacement}
       >
         {render ? (
           render(

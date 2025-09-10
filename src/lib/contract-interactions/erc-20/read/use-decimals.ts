@@ -11,11 +11,18 @@ import { readContractQueryOptions } from "wagmi/query";
 import { config } from "@/wagmi/config";
 import { queryClient } from "@/lib/react-query";
 
-export const getDecimalsQueryOptions = (tokenAddress: `0x${string}`) =>
+export const getDecimalsQueryOptions = ({
+  address,
+  chainId,
+}: {
+  address: `0x${string}`;
+  chainId?: number;
+}) =>
   readContractQueryOptions(config, {
     abi: TokenABI,
-    address: tokenAddress,
+    address,
     functionName: "decimals",
+    chainId,
   });
 
 type QueryOptions = UseReadContractParameters<
@@ -23,19 +30,25 @@ type QueryOptions = UseReadContractParameters<
   "decimals"
 >["query"];
 
-export const fetchDecimals = (tokenAddress: `0x${string}`) =>
-  queryClient.fetchQuery(getDecimalsQueryOptions(tokenAddress));
+export const fetchDecimals = ({
+  address,
+  chainId,
+}: {
+  address: `0x${string}`;
+  chainId?: number;
+}) => queryClient.fetchQuery(getDecimalsQueryOptions({ address, chainId }));
 
 export const useDecimals = (
-  { tokenAddress }: { tokenAddress?: `0x${string}` },
+  { address, chainId }: { address?: `0x${string}`; chainId?: number },
   options: QueryOptions = { enabled: true },
 ) => {
   return useReadContract({
     abi: TokenABI,
-    address: tokenAddress,
+    address,
     functionName: "decimals",
+    chainId,
 
-    query: { ...options, enabled: tokenAddress && options?.enabled },
+    query: { ...options, enabled: address && options?.enabled },
   });
 };
 

@@ -25,6 +25,7 @@ export const DashboardLayout: FC<ComponentPropsWithRef<"div">> = ({
   if (isMaintenancePage) {
     return <Navigate to="/maintenance" replace />;
   }
+  
   return (
     <>
       <BatchTransactionProvider>

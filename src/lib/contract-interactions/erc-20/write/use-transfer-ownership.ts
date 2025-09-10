@@ -29,16 +29,15 @@ export const useTransferOwnership = () => {
   const mutation = useWriteContract();
 
   const send = (
-    {
-      tokenAddress,
-      ...params
-    }: AbiInputsToParams<Fn["inputs"]> & { tokenAddress: `0x${string}` },
+    { address, chainId }: { address: `0x${string}`; chainId?: number },
+    params: AbiInputsToParams<Fn["inputs"]>,
     options: MutationOptions<MainnetEvent> = {},
   ) => {
     return mutation.writeContractAsync(
       {
         abi: TokenABI,
-        address: tokenAddress,
+        address,
+        chainId,
         functionName: "transferOwnership",
         args: paramsToArray({ params, abiFunction }),
       },
@@ -50,10 +49,8 @@ export const useTransferOwnership = () => {
   };
 
   const write = (
-    {
-      tokenAddress,
-      ...params
-    }: AbiInputsToParams<Fn["inputs"]> & { tokenAddress: `0x${string}` },
+    { address, chainId }: { address: `0x${string}`; chainId?: number },
+    params: AbiInputsToParams<Fn["inputs"]>,
     options: MutationOptions<MainnetEvent> = {},
   ) => {
     options.onInitiated?.();
@@ -61,7 +58,8 @@ export const useTransferOwnership = () => {
       .writeContractAsync(
         {
           abi: TokenABI,
-          address: tokenAddress,
+          address,
+          chainId,
           functionName: "transferOwnership",
           args: paramsToArray({ params, abiFunction }),
         },

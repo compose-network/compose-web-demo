@@ -6,7 +6,8 @@ import type { Address } from "abitype";
 import type { ComponentPropsWithoutRef, FC } from "react";
 
 export type AssetLogoProps = {
-  address: Address;
+  chainId: number;
+  tokenAddress: Address;
   fallbackAssetSrc?: string;
 };
 
@@ -15,14 +16,15 @@ type AssetLogoFC = FC<
 >;
 
 export const AssetLogo: AssetLogoFC = ({
-  address,
+  chainId,
+  tokenAddress,
   fallbackAssetSrc = "/images/networks/light.svg",
   className,
   ...props
 }) => {
   const { dark } = useTheme();
 
-  const asset = useAsset(address);
+  const asset = useAsset({ tokenAddress, chainId });
   const logoSrc = asset.isEthereum
     ? dark
       ? "/images/networks/light.svg"

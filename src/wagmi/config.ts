@@ -5,19 +5,30 @@ import {
 } from "@rainbow-me/rainbowkit/wallets";
 import type { Transport } from "@wagmi/core";
 
-import type { Chain } from "viem";
+import type { Address, Chain } from "viem";
 import { defineChain, http } from "viem";
 import { mainnet as mainnetChain, polygon as polygonChain } from "viem/chains";
 import { createConfig } from "wagmi";
 
-// Chain IDs
-export const ROLLUP_B_CHAIN_ID = 88888;
-export const ETHEREUM_MAINNET_CHAIN_ID = 1;
-export const POLYGON_CHAIN_ID = 137;
+export const rollupA = defineChain({
+  id: 77777,
+  name: "Rollup A",
+  nativeCurrency: {
+    name: "Rollup A",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://rollup-rpc-1.stage.ops.ssvlabsinternal.com"],
+    },
+  },
+  iconBackground: "none",
+  iconUrl: "/images/networks/light.svg",
+});
 
-// Individual chain definitions
 export const rollupB = defineChain({
-  id: ROLLUP_B_CHAIN_ID,
+  id: 88888,
   name: "Rollup B",
   nativeCurrency: {
     name: "Rollup B",
@@ -26,7 +37,7 @@ export const rollupB = defineChain({
   },
   rpcUrls: {
     default: {
-      http: ["http://57.129.73.144:31133/"],
+      http: ["https://rollup-rpc-2.stage.ops.ssvlabsinternal.com"],
     },
   },
   iconBackground: "none",
@@ -52,7 +63,20 @@ export const mainnet = {
 };
 
 // Chains array
-export const chains = [rollupB, mainnet, polygon] as [Chain, ...Chain[]];
+export const chains = [rollupA, rollupB, mainnet, polygon] as [
+  Chain,
+  ...Chain[],
+];
+export const chainsMap = {
+  [rollupA.id]: rollupA,
+  [rollupB.id]: rollupB,
+  [mainnet.id]: mainnet,
+  [polygon.id]: polygon,
+};
+
+export const swapContract = {
+  [rollupB.id]: "0x52cfc57b976936ba8d6beea547900c4425836bea",
+} as Record<number, Address>;
 export const isChainSupported = (chainId: number) => {
   return chains.some((chain) => chain.id === chainId);
 };

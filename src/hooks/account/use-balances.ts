@@ -1,7 +1,7 @@
 import { useAccount } from "@/hooks/account/use-account";
 import { fetchBalanceOf } from "@/lib/contract-interactions/erc-20/read/use-balance-of";
 import { fetchDecimals } from "@/lib/contract-interactions/erc-20/read/use-decimals";
-import { isEthereumTokenAddress } from "@/lib/utils/token";
+import { isNativeToken } from "@/lib/utils/token";
 import { useQueries } from "@tanstack/react-query";
 import type { Address } from "abitype";
 import { isAddress, zeroAddress } from "viem";
@@ -21,7 +21,7 @@ export const useBalances = (assets: Address[]) => {
     queries: assets
       .filter(
         (tokenAddress) =>
-          isAddress(tokenAddress) && !isEthereumTokenAddress(tokenAddress),
+          isAddress(tokenAddress) && !isNativeToken(tokenAddress),
       )
       .map((tokenAddress) => ({
         queryKey: ["token-balance", tokenAddress, account.address],

@@ -1,0 +1,67 @@
+import { type FC, type ComponentPropsWithoutRef, useState } from "react";
+import { cn } from "@/lib/utils/tw";
+import { ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { TokenPickerCommandDialog } from "@/components/swap/token-picker/token-picker-command-dialog";
+import { AssetLogo } from "@/components/ui/asset-logo";
+import AssetName from "@/components/ui/asset-name";
+import type { Address } from "abitype";
+
+export type TokenPickerProps = {
+  chainId: number;
+  selectedToken: Address;
+  onSelectToken: (token: Address) => void;
+};
+
+type TokenPickerFC = FC<
+  Omit<ComponentPropsWithoutRef<"button">, keyof TokenPickerProps> &
+    TokenPickerProps
+>;
+
+export const TokenPicker: TokenPickerFC = ({
+  chainId,
+  className,
+  selectedToken,
+  onSelectToken,
+  ...props
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <>
+      <TokenPickerCommandDialog
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        chainId={chainId}
+        onTokenSelect={onSelectToken}
+      />
+      <Button
+        onClick={() => {
+          console.log("Button clicked, setting isOpen to true");
+          setIsOpen(true);
+        }}
+        variant="ghost"
+        className={cn(
+          "p-4 pr-6 pl-4 rounded-xl border border-gray-300 bg-gray-50 flex gap-3 items-center w-[188px] h-auto",
+          className,
+        )}
+        {...props}
+      >
+        <div className="flex gap-3 items-center flex-1">
+          <AssetLogo
+            tokenAddress={selectedToken}
+            chainId={chainId}
+          />
+          <AssetName
+            symbolOnly
+            tokenAddress={selectedToken}
+            chainId={chainId}
+            className="text-xl font-semibold"
+          />
+        </div>
+        <ChevronDown className="size-4 justify-end" />
+      </Button>
+    </>
+  );
+};
+
+TokenPicker.displayName = "TokenPicker";

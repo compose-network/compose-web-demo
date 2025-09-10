@@ -80,13 +80,14 @@ export const ${hookName} = () => {
   const wait = ${useWaitForTxHookName}<${eventTypeName}>(["${hookName}"]);
   const mutation = useWriteContract();
 
-  const send = (${hasInputs ? '{tokenAddress, ...params}: AbiInputsToParams<Fn["inputs"]> & {tokenAddress: `0x${string}`},' : "{tokenAddress}: {tokenAddress: `0x${string}`},"}
+  const send = ({address, chainId}: {address: \`0x\${string}\`, chainId?: number},${hasInputs ? '\n  params: AbiInputsToParams<Fn["inputs"]>,' : ''}
   options: MutationOptions<${eventTypeName}> = {}) => {
     return mutation.writeContractAsync(
       {
       ${isPayable ? "value," : ""}
         abi: ${abiName},
-        address: tokenAddress,
+        address,
+        chainId,
         functionName: "${functionName}",
         ${hasInputs ? "args: paramsToArray({ params, abiFunction })" : ""}
       },
@@ -97,13 +98,14 @@ export const ${hookName} = () => {
     );
   };
 
-  const write = (${hasInputs ? '{tokenAddress, ...params}: AbiInputsToParams<Fn["inputs"]> & {tokenAddress: `0x${string}`},' : "{tokenAddress}: {tokenAddress: `0x${string}`},"}
+  const write = ({address, chainId}: {address: \`0x\${string}\`, chainId?: number},${hasInputs ? '\n  params: AbiInputsToParams<Fn["inputs"]>,' : ''}
   options: MutationOptions<${eventTypeName}> = {}) => {
     options.onInitiated?.();
     return mutation.writeContractAsync({
     ${isPayable ? "value," : ""}
       abi: ${abiName},
-      address: tokenAddress,
+      address,
+      chainId,
       functionName: "${functionName}",
       ${hasInputs ? "args: paramsToArray({ params, abiFunction })" : ""}
     },{

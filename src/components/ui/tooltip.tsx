@@ -33,7 +33,7 @@ const TooltipContent = React.forwardRef<
 ));
 TooltipContent.displayName = TooltipPrimitive.Content.displayName;
 
-interface TooltipProps
+export interface TooltipProps
   extends Omit<
     React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>,
     "content"
