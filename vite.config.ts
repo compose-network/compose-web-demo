@@ -1,4 +1,3 @@
-import { sentryVitePlugin } from "@sentry/vite-plugin";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig, loadEnv } from "vite";
@@ -7,10 +6,6 @@ import svgr from "vite-plugin-svgr";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
-
-  if (!env.VITE_SSV_NETWORKS) {
-    console.error("VITE_SSV_NETWORKS is not defined in .env");
-  }
 
   return {
     worker: {
@@ -42,11 +37,6 @@ export default defineConfig(({ mode }) => {
         },
       }),
       svgr(),
-      sentryVitePlugin({
-        org: "ssv-labs",
-        project: "javascript-react",
-        authToken: env.VITE_SENTRY_AUTH_TOKEN,
-      }),
     ],
     define: {
       APP_VERSION: JSON.stringify(process.env.npm_package_version),
