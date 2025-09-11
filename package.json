@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:prod": "vite --mode prod",
     "watch": "vite build --watch",
-    "build": "node --max_old_space_size=9192 ./node_modules/vite/bin/vite.js build --mode production",
+    "build": "NODE_OPTIONS='--max-old-space-size=4096' vite build --mode production",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 10",
     "fix": "eslint . --ext ts,tsx --fix",
     "preview": "vite preview",
@@ -16,6 +16,10 @@
     "generate-all": "node scripts/runAllScripts.cjs",
     "log-todos": "node scripts/log-todos.js",
     "commit": "cz"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
   },
   "config": {
     "commitizen": {
