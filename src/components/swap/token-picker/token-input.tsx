@@ -14,6 +14,7 @@ export type TokenInputProps = {
   chainId: number;
   tokenAddress: Address;
   onSelectToken: (token: Address) => void;
+  onChainSelect: (chainId: number) => void;
   readOnly?: boolean;
   isLoading?: boolean;
 };
@@ -27,6 +28,7 @@ export const TokenInput: TokenInputFC = ({
   tokenAddress,
   readOnly,
   isLoading,
+  onChainSelect,
   ...props
 }) => {
   const asset = useAsset({
@@ -48,6 +50,7 @@ export const TokenInput: TokenInputFC = ({
           })}
         />
         <TokenPicker
+          onChainSelect={onChainSelect}
           selectedToken={tokenAddress}
           chainId={chainId}
           onSelectToken={props.onSelectToken}

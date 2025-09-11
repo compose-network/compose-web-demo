@@ -4,6 +4,7 @@ const Templates = {
   Query: "Query",
   Modal: "Modal",
   ForwardRef: "ComponentWithForwardRef",
+  CVA: "ComponentWithCVA",
 };
 
 const getPrompts = () => {
@@ -170,5 +171,10 @@ module.exports = (plop) => {
     description: "Create a component forwardRef",
     prompts: getPrompts(Templates.ForwardRef),
     actions: getActions(Templates.ForwardRef),
+  });
+  plop.setGenerator("cmp-cva", {
+    description: "Create a component with CVA (Class Variance Authority)",
+    prompts: getPrompts(Templates.CVA),
+    actions: getActions(Templates.CVA),
   });
 };

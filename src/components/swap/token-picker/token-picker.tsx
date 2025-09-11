@@ -11,6 +11,7 @@ export type TokenPickerProps = {
   chainId: number;
   selectedToken: Address;
   onSelectToken: (token: Address) => void;
+  onChainSelect: (chainId: number) => void;
 };
 
 type TokenPickerFC = FC<
@@ -23,6 +24,7 @@ export const TokenPicker: TokenPickerFC = ({
   className,
   selectedToken,
   onSelectToken,
+  onChainSelect,
   ...props
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -33,6 +35,7 @@ export const TokenPicker: TokenPickerFC = ({
         onOpenChange={setIsOpen}
         chainId={chainId}
         onTokenSelect={onSelectToken}
+        onChainSelect={onChainSelect}
       />
       <Button
         onClick={() => {
@@ -41,7 +44,7 @@ export const TokenPicker: TokenPickerFC = ({
         }}
         variant="ghost"
         className={cn(
-          "p-4 pr-6 pl-4 rounded-xl border border-gray-300 bg-gray-50 flex gap-3 items-center w-[188px] h-auto",
+          "p-4 pr-6 pl-4 rounded-xl border border-gray-300 bg-gray-50 flex gap-3 items-center min-w-[188px] h-auto",
           className,
         )}
         {...props}
@@ -50,6 +53,7 @@ export const TokenPicker: TokenPickerFC = ({
           <AssetLogo
             tokenAddress={selectedToken}
             chainId={chainId}
+            className="size-10"
           />
           <AssetName
             symbolOnly

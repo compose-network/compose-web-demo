@@ -3,7 +3,7 @@
 import type { UseReadContractReturnType } from "wagmi";
 import { useBlockNumber, useReadContract, useWriteContract } from "wagmi";
 import type { Abi, AbiFunction, Address, ExtractAbiFunctions } from "abitype";
-import type { WriteContractErrorType } from "@wagmi/core";
+import { getChainId, type WriteContractErrorType } from "@wagmi/core";
 import { type WaitForTransactionReceiptErrorType, type Hash } from "viem";
 import { useWaitForTransactionReceipt } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
 import type {
@@ -18,9 +18,9 @@ import type { AbiInputsToParams } from "@/lib/contract-interactions/utils";
 import { useMemo } from "react";
 import { wait } from "@/lib/utils/promise";
 import { SwapABI } from "@/lib/abi/swap/swap";
-import { rollupB, swapContract } from "@/wagmi/config";
+import { config, rollupB, swapContract } from "@/wagmi/config";
 import { isUndefined } from "lodash-es";
-import type { QueryOptions } from "@tanstack/react-query";
+import type { UseQueryOptions } from "@/lib/react-query";
 
 type WriteParams<T extends AbiFunction> = {
   value?: bigint;
@@ -35,6 +35,7 @@ type WriteHookResult<T extends WriteParams<AbiFunction> | void> = {
   isPending: boolean;
   mutation: ReturnType<typeof useWriteContract>;
   write: (params: T, options?: MutationOptions<AllEvents>) => Promise<unknown>;
+  send: (params: T, options?: MutationOptions<AllEvents>) => Promise<`0x${string}`>;
   wait: ReturnType<typeof useWaitForTransactionReceipt>;
 };
 
@@ -44,22 +45,31 @@ type WriteHooksObject<T extends AbiFunction[]> = {
   >;
 };
 type CustomQueryOptions = {
-  chainId?: number;
+  chainId: number;
   enabled?: boolean;
   watch?: boolean;
-} & QueryOptions;
+};
 
 type ReadHooksObject<T extends AbiFunction[]> = {
   [Fn in T[number] as `use${Capitalize<Fn["name"]>}`]: Fn["inputs"] extends readonly []
-    ? //@ts-expect-error - Fn["name"] is not a valid ContractFunctionName
-      (options: CustomQueryOptions) => UseReadContractReturnType<T, Fn["name"]>
+    ? (
+        options: CustomQueryOptions &
+          //@ts-expect-error - Fn["name"] is not a valid ContractFunctionName
+          UseQueryOptions<UseReadContractReturnType<T, Fn["name"]>["data"]>,
+        //@ts-expect-error - Fn["name"] is not a valid ContractFunctionName
+      ) => UseReadContractReturnType<T, Fn["name"]>
     : (
         params: AbiInputsToParams<Fn["inputs"]>,
-        options: CustomQueryOptions,
+        options: CustomQueryOptions &
+          //@ts-expect-error - Fn["name"] is not a valid ContractFunctionName
+          UseQueryOptions<UseReadContractReturnType<T, Fn["name"]>["data"]>,
         //@ts-expect-error - Fn["name"] is not a valid ContractFunctionName
       ) => UseReadContractReturnType<T, Fn["name"]>;
 };
 
+const capitalize = (str: string) => {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+};
 export function createContractHooks<T extends Abi>(
   abi: T,
   contractAddressGetter: () => Address,
@@ -72,6 +82,8 @@ export function createContractHooks<T extends Abi>(
       item.stateMutability !== "pure",
   ) as AbiFunction[];
 
+  console.log("writeFunctions:", writeFunctions);
+
   const readFunctions = abi.filter(
     (item) =>
       item.type === "function" &&
@@ -81,7 +93,7 @@ export function createContractHooks<T extends Abi>(
   const hooks = {};
 
   readFunctions.forEach((fn) => {
-    const hookName = `use${fn.name.charAt(0).toUpperCase() + fn.name.slice(1)}`;
+    const hookName = `use${capitalize(fn.name)}`;
     const functionName = fn.name;
     const hasInputs = Boolean(fn.inputs?.length);
     const abiFunction = extractAbiFunction(abi, functionName);
@@ -90,7 +102,10 @@ export function createContractHooks<T extends Abi>(
       //@ts-expect-error - TODO: fix this
       hooks[hookName] = (
         params: AbiInputsToParams<typeof fn.inputs>,
-        options: CustomQueryOptions = { enabled: true },
+        options: CustomQueryOptions = {
+          enabled: true,
+          chainId: getChainId(config),
+        },
       ) => {
         const contractAddress = contractAddressGetter();
         const blockNumber = useBlockNumber({ watch: options.watch });
@@ -101,6 +116,7 @@ export function createContractHooks<T extends Abi>(
           address: contractAddress,
           functionName: functionName as string,
           args: args as readonly unknown[],
+          chainId: options.chainId,
           blockNumber: options.watch ? blockNumber.data : undefined,
           query: {
             ...options,
@@ -114,7 +130,12 @@ export function createContractHooks<T extends Abi>(
     } else {
       // Create hook function for functions without parameters
       //@ts-expect-error - TODO: fix this
-      hooks[hookName] = (options: CustomQueryOptions = { enabled: true }) => {
+      hooks[hookName] = (
+        options: CustomQueryOptions = {
+          enabled: true,
+          chainId: getChainId(config),
+        },
+      ) => {
         const contractAddress = contractAddressGetter();
         const blockNumber = useBlockNumber({ watch: options.watch });
 
@@ -122,6 +143,7 @@ export function createContractHooks<T extends Abi>(
           abi,
           address: contractAddress,
           functionName: functionName as string,
+          chainId: options.chainId,
           blockNumber: options.watch ? blockNumber.data : undefined,
           query: {
             ...options,
@@ -133,7 +155,7 @@ export function createContractHooks<T extends Abi>(
   });
 
   writeFunctions.forEach((fn) => {
-    const hookName = "use" + fn.name;
+    const hookName = "use" + capitalize(fn.name);
     const hookFn = () => {
       const contractAddress = contractAddressGetter();
 
@@ -188,12 +210,38 @@ export function createContractHooks<T extends Abi>(
             }),
           );
       };
+
+      const send = (
+        params: WriteParams<typeof fn>,
+        options: MutationOptions<AllEvents> = {},
+      ) => {
+        options.onInitiated?.();
+
+        return mutation.writeContractAsync(
+          // @ts-expect-error - TODO: fix this
+          {
+            abi,
+            address: contractAddress,
+            functionName,
+            ...(params && { args: paramsToArray({ params, abiFunction }) }),
+            ...(fn.stateMutability === "payable" &&
+              params?.value && { value: params.value }),
+          },
+          {
+            onSuccess: (hash) => options.onConfirmed?.(hash),
+            onError: (error) =>
+              options.onError?.(error as WriteContractErrorType),
+          },
+        );
+      };
+
       return {
         error: mutation.error || waitForTx.error,
         isSuccess: waitForTx.isSuccess,
         isPending: mutation.isPending || waitForTx.isPending,
         mutation,
         write,
+        send,
         wait: waitForTx,
       };
     };
@@ -213,5 +261,6 @@ export const swapContractHooks = createContractHooks(
   SwapABI,
   () => swapContract[rollupB.id] as Address,
 );
+console.log("swapContractHooks:", swapContractHooks);
 export const useSwapContract = () => swapContractHooks;
 // swapHooks.useGetSwapPrice()

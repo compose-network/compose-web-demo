@@ -5744,7 +5744,7 @@ export const onlyTokens: Record<string, string> = {
   AITA: "https://assets.coingecko.com/coins/images/29910/thumb/aita.png?1736744705",
   SYNT: "https://assets.coingecko.com/coins/images/38888/thumb/synt.png?1738226331",
   AVER: "https://assets.coingecko.com/coins/images/53541/thumb/Aver_Dextools.png?1736598569",
-  USDC: "https://assets.coingecko.com/coins/images/6319/thumb/usdc.png?1696506694",
+  USDC: "/images/crypto-logos/USDC.svg",
   MFT: "https://assets.coingecko.com/coins/images/3293/thumb/Mainframe_Token_Logo.png?1696504003",
   ELG: "https://assets.coingecko.com/coins/images/13566/thumb/escoin-200.png?1696513320",
   MOODENG:
@@ -5792,7 +5792,7 @@ export const onlyTokens: Record<string, string> = {
   ALPH: "https://assets.coingecko.com/coins/images/21598/thumb/Alephium-Logo_200x200_listing.png?1696520959",
   PIVOT:
     "https://assets.coingecko.com/coins/images/53594/thumb/6307601177658902877.jpg?1736806045",
-  SSV: "https://assets.coingecko.com/coins/images/19155/thumb/ssv.png?1696518606",
+  SSV: "/images/logo/small_light.svg",
   SHRUB:
     "https://assets.coingecko.com/coins/images/38880/thumb/photo_2024-11-13_23.58.11.png?1731575427",
   RLC: "https://assets.coingecko.com/coins/images/646/thumb/pL1VuXm.png?1696501840",

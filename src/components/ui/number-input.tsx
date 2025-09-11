@@ -88,7 +88,7 @@ export const BigNumberInput: BigNumberInputFC = forwardRef<
       }
 
       setDisplayValue(displayValue ?? formatBigintInput(parsed, decimals));
-      onChange(parsed);
+      if (parsed !== value) onChange(parsed);
     };
 
     if (

@@ -3,8 +3,8 @@ import { cn } from "@/lib/utils/tw";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { rollupB } from "@/wagmi/config";
-import { isAddress } from "viem";
+import { rollupB, swapContract } from "@/wagmi/config";
+import { isAddress, parseEther } from "viem";
 import { TokenInput } from "@/components/swap/token-picker/token-input";
 import { Card } from "@/components/ui/card";
 import { useSwapContract } from "@/lib/contract-interactions/core/create-write-hooks";
@@ -14,7 +14,17 @@ import { Divider } from "@/components/ui/divider";
 import { Button } from "@/components/ui/button";
 import { FaArrowDown } from "react-icons/fa6";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { textVariants } from "@/components/ui/text";
+import { Text, textVariants } from "@/components/ui/text";
+import { WithAllowance } from "@/components/with-allowance/with-allowance";
+import { useAccount } from "@/hooks/account/use-account";
+import { useSwitchChain } from "wagmi";
+import { toast } from "@/components/ui/use-toast";
+import { Form } from "@/components/ui/form";
+import { withTransactionModal } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
+import { useAsset } from "@/hooks/use-asset";
+import { merge } from "lodash-es";
+import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
+import { SwapRoute } from "@/components/swap/swap-route";
 
 export type SwapProps = {
   // TODO: Add props or remove this type
@@ -25,38 +35,52 @@ type SwapFC = FC<
 >;
 
 const schema = z.object({
+  chainId: z.number().default(rollupB.id),
   from: z.object({
     token: z.string().refine(isAddress),
-    amount: z.bigint(),
-    chainId: z.number(),
+    amount: z.bigint().min(parseEther("0.000001"), {
+      message: "Amount must be greater than 0.000001",
+    }),
   }),
   to: z.object({
     token: z.string().refine(isAddress),
     amount: z.bigint(),
-    chainId: z.number(),
   }),
   slippage: z.number(),
 });
 export const Swap: SwapFC = ({ className, ...props }) => {
+  const { chainId, address, isConnected } = useAccount();
+  const isRollupB = chainId === rollupB.id;
+  const switchChain = useSwitchChain();
+
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
+      chainId: rollupB.id,
       from: {
         token: tokens[rollupB.id][0].address,
         amount: 0n,
-        chainId: rollupB.id,
       },
       to: {
         token: tokens[rollupB.id][1].address,
         amount: 0n,
-        chainId: rollupB.id,
       },
       slippage: 0.5,
     },
     resolver: zodResolver(schema),
   });
 
+  const handleChainSelect = (chainId: number) => {
+    form.setValue("chainId", chainId);
+  };
+
+  console.log("form.formState.isDirty:", form.formState.isDirty);
+  console.log("form.formState.isValid:", form.formState.isValid);
+
   const values = form.watch();
-  const { useGetSwapPrice } = useSwapContract();
+  const { useGetSwapPrice, useSwap } = useSwapContract();
+
+  const swap = useSwap();
+
   const prices = useGetSwapPrice(
     {
       tokenIn: getToken(values.from.token)?.id ?? 0,
@@ -72,8 +96,65 @@ export const Swap: SwapFC = ({ className, ...props }) => {
 
   const isSameToken = values.from.token === values.to.token;
 
+  const fromToken = useAsset({
+    tokenAddress: values.from.token,
+    chainId: values.chainId,
+  });
+
+  const toToken = useAsset({
+    tokenAddress: values.to.token,
+    chainId: values.chainId,
+  });
+
+  const submit = form.handleSubmit(async (values) => {
+    await switchChain.switchChainAsync({ chainId: values.chainId });
+    swap.write(
+      {
+        amountIn: values.from.amount,
+        recipient: address!,
+        tokenIn: getToken(values.from.token)?.id ?? 0,
+        tokenOut: getToken(values.to.token)?.id ?? 0,
+      },
+      withTransactionModal({
+        onInitiated: () => {
+          toast({
+            title: "Swap initiated",
+            description: "Check your wallet to confirm the transaction",
+          });
+        },
+        onMined: () => {
+          toast({
+            title: "Swap mined",
+          });
+          fromToken.refreshBalance();
+          toToken.refreshBalance();
+          form.reset(
+            merge({}, values, {
+              from: { amount: 0n },
+              to: { amount: 0n },
+            }),
+            {
+              keepIsValid: true,
+            },
+          );
+          form.clearErrors();
+        },
+        onError: (error) => {
+          toast({
+            variant: "destructive",
+            title: "Swap failed",
+            description: error.message,
+          });
+        },
+      }),
+    );
+  });
+
   return (
-    <Card className={cn("max-w-[648px] mx-auto gap-8", className)} {...props}>
+    <Card
+      className={cn("max-w-[648px] mx-auto gap-8 mt-8", className)}
+      {...props}
+    >
       <Tabs className="w-full" defaultValue="swap">
         <TabsList className="w-full bg-gray-200">
           <TabsTrigger
@@ -99,79 +180,104 @@ export const Swap: SwapFC = ({ className, ...props }) => {
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      <div className="flex gap-4 flex-col">
-        <TokenInput
-          value={values.from.amount}
-          tokenAddress={values.from.token}
-          chainId={values.from.chainId}
-          onSelectToken={(token) =>
-            form.setValue("from.token", token, {
-              shouldValidate: true,
-              shouldDirty: true,
-            })
-          }
-          onChange={(amount) =>
-            form.setValue("from.amount", amount, {
-              shouldValidate: true,
-              shouldDirty: true,
-            })
-          }
-        />
-        <div className="flex items-center gap-3">
-          <Divider className="flex-1" />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-12 rounded-xl"
-            style={{
-              boxShadow: "0px 4px 8px -3px rgba(11, 42, 60, 0.08)",
-            }}
-            onClick={() => {
-              form.setValue(
-                "from",
-                {
-                  ...values.to,
-                  amount: prices.data?.[0] ?? 0n,
-                },
-                {
+      <Form {...form}>
+        <form onSubmit={submit} className="flex flex-col gap-8">
+          <div className="flex gap-4 flex-col">
+            <TokenInput
+              onChainSelect={handleChainSelect}
+              value={values.from.amount}
+              tokenAddress={values.from.token}
+              chainId={values.chainId}
+              onSelectToken={(token) => form.setValue("from.token", token)}
+              onChange={(amount) =>
+                form.setValue("from.amount", amount, {
                   shouldValidate: true,
                   shouldDirty: true,
-                },
-              );
-              form.setValue("to", values.from, {
-                shouldValidate: true,
-                shouldDirty: true,
-              });
-            }}
-          >
-            <FaArrowDown className="text-primary-500" />
-          </Button>
-          <Divider className="flex-1" />
-        </div>
-        <TokenInput
-          value={isSameToken ? values.from.amount : prices.data?.[0] ?? 0n}
-          tokenAddress={values.to.token}
-          chainId={values.to.chainId}
-          isLoading={prices.isPending}
-          readOnly
-          onSelectToken={(token) =>
-            form.setValue("to.token", token, {
-              shouldValidate: true,
-              shouldDirty: true,
-            })
-          }
-          onChange={(amount) =>
-            form.setValue("to.amount", amount, {
-              shouldValidate: true,
-              shouldDirty: true,
-            })
-          }
-        />
-      </div>
-      <Divider />
-      <Button size="xl" className="w-full">
-        Swap
-      </Button>
+                })
+              }
+            />
+            {form.formState.errors.from?.amount && (
+              <Text variant="body-3-medium" className="text-error-500">
+                {form.formState.errors.from.amount?.message}
+              </Text>
+            )}
+            <div className="flex items-center gap-3">
+              <Divider className="flex-1" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-12 rounded-xl"
+                style={{
+                  boxShadow: "0px 4px 8px -3px rgba(11, 42, 60, 0.08)",
+                }}
+                onClick={() => {
+                  form.setValue(
+                    "from",
+                    {
+                      ...values.to,
+                      amount: prices.data?.[0] ?? 0n,
+                    },
+                    {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    },
+                  );
+                  form.setValue("to", values.from, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                }}
+              >
+                <FaArrowDown className="text-primary-500" />
+              </Button>
+              <Divider className="flex-1" />
+            </div>
+            <TokenInput
+              onChainSelect={handleChainSelect}
+              value={isSameToken ? values.from.amount : prices.data?.[0] ?? 0n}
+              tokenAddress={values.to.token}
+              chainId={values.chainId}
+              isLoading={prices.isPending}
+              readOnly
+              onSelectToken={(token) => form.setValue("to.token", token)}
+              onChange={(amount) => form.setValue("to.amount", amount)}
+            />
+          </div>
+          <Divider />
+          <SwapRoute
+            action="swap"
+            fromToken={{ address: values.from.token, chainId: values.chainId }}
+            toToken={{ address: values.to.token, chainId: values.chainId }}
+          />
+          {isConnected ? (
+            <WithAllowance
+              size="xl"
+              spender={swapContract[rollupB.id]}
+              token={{
+                address: values.from.token,
+                symbol: getToken(values.from.token)?.symbol ?? "",
+              }}
+              amount={values.from.amount}
+              chainId={rollupB.id}
+            >
+              <Button
+                size="xl"
+                className="w-full"
+                type="submit"
+                isLoading={swap.isPending || switchChain.isPending}
+                loadingText={
+                  switchChain.isPending ? "Switching network..." : undefined
+                }
+                disabled={!form.formState.isValid || !form.formState.isDirty}
+              >
+                Swap
+              </Button>
+            </WithAllowance>
+          ) : (
+            <ConnectWalletBtn size="xl" />
+          )}
+        </form>
+      </Form>
     </Card>
   );
 };

@@ -22,6 +22,7 @@ const getWalletIconSrc = (connectorName?: string) => {
     "/images/wallets/metamask.svg"
   );
 };
+
 export const ConnectWalletBtn: FC<ButtonProps> = (props) => {
   const account = useAccount();
 

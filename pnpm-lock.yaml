@@ -22,6 +22,9 @@ importers:
       '@deepsignal/react':
         specifier: ^4.0.0
         version: 4.0.0(@preact/signals-core@1.7.0)(@preact/signals-react@2.1.0(react@18.3.1))
+      '@fontsource/geist-mono':
+        specifier: ^5.2.6
+        version: 5.2.6
       '@fontsource/manrope':
         specifier: ^5.0.20
         version: 5.0.20
@@ -1417,6 +1420,9 @@ packages:
 
   '@floating-ui/utils@0.2.4':
     resolution: {integrity: sha512-dWO2pw8hhi+WrXq1YJy2yCuWoL20PddgGaqTgVe4cOS9Q6qklXCiA1tJEqX6BEwRNSCP84/afac9hd4MS+zEUA==}
+
+  '@fontsource/geist-mono@5.2.6':
+    resolution: {integrity: sha512-I3hsRP+8Gmhk35cwlPAR4w5xqk7e5pro2F1o51ZmB+lN+dPcwN3jYHKN+u0E5AMuiQKpTdkrqfEpvBjzQax3cQ==}
 
   '@fontsource/manrope@5.0.20':
     resolution: {integrity: sha512-FW1t+WAvJroALa7zgd5S2dn3zy/sxxHhry/OwDGKmO7Be/zlLBIVaWW+cjyfyA6a6zWEx5YQ4OFfYlA6An5osQ==}
@@ -9334,6 +9340,8 @@ snapshots:
       react-dom: 18.3.1(react@18.3.1)
 
   '@floating-ui/utils@0.2.4': {}
+
+  '@fontsource/geist-mono@5.2.6': {}
 
   '@fontsource/manrope@5.0.20': {}
 

@@ -16,10 +16,25 @@ module.exports = {
     extend: {
       fontFamily: {
         robotoMono: ['"Roboto Mono"', "monospace"],
+        geistMono: ['"Geist Mono"', "monospace"],
       },
       colors: {
         black: "hsl(var(--black))",
         white: "var(--gray-50)",
+        violeta: {
+          pale: "#E0BBFE",
+          light: "#D099FD",
+          regular: "#C070FF",
+          medium: "#7F35BA",
+          dark: "#5A1095",
+        },
+        mintaloe: {
+          pale: "#61FFCB",
+          light: "#37ECB4",
+          regular: "#1FCF98",
+          medium: "#09A670",
+          dark: "#007248",
+        },
         primary: {
           50: "var(--primary-50)",
           100: "var(--primary-100)",

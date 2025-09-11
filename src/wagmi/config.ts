@@ -74,6 +74,11 @@ export const chainsMap = {
   [polygon.id]: polygon,
 };
 
+export const rollupIdMap = {
+  [rollupA.id]: 1,
+  [rollupB.id]: 2,
+} as const;
+
 export const swapContract = {
   [rollupB.id]: "0x52cfc57b976936ba8d6beea547900c4425836bea",
 } as Record<number, Address>;

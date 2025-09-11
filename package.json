@@ -43,6 +43,7 @@
     "@chainsafe/ssz": "^0.18.0",
     "@deepsignal/core": "^4.0.0",
     "@deepsignal/react": "^4.0.0",
+    "@fontsource/geist-mono": "^5.2.6",
     "@fontsource/manrope": "^5.0.20",
     "@hookform/resolvers": "^3.9.0",
     "@preact/signals-react": "^2.1.0",

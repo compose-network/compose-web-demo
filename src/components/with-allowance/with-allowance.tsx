@@ -16,13 +16,12 @@ import type { Address } from "abitype";
 
 export type WithAllowanceProps = {
   size?: ButtonProps["size"];
-  options: {
-    token: {
-      address: Address;
-      symbol: string;
-    };
-    spender: Address;
+  chainId: number;
+  token: {
+    address: Address;
+    symbol: string;
   };
+  spender: Address;
   amount: bigint;
 };
 
@@ -35,18 +34,21 @@ export const WithAllowance: WithAllowanceFC = ({
   className,
   amount,
   size,
-  options,
+  token,
+  spender,
+  chainId,
   ...props
 }) => {
   const account = useAccount();
-  const block = useBlockNumber({ watch: true });
+  const block = useBlockNumber({ watch: true, chainId });
 
   const allowance = useReadContract({
     abi: TokenABI,
-    address: options.token.address,
+    address: token.address,
     functionName: "allowance",
-    args: [account.address!, options.spender],
+    args: [account.address!, spender],
     blockNumber: block.data,
+    chainId,
     query: {
       placeholderData: keepPreviousData,
       enabled: Boolean(account.address && block.data),
@@ -57,8 +59,11 @@ export const WithAllowance: WithAllowanceFC = ({
   const approve = () => {
     approver.write(
       {
-        tokenAddress: options?.token.address,
-        spender: options?.spender,
+        address: token.address,
+        chainId,
+      },
+      {
+        spender: spender,
         amount: globals.MAX_WEI_AMOUNT,
       },
       withTransactionModal(),
@@ -115,7 +120,7 @@ export const WithAllowance: WithAllowanceFC = ({
           isActionBtn
           loadingText="Approving..."
         >
-          Approve {options?.token.symbol ?? "SSV"}
+          Approve {token.symbol ?? "SSV"}
         </Button>
         {childrenWithProps}
       </div>
