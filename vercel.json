@@ -1,4 +1,4 @@
 {
-  "installCommand": "git config --global url.\"https://\".insteadOf git+ssh://git@ && pnpm install",
+  "installCommand": "pnpm install",
   "rewrites": [{ "source": "/(.*)", "destination": "/" }]
 }
