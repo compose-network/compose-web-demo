@@ -134,7 +134,9 @@ export const Bridge: SwapFC = () => {
               {form.formState.errors.from.amount?.message}
             </Text>
           )}
+
           <TokenInput
+            canPickToken={false}
             chains={[{ chainId: rollupB.id, isSupported: true }]}
             onChainSelect={handleChainSelect}
             value={values.from.amount}

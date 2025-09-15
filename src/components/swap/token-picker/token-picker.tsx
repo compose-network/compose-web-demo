@@ -14,6 +14,8 @@ export type TokenPickerProps = {
   selectedToken: Address;
   onSelectToken: (token: Address) => void;
   onChainSelect: (chainId: number) => void;
+  readOnly?: boolean;
+  canPickToken?: boolean;
 };
 
 type TokenPickerFC = FC<
@@ -28,6 +30,7 @@ export const TokenPicker: TokenPickerFC = ({
   selectedToken,
   onSelectToken,
   onChainSelect,
+  readOnly,
   ...props
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -43,12 +46,14 @@ export const TokenPicker: TokenPickerFC = ({
       />
       <Button
         onClick={() => {
+          if (readOnly) return;
           console.log("Button clicked, setting isOpen to true");
           setIsOpen(true);
         }}
         variant="ghost"
         className={cn(
           "p-4 pr-6 pl-4 rounded-xl border border-gray-300 bg-gray-50 flex gap-3 items-center min-w-[188px] h-auto",
+          { "pointer-events-none": readOnly },
           className,
         )}
         {...props}
@@ -66,7 +71,7 @@ export const TokenPicker: TokenPickerFC = ({
             className="text-xl font-semibold"
           />
         </div>
-        <ChevronDown className="size-4 justify-end" />
+        {!readOnly && <ChevronDown className="size-4 justify-end" />}
       </Button>
     </>
   );

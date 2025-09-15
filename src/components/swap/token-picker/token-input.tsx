@@ -20,6 +20,7 @@ export type TokenInputProps = {
   onChainSelect: (chainId: number) => void;
   readOnly?: boolean;
   isLoading?: boolean;
+  canPickToken?: boolean;
 };
 
 type TokenInputFC = FC<
@@ -32,6 +33,7 @@ export const TokenInput: TokenInputFC = ({
   tokenAddress,
   readOnly,
   isLoading,
+  canPickToken = true,
   onChainSelect,
   ...props
 }) => {
@@ -60,6 +62,7 @@ export const TokenInput: TokenInputFC = ({
           selectedToken={tokenAddress}
           chainId={chainId}
           onSelectToken={props.onSelectToken}
+          readOnly={!canPickToken}
         />
       </div>
       {!readOnly && (
