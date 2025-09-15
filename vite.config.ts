@@ -40,8 +40,6 @@ export default defineConfig(({ mode }) => {
     ],
     define: {
       APP_VERSION: JSON.stringify(process.env.npm_package_version),
-      NETWORKS: JSON.parse(env.VITE_SSV_NETWORKS),
-      "import.meta.env.VITE_SSV_NETWORKS": JSON.parse(env.VITE_SSV_NETWORKS),
       ...(mode === "development" ? { global: {} } : undefined),
     },
     resolve: {
