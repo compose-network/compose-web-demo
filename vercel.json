@@ -3,11 +3,6 @@
   "devCommand": "pnpm dev",
   "installCommand": "pnpm install --frozen-lockfile --prefer-offline",
   "framework": "vite",
-  "functions": {
-    "app/**/*": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "builds": [
     {
       "src": "package.json",
