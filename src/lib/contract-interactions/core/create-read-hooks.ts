@@ -5,7 +5,7 @@ import {
   extractAbiFunction,
   paramsToArray,
 } from "@/lib/contract-interactions/utils";
-import { rollupB, swapContract } from "@/wagmi/config";
+import { rollupB, contracts } from "@/wagmi/config";
 import type { Abi, AbiFunction, Address, ExtractAbiFunctions } from "abitype";
 import { isUndefined } from "lodash-es";
 import type { UseReadContractReturnType } from "wagmi";
@@ -100,7 +100,7 @@ export function createReadHooks<T extends Abi = Abi>(
   return hooks as ReadHooksObject<ExtractAbiFunctions<T>[]>;
 }
 
-const swapReader = createReadHooks(SwapABI, () => swapContract[rollupB.id]);
+const swapReader = createReadHooks(SwapABI, () => contracts[rollupB.id]);
 console.log("swapReader:", swapReader);
 
 export const useSwapReader = () => swapReader;

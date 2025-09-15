@@ -6,7 +6,6 @@ import { useSymbol } from "@/lib/contract-interactions/erc-20/read/use-symbol";
 import { ms } from "@/lib/utils/number";
 import { getNativeCurrency, isNativeToken } from "@/lib/utils/token";
 import { useQueryClient } from "@tanstack/react-query";
-import { zeroAddress } from "viem";
 import { useBalance } from "wagmi";
 
 type UseAssetProps = {
@@ -49,7 +48,7 @@ export const useAsset = ({ tokenAddress, chainId }: UseAssetProps) => {
   );
 
   const nativeBalance = useBalance({
-    address: zeroAddress,
+    address: address!,
     chainId,
     query: {
       enabled: isNative,

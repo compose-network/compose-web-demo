@@ -8,19 +8,27 @@ import { createBrowserRouter, Outlet } from "react-router-dom";
 import { NotFound } from "./not-found";
 import type { RoutePaths, WritableRoutePaths } from "./router/route-types";
 import { Swap } from "@/components/swap/swap";
+import { MainPage } from "@/components/swap/main";
+import { Bridge } from "@/components/swap/bridge";
 
 const routes = [
   {
     path: "",
     element: (
       <DashboardLayout>
-        <Outlet />
+        <MainPage>
+          <Outlet />
+        </MainPage>
       </DashboardLayout>
     ),
     children: [
       {
         path: "",
         element: <Swap />,
+      },
+      {
+        path: "bridge",
+        element: <Bridge />,
       },
     ],
   },

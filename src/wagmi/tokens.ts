@@ -1,5 +1,6 @@
-import { rollupB } from "@/wagmi/config";
+import { hoodi, rollupB } from "@/wagmi/config";
 import type { Address } from "abitype";
+import { zeroAddress } from "viem";
 
 export function isAddressEqual(a: Address, b: Address) {
   return a.toLowerCase() === b.toLowerCase();
@@ -13,6 +14,7 @@ export interface ERC20Token {
   address: Address;
   decimals: number;
   logoUrl: string;
+  native?: boolean;
 }
 
 export const tokens = {
@@ -46,6 +48,18 @@ export const tokens = {
       logoUrl:
         "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x9D65fF81a3c488d585bBfb0Bfe3c7707c7917f54/logo.png",
       decimals: 18,
+    },
+  ],
+  [hoodi.id]: [
+    {
+      id: 0,
+      symbol: "ETH",
+      name: "Ethereum",
+      icon: "ETH",
+      address: zeroAddress,
+      logoUrl: "/images/networks/light.svg",
+      decimals: 18,
+      native: true,
     },
   ],
 } satisfies Record<number, ERC20Token[]>;

@@ -18,9 +18,10 @@ import type { AbiInputsToParams } from "@/lib/contract-interactions/utils";
 import { useMemo } from "react";
 import { wait } from "@/lib/utils/promise";
 import { SwapABI } from "@/lib/abi/swap/swap";
-import { config, rollupB, swapContract } from "@/wagmi/config";
+import { config, rollupB, contracts, hoodi } from "@/wagmi/config";
 import { isUndefined } from "lodash-es";
 import type { UseQueryOptions } from "@/lib/react-query";
+import { l1StandardBridgeABI } from "@/lib/abi/swap/bridge";
 
 type WriteParams<T extends AbiFunction> = {
   value?: bigint;
@@ -35,7 +36,10 @@ type WriteHookResult<T extends WriteParams<AbiFunction> | void> = {
   isPending: boolean;
   mutation: ReturnType<typeof useWriteContract>;
   write: (params: T, options?: MutationOptions<AllEvents>) => Promise<unknown>;
-  send: (params: T, options?: MutationOptions<AllEvents>) => Promise<`0x${string}`>;
+  send: (
+    params: T,
+    options?: MutationOptions<AllEvents>,
+  ) => Promise<`0x${string}`>;
   wait: ReturnType<typeof useWaitForTransactionReceipt>;
 };
 
@@ -259,8 +263,11 @@ export function createContractHooks<T extends Abi>(
 
 export const swapContractHooks = createContractHooks(
   SwapABI,
-  () => swapContract[rollupB.id] as Address,
+  () => contracts[rollupB.id].swap,
 );
-console.log("swapContractHooks:", swapContractHooks);
+export const bridgeContractHooks = createContractHooks(
+  l1StandardBridgeABI,
+  () => contracts[hoodi.id].bridge,
+);
 export const useSwapContract = () => swapContractHooks;
-// swapHooks.useGetSwapPrice()
+export const useBridgeContract = () => bridgeContractHooks;

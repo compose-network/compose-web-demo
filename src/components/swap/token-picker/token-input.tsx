@@ -9,9 +9,12 @@ import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/tw";
 import { formatCurrency } from "@/lib/utils/number";
-
+import type { TokenPickerCommandDialogProps } from "@/components/swap/token-picker/token-picker-command-dialog";
+import { useAccount } from "@/hooks/account/use-account";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 export type TokenInputProps = {
   chainId: number;
+  chains: TokenPickerCommandDialogProps["chains"];
   tokenAddress: Address;
   onSelectToken: (token: Address) => void;
   onChainSelect: (chainId: number) => void;
@@ -25,12 +28,14 @@ type TokenInputFC = FC<
 
 export const TokenInput: TokenInputFC = ({
   chainId,
+  chains,
   tokenAddress,
   readOnly,
   isLoading,
   onChainSelect,
   ...props
 }) => {
+  const { isConnected } = useAccount();
   const asset = useAsset({
     tokenAddress: tokenAddress,
     chainId: chainId,
@@ -51,6 +56,7 @@ export const TokenInput: TokenInputFC = ({
         />
         <TokenPicker
           onChainSelect={onChainSelect}
+          chains={chains}
           selectedToken={tokenAddress}
           chainId={chainId}
           onSelectToken={props.onSelectToken}
@@ -62,7 +68,26 @@ export const TokenInput: TokenInputFC = ({
           <div className="flex justify-between items-center">
             <Text variant="body-3-medium" className="text-gray-500">
               Wallet Balance:{" "}
-              {formatCurrency(asset.balance ?? 0n, asset.decimals)}
+              {isConnected ? (
+                formatCurrency(asset.balance ?? 0n, asset.decimals)
+              ) : (
+                <ConnectButton.Custom>
+                  {({ openConnectModal, mounted }) => {
+                    if (!mounted) return null;
+
+                    return (
+                      <Button
+                        variant="link"
+                        as="span"
+                        className="cursor-pointer"
+                        onClick={openConnectModal}
+                      >
+                        Connect Wallet to see balance
+                      </Button>
+                    );
+                  }}
+                </ConnectButton.Custom>
+              )}
             </Text>
             <Button
               variant="ghost"

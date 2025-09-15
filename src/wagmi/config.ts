@@ -5,11 +5,31 @@ import {
 } from "@rainbow-me/rainbowkit/wallets";
 import type { Transport } from "@wagmi/core";
 
-import type { Address, Chain } from "viem";
+import type { Chain } from "viem";
 import { defineChain, http } from "viem";
 import { mainnet as mainnetChain, polygon as polygonChain } from "viem/chains";
 import { createConfig } from "wagmi";
 
+export const hoodi = defineChain({
+  id: 560048,
+  name: "Hoodi",
+  network: "hoodi",
+  nativeCurrency: {
+    name: "Hoodi",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [
+        "https://ethereum-hoodi-rpc.publicnode.com/d8a2cc6e7483872e917d7899f9403d738b001c80e37d66834f4e40e9efb54a27",
+      ],
+    },
+  },
+  iconBackground: "none",
+  iconUrl: "/images/networks/light.svg",
+  testnet: true,
+});
 export const rollupA = defineChain({
   id: 77777,
   name: "Rollup A",
@@ -25,6 +45,7 @@ export const rollupA = defineChain({
   },
   iconBackground: "none",
   iconUrl: "/images/networks/light.svg",
+  testnet: true,
 });
 
 export const rollupB = defineChain({
@@ -42,6 +63,7 @@ export const rollupB = defineChain({
   },
   iconBackground: "none",
   iconUrl: "/images/networks/light.svg",
+  testnet: true,
 });
 
 export const polygon = {
@@ -63,7 +85,7 @@ export const mainnet = {
 };
 
 // Chains array
-export const chains = [rollupA, rollupB, mainnet, polygon] as [
+export const chains = [rollupA, rollupB, mainnet, polygon, hoodi] satisfies [
   Chain,
   ...Chain[],
 ];
@@ -72,6 +94,11 @@ export const chainsMap = {
   [rollupB.id]: rollupB,
   [mainnet.id]: mainnet,
   [polygon.id]: polygon,
+  [hoodi.id]: hoodi,
+};
+
+export const getChainById = (chainId: number) => {
+  return chainsMap[chainId as keyof typeof chainsMap];
 };
 
 export const rollupIdMap = {
@@ -79,9 +106,14 @@ export const rollupIdMap = {
   [rollupB.id]: 2,
 } as const;
 
-export const swapContract = {
-  [rollupB.id]: "0x52cfc57b976936ba8d6beea547900c4425836bea",
-} as Record<number, Address>;
+export const contracts = {
+  [rollupB.id]: {
+    swap: "0x52cfc57b976936ba8d6beea547900c4425836bea",
+  },
+  [hoodi.id]: {
+    bridge: "0x9adb5dba4f55d7ea921f34e98dc492b3a2ced734",
+  },
+} as const;
 export const isChainSupported = (chainId: number) => {
   return chains.some((chain) => chain.id === chainId);
 };
@@ -100,7 +132,7 @@ const connectors = connectorsForWallets(
 );
 
 export const config = createConfig({
-  chains,
+  chains: [rollupB, hoodi],
   connectors: connectors,
   transports: chains.reduce(
     (acc, chain) => {

@@ -14,18 +14,20 @@ import { TokenPickerItem } from "./token-picker-item";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { Address } from "viem";
 import { Text } from "@/components/ui/text";
-import { RollupIcon } from "@/components/ui/rollup-icon";
-import { rollupA, rollupB } from "@/wagmi/config";
+import { ChainIcon } from "@/components/ui/chain-icon";
 import { Tooltip } from "@/components/ui/tooltip";
+import { getChainById } from "@/wagmi/config";
 
 export type TokenPickerCommandDialogProps = {
   chainId: number;
+  chains: { chainId: number; isSupported: boolean }[];
   onTokenSelect: (token: Address) => void;
   onChainSelect: (chainId: number) => void;
 } & DialogProps;
 
 export const TokenPickerCommandDialog: FC<TokenPickerCommandDialogProps> = ({
   chainId,
+  chains,
   onTokenSelect,
   onOpenChange,
   onChainSelect,
@@ -37,6 +39,8 @@ export const TokenPickerCommandDialog: FC<TokenPickerCommandDialogProps> = ({
     onTokenSelect(token);
     onOpenChange?.(false);
   };
+
+  console.log("chains:", chains);
 
   return (
     <Dialog isOpen={dialogProps.open} onOpenChange={onOpenChange}>
@@ -50,21 +54,26 @@ export const TokenPickerCommandDialog: FC<TokenPickerCommandDialogProps> = ({
             <div className="flex flex-col gap-3 py-5 px-2">
               <Text variant="body-2-semibold">Network</Text>
               <div className="flex items-center gap-5 px-1">
-                <Tooltip content="This network is not supported yet.">
-                  <RollupIcon
-                    disabled
-                    rollup={1}
-                    size="lg"
-                    selected={chainId === rollupA.id}
-                    onClick={() => onChainSelect(rollupA.id)}
-                  />
-                </Tooltip>
-                <RollupIcon
-                  rollup={2}
+                {chains.map((chain) => (
+                  <Tooltip
+                    content={`${getChainById(chain.chainId).name}${chain.isSupported ? "" : " - This network is not supported yet."}`}
+                  >
+                    <ChainIcon
+                      disabled={!chain.isSupported}
+                      chainId={chain.chainId}
+                      size="lg"
+                      selected={chainId === chain.chainId}
+                      onClick={() => onChainSelect(chain.chainId)}
+                    />
+                  </Tooltip>
+                ))}
+                {/* <ChainIcon
+                  chainId={hoodi.id}
                   size="lg"
-                  selected={chainId === rollupB.id}
-                  onClick={() => onChainSelect(rollupB.id)}
-                />
+                  className="cursor-pointer"
+                  selected={chainId === hoodi.id}
+                  onClick={() => onChainSelect(hoodi.id)}
+                /> */}
               </div>
             </div>
             <CommandEmpty>No tokens found.</CommandEmpty>

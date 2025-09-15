@@ -2,6 +2,7 @@ import { type FC, type ComponentPropsWithoutRef, useState } from "react";
 import { cn } from "@/lib/utils/tw";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { TokenPickerCommandDialogProps } from "@/components/swap/token-picker/token-picker-command-dialog";
 import { TokenPickerCommandDialog } from "@/components/swap/token-picker/token-picker-command-dialog";
 import { AssetLogo } from "@/components/ui/asset-logo";
 import AssetName from "@/components/ui/asset-name";
@@ -9,6 +10,7 @@ import type { Address } from "abitype";
 
 export type TokenPickerProps = {
   chainId: number;
+  chains: TokenPickerCommandDialogProps["chains"];
   selectedToken: Address;
   onSelectToken: (token: Address) => void;
   onChainSelect: (chainId: number) => void;
@@ -22,6 +24,7 @@ type TokenPickerFC = FC<
 export const TokenPicker: TokenPickerFC = ({
   chainId,
   className,
+  chains,
   selectedToken,
   onSelectToken,
   onChainSelect,
@@ -31,6 +34,7 @@ export const TokenPicker: TokenPickerFC = ({
   return (
     <>
       <TokenPickerCommandDialog
+        chains={chains}
         open={isOpen}
         onOpenChange={setIsOpen}
         chainId={chainId}

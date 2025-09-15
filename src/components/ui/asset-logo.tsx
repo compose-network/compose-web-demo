@@ -1,9 +1,8 @@
-import { RollupIcon } from "@/components/ui/rollup-icon";
+import { ChainIcon } from "@/components/ui/chain-icon";
 import { useTheme } from "@/hooks/app/use-theme";
 import { useAsset } from "@/hooks/use-asset";
 import { onlyTokens } from "@/lib/utils/tokens.ts";
 import { cn } from "@/lib/utils/tw";
-import { rollupIdMap } from "@/wagmi/config";
 import type { Address } from "abitype";
 import type { ComponentPropsWithoutRef, FC } from "react";
 
@@ -36,9 +35,9 @@ export const AssetLogo: AssetLogoFC = ({
   return (
     <div className={cn("relative size-10", className)}>
       <img {...props} className={cn("rounded-md size-full")} src={logoSrc} />
-      <RollupIcon 
-        rollup={rollupIdMap[chainId as keyof typeof rollupIdMap]} 
-        className="absolute -bottom-1 -right-1"
+      <ChainIcon
+        chainId={chainId}
+        className="absolute -bottom-1 -right-1 pointer-events-none"
       />
     </div>
   );
