@@ -73,7 +73,10 @@ export const Swap: SwapFC = () => {
   const values = form.watch();
   const { useGetSwapPrice, useSwap } = useSwapContract();
 
-  const swap = useSwap();
+  const swap = useSwap({
+    contract: contracts[rollupB.id].swap,
+    chainId: rollupB.id,
+  });
 
   const prices = useGetSwapPrice(
     {
@@ -150,20 +153,24 @@ export const Swap: SwapFC = () => {
         <div className="flex gap-4 flex-col">
           <TokenInput
             chains={[
-              { chainId: rollupA.id, isSupported: false },
-              { chainId: rollupB.id, isSupported: true },
+              { chainId: rollupA.id, isNotSupported: true },
+              {
+                chainId: rollupB.id,
+                tokens: tokens[rollupB.id].map((token) => token.address),
+              },
             ]}
             onChainSelect={handleChainSelect}
             value={values.from.amount}
             tokenAddress={values.from.token}
             chainId={values.chainId}
             onSelectToken={(token) => form.setValue("from.token", token)}
-            onChange={(amount) =>
+            onChange={(amount) => {
               form.setValue("from.amount", amount, {
                 shouldValidate: true,
                 shouldDirty: true,
-              })
-            }
+                shouldTouch: true,
+              });
+            }}
           />
           {form.formState.errors.from?.amount && (
             <Text variant="body-3-medium" className="text-error-500">
@@ -202,10 +209,13 @@ export const Swap: SwapFC = () => {
             <Divider className="flex-1" />
           </div>
           <TokenInput
-              chains={[
-                { chainId: rollupA.id, isSupported: false },
-                { chainId: rollupB.id, isSupported: true },
-              ]}
+            chains={[
+              { chainId: rollupA.id, isNotSupported: true },
+              {
+                chainId: rollupB.id,
+                tokens: tokens[rollupB.id].map((token) => token.address),
+              },
+            ]}
             onChainSelect={handleChainSelect}
             value={isSameToken ? values.from.amount : prices.data?.[0] ?? 0n}
             tokenAddress={values.to.token}
@@ -245,7 +255,7 @@ export const Swap: SwapFC = () => {
                     ? "Swapping..."
                     : undefined
               }
-              disabled={!form.formState.isValid || !form.formState.isDirty}
+              disabled={!form.formState.isValid}
             >
               {!isRollupB ? "Switch to Rollup B And Swap" : "Swap"}
             </Button>

@@ -2,7 +2,7 @@ import type { FC, ComponentPropsWithoutRef } from "react";
 import { cn } from "@/lib/utils/tw";
 import type { ButtonProps } from "@/components/ui/button";
 import { Button } from "@/components/ui/button";
-import { useBlockNumber, useReadContract } from "wagmi";
+import { useBlockNumber, useReadContract, useSwitchChain } from "wagmi";
 import { TokenABI } from "@/lib/abi/token";
 import { useApprove } from "@/lib/contract-interactions/erc-20/write/use-approve";
 import React, { useMemo } from "react";
@@ -41,6 +41,7 @@ export const WithAllowance: WithAllowanceFC = ({
 }) => {
   const account = useAccount();
   const block = useBlockNumber({ watch: true, chainId });
+  const { switchChainAsync } = useSwitchChain();
 
   const allowance = useReadContract({
     abi: TokenABI,
@@ -56,7 +57,8 @@ export const WithAllowance: WithAllowanceFC = ({
   });
 
   const approver = useApprove();
-  const approve = () => {
+  const approve = async () => {
+    await switchChainAsync({ chainId });
     approver.write(
       {
         address: token.address,
@@ -79,7 +81,6 @@ export const WithAllowance: WithAllowanceFC = ({
       React.Children.map(props.children, (child) => {
         if (React.isValidElement(child)) {
           return React.cloneElement(child, {
-            // @ts-expect-error - disabled prop
             disabled: !canProceed,
             size,
           });
@@ -94,7 +95,6 @@ export const WithAllowance: WithAllowanceFC = ({
       React.Children.map(props.children, (child) => {
         if (React.isValidElement(child)) {
           return React.cloneElement(child, {
-            // @ts-expect-error - disabled prop
             isLoading: allowance.isLoading,
             size,
           });

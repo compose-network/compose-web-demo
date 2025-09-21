@@ -9,7 +9,7 @@ import { NotFound } from "./not-found";
 import type { RoutePaths, WritableRoutePaths } from "./router/route-types";
 import { Swap } from "@/components/swap/swap";
 import { MainPage } from "@/components/swap/main";
-import { Bridge } from "@/components/swap/bridge";
+import { Bridge } from "@/components/swap/brideg";
 
 const routes = [
   {

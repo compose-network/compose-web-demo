@@ -2,7 +2,7 @@ import { type FC, type ComponentPropsWithoutRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { rollupB, hoodi } from "@/wagmi/config";
+import { rollupB, hoodi, contracts } from "@/wagmi/config";
 import { isAddress, parseEther, zeroAddress } from "viem";
 import { TokenInput } from "@/components/swap/token-picker/token-input";
 import { Divider } from "@/components/ui/divider";
@@ -37,7 +37,7 @@ const schema = z.object({
   }),
   slippage: z.number(),
 });
-export const Bridge: SwapFC = () => {
+export const TransactionBridge: SwapFC = () => {
   const { chainId, isConnected } = useAccount();
   const isHoodi = chainId === hoodi.id;
   const switchChain = useSwitchChain();
@@ -67,7 +67,10 @@ export const Bridge: SwapFC = () => {
   });
 
   const { useBridgeETH } = useBridgeContract();
-  const bridgeETH = useBridgeETH();
+  const bridgeETH = useBridgeETH({
+    chainId: hoodi.id,
+    contract: contracts[hoodi.id].bridge,
+  });
 
   const submit = form.handleSubmit(async (values) => {
     await switchChain.switchChainAsync({ chainId: hoodi.id });
@@ -116,7 +119,7 @@ export const Bridge: SwapFC = () => {
       <form onSubmit={submit} className="flex flex-col gap-8">
         <div className="flex gap-4 flex-col">
           <TokenInput
-            chains={[{ chainId: hoodi.id, isSupported: true }]}
+            chains={[{ chainId: hoodi.id, tokens: [zeroAddress] }]}
             onChainSelect={handleChainSelect}
             value={values.from.amount}
             tokenAddress={values.from.token}
@@ -137,7 +140,7 @@ export const Bridge: SwapFC = () => {
 
           <TokenInput
             canPickToken={false}
-            chains={[{ chainId: rollupB.id, isSupported: true }]}
+            chains={[{ chainId: rollupB.id, tokens: [] }]}
             onChainSelect={handleChainSelect}
             value={values.from.amount}
             tokenAddress={values.from.token}
@@ -172,4 +175,4 @@ export const Bridge: SwapFC = () => {
   );
 };
 
-Bridge.displayName = "Swap";
+TransactionBridge.displayName = "TransactionBridge";

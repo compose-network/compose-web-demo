@@ -44,14 +44,16 @@ type WriteHookResult<T extends WriteParams<AbiFunction> | void> = {
 };
 
 type WriteHooksObject<T extends AbiFunction[]> = {
-  [K in T[number]["name"] as `use${Capitalize<K>}`]: () => WriteHookResult<
-    WriteParams<Extract<T[number], { name: K }>>
-  >;
+  [K in T[number]["name"] as `use${Capitalize<K>}`]: (args: {
+    chainId?: number;
+    contract: Address;
+  }) => WriteHookResult<WriteParams<Extract<T[number], { name: K }>>>;
 };
 type CustomQueryOptions = {
   chainId: number;
   enabled?: boolean;
   watch?: boolean;
+  contract?: Address;
 };
 
 type ReadHooksObject<T extends AbiFunction[]> = {
@@ -76,7 +78,7 @@ const capitalize = (str: string) => {
 };
 export function createContractHooks<T extends Abi>(
   abi: T,
-  contractAddressGetter: () => Address,
+  defaultContractAddressGetter: () => Address,
 ) {
   // Filter write functions from ABI
   const writeFunctions = abi.filter(
@@ -85,8 +87,6 @@ export function createContractHooks<T extends Abi>(
       item.stateMutability !== "view" &&
       item.stateMutability !== "pure",
   ) as AbiFunction[];
-
-  console.log("writeFunctions:", writeFunctions);
 
   const readFunctions = abi.filter(
     (item) =>
@@ -109,9 +109,12 @@ export function createContractHooks<T extends Abi>(
         options: CustomQueryOptions = {
           enabled: true,
           chainId: getChainId(config),
+          contract: defaultContractAddressGetter(),
         },
       ) => {
-        const contractAddress = contractAddressGetter();
+        const contractAddress =
+          options.contract || defaultContractAddressGetter();
+
         const blockNumber = useBlockNumber({ watch: options.watch });
         const args = paramsToArray({ params, abiFunction });
 
@@ -138,9 +141,11 @@ export function createContractHooks<T extends Abi>(
         options: CustomQueryOptions = {
           enabled: true,
           chainId: getChainId(config),
+          contract: defaultContractAddressGetter(),
         },
       ) => {
-        const contractAddress = contractAddressGetter();
+        const contractAddress =
+          options.contract || defaultContractAddressGetter();
         const blockNumber = useBlockNumber({ watch: options.watch });
 
         return useReadContract({
@@ -160,13 +165,13 @@ export function createContractHooks<T extends Abi>(
 
   writeFunctions.forEach((fn) => {
     const hookName = "use" + capitalize(fn.name);
-    const hookFn = () => {
-      const contractAddress = contractAddressGetter();
-
-      const waitForTx = useWaitForTransactionReceipt([
-        hookName,
-        contractAddress,
-      ]);
+    const hookFn = (
+      args: { chainId?: number; contract: Address } = {
+        chainId: getChainId(config),
+        contract: defaultContractAddressGetter(),
+      },
+    ) => {
+      const waitForTx = useWaitForTransactionReceipt([hookName, args.contract]);
       const functionName = fn.name;
 
       const abiFunction = useMemo(
@@ -187,7 +192,7 @@ export function createContractHooks<T extends Abi>(
             // @ts-expect-error - TODO: fix this
             {
               abi,
-              address: contractAddress,
+              address: args.contract,
               functionName,
               ...(params && { args: paramsToArray({ params, abiFunction }) }),
               ...(fn.stateMutability === "payable" &&
@@ -225,7 +230,7 @@ export function createContractHooks<T extends Abi>(
           // @ts-expect-error - TODO: fix this
           {
             abi,
-            address: contractAddress,
+            address: args.contract,
             functionName,
             ...(params && { args: paramsToArray({ params, abiFunction }) }),
             ...(fn.stateMutability === "payable" &&
@@ -265,9 +270,9 @@ export const swapContractHooks = createContractHooks(
   SwapABI,
   () => contracts[rollupB.id].swap,
 );
+export const useSwapContract = () => swapContractHooks;
 export const bridgeContractHooks = createContractHooks(
   l1StandardBridgeABI,
   () => contracts[hoodi.id].bridge,
 );
-export const useSwapContract = () => swapContractHooks;
 export const useBridgeContract = () => bridgeContractHooks;

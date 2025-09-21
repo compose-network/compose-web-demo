@@ -38,9 +38,20 @@ export const rollupA = defineChain({
     symbol: "ETH",
     decimals: 18,
   },
+  // rpcUrls: {
+  //   default: {
+  //     // http: ["https://rollup-rpc-1.stage.ops.ssvlabsinternal.com"],
+  //     http: ["http://57.129.73.156:31130"],
+  //   },
+  // },
   rpcUrls: {
+    default: { http: ["http://57.129.73.156:31130"] },
+    public: { http: ["http://57.129.73.156:31130"] },
+  },
+  blockExplorers: {
     default: {
-      http: ["https://rollup-rpc-1.stage.ops.ssvlabsinternal.com"],
+      name: "Rollup A",
+      url: "https://blockscout-rollup-1.stage.ops.ssvlabsinternal.com/",
     },
   },
   iconBackground: "none",
@@ -56,10 +67,21 @@ export const rollupB = defineChain({
     symbol: "ETH",
     decimals: 18,
   },
-  rpcUrls: {
+  // rpcUrls: {
+  //   default: {
+  //     // http: ["https://rollup-rpc-2.stage.ops.ssvlabsinternal.com"],
+  //     http: ["http://57.129.73.144:31133"],
+  //   },
+  // },
+  blockExplorers: {
     default: {
-      http: ["https://rollup-rpc-2.stage.ops.ssvlabsinternal.com"],
+      name: "Rollup B",
+      url: "https://blockscout-rollup-2.stage.ops.ssvlabsinternal.com/",
     },
+  },
+  rpcUrls: {
+    default: { http: ["http://57.129.73.144:31133"] },
+    public: { http: ["http://57.129.73.144:31133"] },
   },
   iconBackground: "none",
   iconUrl: "/images/networks/light.svg",
@@ -132,7 +154,7 @@ const connectors = connectorsForWallets(
 );
 
 export const config = createConfig({
-  chains: [rollupB, hoodi],
+  chains: [rollupA, rollupB, hoodi],
   connectors: connectors,
   transports: chains.reduce(
     (acc, chain) => {

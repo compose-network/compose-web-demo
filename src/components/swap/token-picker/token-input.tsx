@@ -65,46 +65,44 @@ export const TokenInput: TokenInputFC = ({
           readOnly={!canPickToken}
         />
       </div>
-      {!readOnly && (
-        <>
-          <Divider />
-          <div className="flex justify-between items-center">
-            <Text variant="body-3-medium" className="text-gray-500">
-              Wallet Balance:{" "}
-              {isConnected ? (
-                formatCurrency(asset.balance ?? 0n, asset.decimals)
-              ) : (
-                <ConnectButton.Custom>
-                  {({ openConnectModal, mounted }) => {
-                    if (!mounted) return null;
+      <Divider />
+      <div className="flex justify-between items-center">
+        <Text variant="body-3-medium" className="text-gray-500">
+          Wallet Balance:{" "}
+          {isConnected ? (
+            formatCurrency(asset.balance ?? 0n, asset.decimals)
+          ) : (
+            <ConnectButton.Custom>
+              {({ openConnectModal, mounted }) => {
+                if (!mounted) return null;
 
-                    return (
-                      <Button
-                        variant="link"
-                        as="span"
-                        className="cursor-pointer"
-                        onClick={openConnectModal}
-                      >
-                        Connect Wallet to see balance
-                      </Button>
-                    );
-                  }}
-                </ConnectButton.Custom>
-              )}
-            </Text>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-primary-500 font-semibold h-6"
-              onClick={() => {
-                props.onChange(asset.balance ?? 0n);
+                return (
+                  <Button
+                    variant="link"
+                    as="span"
+                    className="cursor-pointer"
+                    onClick={openConnectModal}
+                  >
+                    Connect Wallet to see balance
+                  </Button>
+                );
               }}
-            >
-              Max
-            </Button>
-          </div>
-        </>
-      )}
+            </ConnectButton.Custom>
+          )}
+        </Text>
+        {!readOnly && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-primary-500 font-semibold h-6"
+            onClick={() => {
+              props.onChange(asset.balance ?? 0n);
+            }}
+          >
+            Max
+          </Button>
+        )}
+      </div>
     </div>
   );
 };

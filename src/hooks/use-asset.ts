@@ -11,9 +11,13 @@ import { useBalance } from "wagmi";
 type UseAssetProps = {
   tokenAddress?: `0x${string}`;
   chainId: number;
+  watch?: boolean;
 };
 
-export const useAsset = ({ tokenAddress, chainId }: UseAssetProps) => {
+export const useAsset = ({
+  tokenAddress,
+  chainId,
+}: UseAssetProps) => {
   const isNative = tokenAddress && isNativeToken(tokenAddress);
   const { address } = useAccount();
   const queryClient = useQueryClient();

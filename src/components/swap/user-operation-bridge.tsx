@@ -1,0 +1,523 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { type FC, type ComponentPropsWithoutRef } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { rollupB, rollupA, chainsMap } from "@/wagmi/config";
+import {
+  createPublicClient,
+  encodeFunctionData,
+  http,
+  isAddress,
+  parseEther,
+  zeroAddress,
+} from "viem";
+import { TokenInput } from "@/components/swap/token-picker/token-input";
+import { Divider } from "@/components/ui/divider";
+import { Button } from "@/components/ui/button";
+import { Text } from "@/components/ui/text";
+import { useAccount } from "@/hooks/account/use-account";
+import { useSwitchChain } from "wagmi";
+import { toast } from "@/components/ui/use-toast";
+import { Form } from "@/components/ui/form";
+import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
+import { SwapRoute } from "@/components/swap/swap-route";
+import { useSmartAccount } from "@/lib/smart-account/kernel";
+import { BRIDGE_ADDRESSES, BRIDGE_TOKEN } from "@/wagmi/addresses";
+import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
+import { prepareAndSignUserOperations } from "@zerodev/multi-chain-ecdsa-validator";
+import { useLocalStorage } from "react-use";
+import { formatCurrency } from "@/lib/utils/number";
+import { Card } from "@/components/ui/card";
+import { AddressDisplay } from "@/components/ui/address";
+import type { ComposedSignedUserOpsTxReturnType } from "@/lib/smart-account/user-op";
+import {
+  decodeUserOperationLogs,
+  toRpcUserOpCanonical,
+} from "@/lib/smart-account/user-op";
+import { useMint } from "@/lib/contract-interactions/erc-20/write/use-mint";
+import { withTransactionModal } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
+import { WithAllowance } from "@/components/with-allowance/with-allowance";
+import { useBalanceOf } from "@/lib/contract-interactions/erc-20/read/use-balance-of";
+
+export type SwapProps = {
+  // TODO: Add props or remove this type
+};
+
+type SwapFC = FC<
+  Omit<ComponentPropsWithoutRef<"div">, keyof SwapProps> & SwapProps
+>;
+
+const schema = z.object({
+  from: z.object({
+    chainId: z.number().default(rollupB.id),
+    token: z.string().refine(isAddress),
+    amount: z.bigint().min(parseEther("0.000001"), {
+      message: "Amount must be greater than 0.000001",
+    }),
+  }),
+  to: z.object({
+    chainId: z.number().default(rollupB.id),
+    token: z.string().refine(isAddress),
+  }),
+  slippage: z.number(),
+});
+export const UserOperationBridge: SwapFC = () => {
+  const account = useAccount();
+
+  const [showDeposit] = useLocalStorage("showDeposit", false);
+
+  const form = useForm<z.infer<typeof schema>>({
+    defaultValues: {
+      from: {
+        token: BRIDGE_TOKEN,
+        amount: 0n,
+        chainId: rollupA.id,
+      },
+      to: {
+        token: BRIDGE_TOKEN,
+        chainId: rollupB.id,
+      },
+      slippage: 0.5,
+    },
+    resolver: zodResolver(schema),
+  });
+
+  const values = form.watch();
+
+  const { switchChainAsync } = useSwitchChain();
+  const kernel = useSmartAccount();
+
+  const submit = form.handleSubmit(async (values) => {
+    if (!account.address || !kernel.kernel.data)
+      return toast({
+        title: "Please connect your wallet",
+        variant: "destructive",
+      });
+
+    await switchChainAsync({ chainId: values.from.chainId });
+
+    const publicClientFrom = createPublicClient({
+      chain: chainsMap[values.from.chainId as keyof typeof chainsMap],
+      transport: http(
+        chainsMap[values.from.chainId as keyof typeof chainsMap].rpcUrls.default
+          .http[0],
+      ),
+    });
+
+    const publicClientTo = createPublicClient({
+      chain: chainsMap[values.to.chainId as keyof typeof chainsMap],
+      transport: http(
+        chainsMap[values.to.chainId as keyof typeof chainsMap].rpcUrls.default
+          .http[0],
+      ),
+    });
+
+    const [gasFrom, gasTo] = await Promise.all([
+      publicClientFrom.estimateFeesPerGas(),
+      publicClientTo.estimateFeesPerGas(),
+    ]);
+
+    const sessionId = BigInt(Math.floor(Math.random() * 1000000));
+
+    const dataA = encodeFunctionData({
+      abi: UserOperationBridgeAbi,
+      functionName: "send",
+      args: [
+        BigInt(values.from.chainId),
+        BigInt(values.to.chainId),
+        values.from.token,
+        kernel.kernel.data!.accounts.A.address,
+        account.address!,
+        values.from.amount,
+        sessionId,
+      ],
+    });
+
+    const dataB = encodeFunctionData({
+      abi: UserOperationBridgeAbi,
+      functionName: "receiveTokens",
+      args: [
+        BigInt(values.from.chainId),
+        BigInt(values.to.chainId),
+        kernel.kernel.data!.accounts.A.address,
+        account.address!,
+        sessionId,
+      ],
+    });
+
+    const fromBridgeContract =
+      BRIDGE_ADDRESSES[values.from.chainId as keyof typeof BRIDGE_ADDRESSES]
+        .BRIDGE;
+    const toBridgeContract =
+      BRIDGE_ADDRESSES[values.to.chainId as keyof typeof BRIDGE_ADDRESSES]
+        .BRIDGE;
+
+    const [signedA, signedB] = await prepareAndSignUserOperations(
+      [publicClientFrom, publicClientTo],
+      [
+        {
+          account: kernel.kernel.data.accounts.A,
+          chainId: values.from.chainId,
+          calls: [
+            {
+              to: fromBridgeContract,
+              value: 0n,
+              data: dataA,
+            },
+          ],
+          callGasLimit: 300000n,
+          verificationGasLimit: 1200000n,
+          preVerificationGas: 80000n,
+          maxFeePerGas: gasFrom!.maxFeePerGas!,
+          maxPriorityFeePerGas: gasFrom!.maxPriorityFeePerGas!,
+        },
+        {
+          account: kernel.kernel.data.accounts.B,
+          chainId: values.to.chainId,
+          calls: [{ to: toBridgeContract, value: 0n, data: dataB }],
+          callGasLimit: 300000n,
+          verificationGasLimit: 1200000n,
+          preVerificationGas: 80000n,
+          maxFeePerGas: gasTo!.maxFeePerGas!,
+          maxPriorityFeePerGas: gasTo!.maxPriorityFeePerGas!,
+        },
+      ],
+    );
+
+    const userOpA = toRpcUserOpCanonical(signedA);
+    const userOpB = toRpcUserOpCanonical(signedB);
+
+    const [buildA, buildB] = await Promise.all([
+      publicClientFrom.request({
+        method: "compose_buildSignedUserOpsTx",
+        params: [[userOpA], { chainId: values.from.chainId }],
+      } as any) as Promise<ComposedSignedUserOpsTxReturnType>,
+      publicClientTo.request({
+        method: "compose_buildSignedUserOpsTx",
+        params: [[userOpB], { chainId: values.to.chainId }],
+      } as any) as Promise<ComposedSignedUserOpsTxReturnType>,
+    ]);
+
+    console.log(
+      "buildA:",
+      buildA,
+      new URL(
+        `tx/${buildA.hash}`,
+        publicClientFrom.chain.blockExplorers?.default?.url,
+      ).toString(),
+    );
+    console.log(
+      "buildB:",
+      buildB,
+      new URL(
+        `tx/${buildB.hash}`,
+        publicClientTo.chain.blockExplorers?.default?.url,
+      ).toString(),
+    );
+
+    // const payload = encodeXtMessage({
+    //   senderId: "client",
+    //   entries: [
+    //     { chainId: rollupA.id, rawTx: buildA.raw as `0x${string}` },
+    //     { chainId: rollupB.id, rawTx: buildB.raw as `0x${string}` },
+    //   ],
+    // });
+
+    const [hashA, hashB] = await Promise.all([
+      publicClientFrom.request({
+        method: "eth_sendRawTransaction",
+        params: [buildA.raw],
+      }),
+      publicClientTo.request({
+        method: "eth_sendRawTransaction",
+        params: [buildB.raw],
+      }),
+    ]);
+
+    const [receiptA, receiptB] = await Promise.all([
+      publicClientFrom.waitForTransactionReceipt({
+        hash: hashA,
+      }),
+      publicClientTo.waitForTransactionReceipt({
+        hash: hashB,
+      }),
+    ]);
+    console.log("receiptA:", receiptA);
+    console.log("receiptB:", receiptB);
+
+    const decodedA = decodeUserOperationLogs(receiptA.logs);
+    const decodedB = decodeUserOperationLogs(receiptB.logs);
+
+    const revertedA = decodedA.find(
+      (log) => log.args && "success" in log.args && log.args.success === false,
+    );
+
+    const revertedB = decodedB.find(
+      (log) => log.args && "success" in log.args && log.args.success === false,
+    );
+
+    if (revertedA || revertedB) {
+      toast({
+        variant: "destructive",
+        title: "User operation failed",
+        description: "Check your wallet to confirm the transaction",
+      });
+    }
+
+    toast({
+      title: "Transaction sent",
+      description: "Check your wallet to confirm the transaction",
+    });
+  });
+
+  const mint = useMint();
+
+  const kernelMTKBalance = useBalanceOf(
+    {
+      address: BRIDGE_TOKEN,
+      chainId: rollupA.id,
+    },
+    {
+      account: kernel.kernel.data?.accounts.A.address || zeroAddress,
+    },
+  );
+
+  return (
+    <>
+      <Form {...form}>
+        <form onSubmit={submit} className="flex flex-col gap-8">
+          <div className="flex gap-4 flex-col">
+            <TokenInput
+              chains={[
+                {
+                  chainId: rollupA.id,
+                  tokens: [BRIDGE_TOKEN],
+                },
+                {
+                  chainId: rollupB.id,
+                  tokens: [BRIDGE_TOKEN],
+                },
+              ]}
+              onChainSelect={(chainId) =>
+                form.setValue("from.chainId", chainId)
+              }
+              value={values.from.amount}
+              tokenAddress={values.from.token}
+              chainId={values.from.chainId}
+              onSelectToken={(token) => form.setValue("from.token", token)}
+              onChange={(amount) =>
+                form.setValue("from.amount", amount, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                })
+              }
+            />
+            {form.formState.errors.from?.amount && (
+              <Text variant="body-3-medium" className="text-error-500">
+                {form.formState.errors.from.amount?.message}
+              </Text>
+            )}
+
+            <TokenInput
+              chains={[
+                {
+                  chainId: rollupA.id,
+                  tokens: [BRIDGE_TOKEN],
+                },
+                {
+                  chainId: rollupB.id,
+                  tokens: [BRIDGE_TOKEN],
+                },
+              ]}
+              onChainSelect={(chainId) => form.setValue("to.chainId", chainId)}
+              value={values.from.amount}
+              tokenAddress={values.to.token}
+              chainId={values.to.chainId}
+              onSelectToken={(token) => form.setValue("to.token", token)}
+              onChange={() => {}}
+              readOnly
+            />
+          </div>
+          <Divider />
+          <SwapRoute
+            action="swap"
+            fromToken={{
+              address: values.from.token,
+              chainId: values.from.chainId,
+            }}
+            toToken={{
+              address: values.to.token,
+              chainId: values.to.chainId,
+            }}
+          />
+          {account.isConnected ? (
+            <WithAllowance
+              size="xl"
+              spender={
+                BRIDGE_ADDRESSES[
+                  values.from.chainId as keyof typeof BRIDGE_ADDRESSES
+                ].BRIDGE
+              }
+              token={{
+                address: values.from.token,
+                symbol: "MTK",
+              }}
+              amount={values.from.amount}
+              chainId={values.from.chainId}
+            >
+              <Button
+                size="xl"
+                className="w-full"
+                type="submit"
+                disabled={!form.formState.isValid}
+                loadingText="Bridging..."
+              >
+                Bridge
+              </Button>
+            </WithAllowance>
+          ) : (
+            <ConnectWalletBtn size="xl" />
+          )}
+        </form>
+      </Form>
+      {showDeposit && (
+        <Card className="m-0 p-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Kernel A Account */}
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <Text variant="body-2-semibold" className="text-gray-900">
+                  Kernel A Account
+                </Text>
+                <Text variant="body-3-medium" className="text-gray-500">
+                  Rollup A
+                </Text>
+              </div>
+
+              {kernel.kernel.data?.accounts?.A?.address && (
+                <div className="mb-3">
+                  <AddressDisplay
+                    address={kernel.kernel.data.accounts.A.address}
+                    copyable
+                    className="text-sm"
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Text variant="body-3-medium" className="text-gray-600">
+                    Balance
+                  </Text>
+                  <Text variant="headline4" className="text-gray-900">
+                    {formatCurrency(kernel.balanceA.data ?? 0n)} ETH
+                  </Text>
+                  <Text variant="headline4" className="text-gray-900">
+                    {formatCurrency(kernelMTKBalance.data ?? 0n)} MTK
+                  </Text>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    kernel.depositToA.write({
+                      account: kernel.kernel.data!.accounts.A.address,
+                      value: parseEther("1"),
+                    });
+                  }}
+                  disabled={kernel.depositToA.isPending}
+                  isLoading={kernel.depositToA.isPending}
+                >
+                  Deposit 1 ETH
+                </Button>
+              </div>
+            </div>
+
+            {/* Kernel B Account */}
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <Text variant="body-2-semibold" className="text-gray-900">
+                  Kernel B Account
+                </Text>
+                <Text variant="body-3-medium" className="text-gray-500">
+                  Rollup B
+                </Text>
+              </div>
+
+              {kernel.kernel.data?.accounts?.B?.address && (
+                <div className="mb-3">
+                  <AddressDisplay
+                    address={kernel.kernel.data.accounts.B.address}
+                    copyable
+                    className="text-sm"
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Text variant="body-3-medium" className="text-gray-600">
+                    Balance
+                  </Text>
+                  <Text variant="headline4" className="text-gray-900">
+                    {formatCurrency(kernel.balanceB.data ?? 0n)} ETH
+                  </Text>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    kernel.depositToB.write({
+                      account: kernel.kernel.data?.accounts.B.address,
+                      value: parseEther("1"),
+                    }); 
+                  }}
+                  disabled={kernel.depositToB.isPending}
+                  isLoading={kernel.depositToB.isPending}
+                >
+                  Deposit 1 ETH
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex">
+            <Button
+              onClick={() => {
+                switchChainAsync({ chainId: rollupA.id });
+                mint.write(
+                  { address: BRIDGE_TOKEN, chainId: rollupA.id },
+                  {
+                    to: account.address!,
+                    amount: parseEther("10"),
+                  },
+                  withTransactionModal(),
+                );
+              }}
+            >
+              Mint 10 MTK Rollup A
+            </Button>
+            <Button
+              onClick={() => {
+                switchChainAsync({ chainId: rollupB.id });
+                mint.write(
+                  { address: BRIDGE_TOKEN, chainId: rollupA.id },
+                  {
+                    to: account.address!,
+                    amount: parseEther("10"),
+                  },
+                  withTransactionModal(),
+                );
+              }}
+            >
+              Mint 10 MTK Rollup B
+            </Button>
+          </div>
+        </Card>
+      )}
+    </>
+  );
+};
+
+UserOperationBridge.displayName = "Swap";

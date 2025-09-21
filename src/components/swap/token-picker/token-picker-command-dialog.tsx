@@ -8,8 +8,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import type { ERC20Token } from "@/wagmi/tokens";
-import { tokens } from "@/wagmi/tokens";
 import { TokenPickerItem } from "./token-picker-item";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { Address } from "viem";
@@ -20,7 +18,7 @@ import { getChainById } from "@/wagmi/config";
 
 export type TokenPickerCommandDialogProps = {
   chainId: number;
-  chains: { chainId: number; isSupported: boolean }[];
+  chains: { chainId: number; isNotSupported?: boolean; tokens?: Address[] }[];
   onTokenSelect: (token: Address) => void;
   onChainSelect: (chainId: number) => void;
 } & DialogProps;
@@ -33,14 +31,13 @@ export const TokenPickerCommandDialog: FC<TokenPickerCommandDialogProps> = ({
   onChainSelect,
   ...dialogProps
 }) => {
-  const availableTokens = tokens[chainId as keyof typeof tokens] || [];
+  const availableTokens =
+    chains.find((chain) => chain.chainId === chainId)?.tokens || [];
 
   const handleTokenSelect = (token: Address) => {
     onTokenSelect(token);
     onOpenChange?.(false);
   };
-
-  console.log("chains:", chains);
 
   return (
     <Dialog isOpen={dialogProps.open} onOpenChange={onOpenChange}>
@@ -56,10 +53,10 @@ export const TokenPickerCommandDialog: FC<TokenPickerCommandDialogProps> = ({
               <div className="flex items-center gap-5 px-1">
                 {chains.map((chain) => (
                   <Tooltip
-                    content={`${getChainById(chain.chainId).name}${chain.isSupported ? "" : " - This network is not supported yet."}`}
+                    content={`${getChainById(chain.chainId).name}${chain.isNotSupported ? " - This network is not supported yet." : ""}`}
                   >
                     <ChainIcon
-                      disabled={!chain.isSupported}
+                      disabled={chain.isNotSupported}
                       chainId={chain.chainId}
                       size="lg"
                       selected={chainId === chain.chainId}
@@ -67,31 +64,17 @@ export const TokenPickerCommandDialog: FC<TokenPickerCommandDialogProps> = ({
                     />
                   </Tooltip>
                 ))}
-                {/* <ChainIcon
-                  chainId={hoodi.id}
-                  size="lg"
-                  className="cursor-pointer"
-                  selected={chainId === hoodi.id}
-                  onClick={() => onChainSelect(hoodi.id)}
-                /> */}
               </div>
             </div>
             <CommandEmpty>No tokens found.</CommandEmpty>
             <CommandGroup heading="Available Tokens">
-              {/* <CommandItem
-                key={zeroAddress}
-                onSelect={() => handleTokenSelect(zeroAddress)}
-                className="cursor-pointer"
-              >
-                <TokenPickerItem token={zeroAddress} chainId={chainId} />
-              </CommandItem> */}
-              {availableTokens.map((token: ERC20Token) => (
+              {availableTokens.map((token) => (
                 <CommandItem
-                  key={token.address}
-                  onSelect={() => handleTokenSelect(token.address)}
+                  key={token}
+                  onSelect={() => handleTokenSelect(token)}
                   className="cursor-pointer"
                 >
-                  <TokenPickerItem token={token.address} chainId={chainId} />
+                  <TokenPickerItem token={token} chainId={chainId} />
                 </CommandItem>
               ))}
             </CommandGroup>
