@@ -24,7 +24,7 @@ export type BatchTransactionModalProps = {
   // TODO: Add props or remove this type
 };
 
-const statusIcons = {
+export const statusIcons = {
   ["idle"]: (
     <img className="size-9" src={"/images/rectangle.svg"} alt="Step Done" />
   ),

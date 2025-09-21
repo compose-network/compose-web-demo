@@ -21,6 +21,7 @@ const chainIconVariants = cva(
         default:
           "size-6 text-sm rounded-md tracking-[-4px] [&>span]:-ml-[0.27em]",
         lg: "size-10 text-2xl rounded-xl tracking-[-6px] [&>span]:-ml-[0.2em]",
+        sm: "size-5 text-sm rounded-md tracking-[-4px] [&>span]:-ml-[0.27em]",
       },
     },
     defaultVariants: {
