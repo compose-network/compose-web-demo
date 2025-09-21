@@ -38,16 +38,16 @@ export const rollupA = defineChain({
     symbol: "ETH",
     decimals: 18,
   },
-  // rpcUrls: {
-  //   default: {
-  //     // http: ["https://rollup-rpc-1.stage.ops.ssvlabsinternal.com"],
-  //     http: ["http://57.129.73.156:31130"],
-  //   },
-  // },
   rpcUrls: {
-    default: { http: ["http://57.129.73.156:31130"] },
-    public: { http: ["http://57.129.73.156:31130"] },
+    default: {
+      http: ["https://rollup-rpc-1.stage.ops.ssvlabsinternal.com"],
+      // http: ["http://57.129.73.156:31130"],
+    },
   },
+  // rpcUrls: {
+  //   default: { http: ["http://57.129.73.156:31130"] },
+  //   public: { http: ["http://57.129.73.156:31130"] },
+  // },
   blockExplorers: {
     default: {
       name: "Rollup A",
@@ -67,21 +67,21 @@ export const rollupB = defineChain({
     symbol: "ETH",
     decimals: 18,
   },
+  rpcUrls: {
+    default: {
+      http: ["https://rollup-rpc-2.stage.ops.ssvlabsinternal.com"],
+      // http: ["http://57.129.73.144:31133"],
+    },
+  },
   // rpcUrls: {
-  //   default: {
-  //     // http: ["https://rollup-rpc-2.stage.ops.ssvlabsinternal.com"],
-  //     http: ["http://57.129.73.144:31133"],
-  //   },
+  //   default: { http: ["http://57.129.73.144:31133"] },
+  //   public: { http: ["http://57.129.73.144:31133"] },
   // },
   blockExplorers: {
     default: {
       name: "Rollup B",
       url: "https://blockscout-rollup-2.stage.ops.ssvlabsinternal.com/",
     },
-  },
-  rpcUrls: {
-    default: { http: ["http://57.129.73.144:31133"] },
-    public: { http: ["http://57.129.73.144:31133"] },
   },
   iconBackground: "none",
   iconUrl: "/images/networks/light.svg",

@@ -243,8 +243,6 @@ export const UserOperationBridge: SwapFC = () => {
         hash: hashB,
       }),
     ]);
-    console.log("receiptA:", receiptA);
-    console.log("receiptB:", receiptB);
 
     const decodedA = decodeUserOperationLogs(receiptA.logs);
     const decodedB = decodeUserOperationLogs(receiptB.logs);
@@ -258,7 +256,7 @@ export const UserOperationBridge: SwapFC = () => {
     );
 
     if (revertedA || revertedB) {
-      toast({
+      return toast({
         variant: "destructive",
         title: "User operation failed",
         description: "Check your wallet to confirm the transaction",
@@ -471,7 +469,7 @@ export const UserOperationBridge: SwapFC = () => {
                     kernel.depositToB.write({
                       account: kernel.kernel.data?.accounts.B.address,
                       value: parseEther("1"),
-                    }); 
+                    });
                   }}
                   disabled={kernel.depositToB.isPending}
                   isLoading={kernel.depositToB.isPending}
