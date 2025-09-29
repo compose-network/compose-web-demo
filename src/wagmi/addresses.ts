@@ -24,4 +24,4 @@ export const BRIDGE_ADDRESSES = {
 } as const;
 
 export const BRIDGE_TOKEN =
-  "0x2a72a18AB5293C7D436153EdD3F8c5b8FEBBA4F3" as const;
+  "0xAC068945deF916854a9B552FEdB34ba334b36410" as const;

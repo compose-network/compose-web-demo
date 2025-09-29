@@ -17,7 +17,7 @@ import { Divider } from "@/components/ui/divider";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { useAccount } from "@/hooks/account/use-account";
-import { useSwitchChain } from "wagmi";
+import { usePublicClient, useSwitchChain } from "wagmi";
 import { toast } from "@/components/ui/use-toast";
 import { Form } from "@/components/ui/form";
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
@@ -39,6 +39,7 @@ import { useMint } from "@/lib/contract-interactions/erc-20/write/use-mint";
 import { withTransactionModal } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
 import { WithAllowance } from "@/components/with-allowance/with-allowance";
 import { useBalanceOf } from "@/lib/contract-interactions/erc-20/read/use-balance-of";
+import { encodeXtMessage } from "@/lib/smart-account/xt";
 
 export type SwapProps = {
   // TODO: Add props or remove this type
@@ -87,6 +88,17 @@ export const UserOperationBridge: SwapFC = () => {
 
   const { switchChainAsync } = useSwitchChain();
   const kernel = useSmartAccount();
+
+  const publicClient = usePublicClient({
+    chainId: rollupA.id,
+  });
+  window.getLogs = (hash: `0x${string}`) => {
+    return publicClient
+      ?.getTransactionReceipt({
+        hash,
+      })
+      .then((receipt) => decodeUserOperationLogs(receipt.logs));
+  };
 
   const submit = form.handleSubmit(async (values) => {
     if (!account.address || !kernel.kernel.data)
@@ -216,18 +228,20 @@ export const UserOperationBridge: SwapFC = () => {
       ).toString(),
     );
 
-    // const payload = encodeXtMessage({
-    //   senderId: "client",
-    //   entries: [
-    //     { chainId: rollupA.id, rawTx: buildA.raw as `0x${string}` },
-    //     { chainId: rollupB.id, rawTx: buildB.raw as `0x${string}` },
-    //   ],
-    // });
+    const payload = encodeXtMessage({
+      senderId: "client",
+      entries: [
+        { chainId: values.from.chainId, rawTx: buildA.raw as `0x${string}` },
+        { chainId: values.to.chainId, rawTx: buildB.raw as `0x${string}` },
+      ],
+    });
 
-    // const hash = await publicClientFrom.request({
-    //   method: "eth_sendRawTransaction",
-    //   params: [payload],
-    // });
+    const hash = await publicClientFrom.request({
+      method: "eth_sendXTransaction",
+      params: [payload],
+    });
+    // console.log("hash:", hash);
+
     // const receipt = await publicClientFrom.waitForTransactionReceipt({
     //   hash,
     // });
@@ -235,51 +249,51 @@ export const UserOperationBridge: SwapFC = () => {
     // const decoded = decodeUserOperationLogs(receipt.logs);
     // console.log("decoded:", decoded);
 
-    const [hashA, hashB] = await Promise.all([
-      publicClientFrom.request({
-        method: "eth_sendRawTransaction",
-        params: [buildA.raw],
-      }),
-      publicClientTo.request({
-        method: "eth_sendRawTransaction",
-        params: [buildB.raw],
-      }),
-    ]);
+    // const [hashA, hashB] = await Promise.all([
+    //   publicClientFrom.request({
+    //     method: "eth_sendRawTransaction",
+    //     params: [buildA.raw],
+    //   }),
+    //   publicClientTo.request({
+    //     method: "eth_sendRawTransaction",
+    //     params: [buildB.raw],
+    //   }),
+    // ]);
 
-    const [receiptA, receiptB] = await Promise.all([
-      publicClientFrom.waitForTransactionReceipt({
-        hash: hashA,
-      }),
-      publicClientTo.waitForTransactionReceipt({
-        hash: hashB,
-      }),
-    ]);
+    // const [receiptA, receiptB] = await Promise.all([
+    //   publicClientFrom.waitForTransactionReceipt({
+    //     hash: hashA,
+    //   }),
+    //   publicClientTo.waitForTransactionReceipt({
+    //     hash: hashB,
+    //   }),
+    // ]);
 
-    const decodedA = decodeUserOperationLogs(receiptA.logs);
-    console.log('decodedA:', decodedA)
-    const decodedB = decodeUserOperationLogs(receiptB.logs);
-    console.log('decodedB:', decodedB)
+    // const decodedA = decodeUserOperationLogs(receiptA.logs);
+    // console.log('decodedA:', decodedA)
+    // const decodedB = decodeUserOperationLogs(receiptB.logs);
+    // console.log('decodedB:', decodedB)
 
-    const revertedA = decodedA.find(
-      (log) => log.args && "success" in log.args && log.args.success === false,
-    );
+    // const revertedA = decodedA.find(
+    //   (log) => log.args && "success" in log.args && log.args.success === false,
+    // );
 
-    const revertedB = decodedB.find(
-      (log) => log.args && "success" in log.args && log.args.success === false,
-    );
+    // const revertedB = decodedB.find(
+    //   (log) => log.args && "success" in log.args && log.args.success === false,
+    // );
 
-    if (revertedA || revertedB) {
-      return toast({
-        variant: "destructive",
-        title: "User operation failed",
-        description: "Check your wallet to confirm the transaction",
-      });
-    }
+    // if (revertedA || revertedB) {
+    //   return toast({
+    //     variant: "destructive",
+    //     title: "User operation failed",
+    //     description: "Check your wallet to confirm the transaction",
+    //   });
+    // }
 
-    toast({
-      title: "Transaction sent",
-      description: "Check your wallet to confirm the transaction",
-    });
+    // toast({
+    //   title: "Transaction sent",
+    //   description: "Check your wallet to confirm the transaction",
+    // });
   });
 
   const mint = useMint();
