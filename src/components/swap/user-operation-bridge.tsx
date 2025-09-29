@@ -68,6 +68,14 @@ const schema = z.object({
   }),
   slippage: z.number(),
 });
+
+const FALLBACK_CALL_GAS_LIMIT = 900_000n;
+const MIN_VERIFICATION_GAS_LIMIT = 1_200_000n;
+const PRE_VERIFICATION_GAS = 90_000n;
+
+const withMargin = (value: bigint, marginPct = 25n) =>
+  value + (value * marginPct) / 100n;
+
 export const UserOperationBridge: SwapFC = () => {
   const account = useAccount();
 
@@ -174,6 +182,47 @@ export const UserOperationBridge: SwapFC = () => {
       BRIDGE_ADDRESSES[values.to.chainId as keyof typeof BRIDGE_ADDRESSES]
         .BRIDGE;
 
+    const [callGasLimitA, callGasLimitB] = await Promise.all([
+      (async () => {
+        try {
+          const estimate = await publicClientFrom.estimateGas({
+            account: kernel.kernel.data!.accounts.A.address as `0x${string}`,
+            to: fromBridgeContract,
+            data: dataA,
+          });
+          return withMargin(estimate);
+        } catch (error) {
+          console.warn("send() gas estimation failed, falling back", error);
+          return FALLBACK_CALL_GAS_LIMIT;
+        }
+      })(),
+      (async () => {
+        try {
+          const estimate = await publicClientTo.estimateGas({
+            account: kernel.kernel.data!.accounts.B.address as `0x${string}`,
+            to: toBridgeContract,
+            data: dataB,
+          });
+          return withMargin(estimate);
+        } catch (error) {
+          console.warn(
+            "receiveTokens() gas estimation failed, falling back",
+            error,
+          );
+          return FALLBACK_CALL_GAS_LIMIT;
+        }
+      })(),
+    ]);
+
+    console.log(
+      "callGasLimit estimates",
+      callGasLimitA.toString(),
+      callGasLimitB.toString(),
+    );
+
+    const verificationGasLimitA = callGasLimitA + PRE_VERIFICATION_GAS;
+    const verificationGasLimitB = callGasLimitB + PRE_VERIFICATION_GAS;
+
     const [signedA, signedB] = await prepareAndSignUserOperations(
       [publicClientFrom, publicClientTo],
       [
@@ -187,9 +236,12 @@ export const UserOperationBridge: SwapFC = () => {
               data: dataA,
             },
           ],
-          callGasLimit: 1300000n,
-          verificationGasLimit: 11200000n,
-          preVerificationGas: 180000n,
+          callGasLimit: callGasLimitA,
+          verificationGasLimit:
+            verificationGasLimitA > MIN_VERIFICATION_GAS_LIMIT
+              ? verificationGasLimitA
+              : MIN_VERIFICATION_GAS_LIMIT,
+          preVerificationGas: PRE_VERIFICATION_GAS,
           maxFeePerGas: gasFrom!.maxFeePerGas!,
           maxPriorityFeePerGas: gasFrom!.maxPriorityFeePerGas!,
         },
@@ -197,9 +249,12 @@ export const UserOperationBridge: SwapFC = () => {
           account: kernel.kernel.data.accounts.B,
           chainId: values.to.chainId,
           calls: [{ to: toBridgeContract, value: 0n, data: dataB }],
-          callGasLimit: 1300000n,
-          verificationGasLimit: 11200000n,
-          preVerificationGas: 180000n,
+          callGasLimit: callGasLimitB,
+          verificationGasLimit:
+            verificationGasLimitB > MIN_VERIFICATION_GAS_LIMIT
+              ? verificationGasLimitB
+              : MIN_VERIFICATION_GAS_LIMIT,
+          preVerificationGas: PRE_VERIFICATION_GAS,
           maxFeePerGas: gasTo!.maxFeePerGas!,
           maxPriorityFeePerGas: gasTo!.maxPriorityFeePerGas!,
         },
@@ -207,7 +262,11 @@ export const UserOperationBridge: SwapFC = () => {
     );
 
     const userOpA = toRpcUserOpCanonical(signedA);
+    console.log('userOpA:', userOpA)
     const userOpB = toRpcUserOpCanonical(signedB);
+    console.log('userOpB:', userOpB)
+    console.log("signedA:", signedA);
+    console.log("signedB:", signedB);
 
     const [buildA, buildB] = await Promise.all([
       publicClientFrom.request({
