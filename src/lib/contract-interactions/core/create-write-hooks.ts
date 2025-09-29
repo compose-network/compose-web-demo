@@ -128,7 +128,7 @@ export function createContractHooks<T extends Abi>(
           query: {
             ...options,
             enabled:
-              options?.enabled &&
+              (options?.enabled ?? true) &&
               !!contractAddress &&
               args?.every((arg) => !isUndefined(arg)),
           },

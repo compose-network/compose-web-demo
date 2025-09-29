@@ -50,7 +50,7 @@ const TransactionRequest = root.lookupType("rollup.v1.TransactionRequest");
 export function encodeXtMessage(params: {
   senderId?: string;
   entries: Array<{ chainId: number | bigint; rawTx: Hex }>;
-}): Hex {
+}) {
   const txs = params.entries.map(({ chainId, rawTx }) => {
     const chainBytes = toBigEndianBytes(chainId);
     const txBytes = hexToBytes(rawTx);
@@ -64,7 +64,9 @@ export function encodeXtMessage(params: {
     sender_id: params.senderId ?? "client",
     xt_request: xt,
   });
+  console.log("msg:", msg);
   const bytes = Message.encode(msg).finish();
+  // return btoa(String.fromCharCode(...bytes));
   return ("0x" + bytesToHex(bytes)) as Hex;
 }
 

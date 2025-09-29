@@ -83,29 +83,31 @@ export const decodeUserOperationLogs = (logs: Log[]) => {
       if (!decoded) return undefined;
 
       if (decoded.args && "revertReason" in decoded.args) {
+        console.log("decoded.args.revertReason:", decoded.args.revertReason);
         const reason = [
           EntryPointAbi,
           UserOperationBridgeAbi,
           TokenABI,
           erc20Abi,
-        ]
-          .map((abi) =>
-            tryCatch(
-              () =>
-                decodeErrorResult({
-                  abi,
-                  // @ts-expect-error revertReason is not always present
-                  data: decoded.args.revertReason,
-                }),
-              undefined,
-            ),
-          )
-          .find(Boolean);
+        ].map((abi) => {
+          try {
+            return decodeErrorResult({
+              abi,
+              // @ts-expect-error revertReason is not always present
+              data: decoded.args.revertReason,
+            });
+          } catch (error) {
+            console.log("error:", error.message);
+            return undefined;
+          }
+        });
+        console.log("reason:", reason);
+
         return {
           ...decoded,
           args: {
             ...decoded.args,
-            revertReason: reason,
+            revertReason: reason.find(Boolean),
           },
         };
       }

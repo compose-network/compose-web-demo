@@ -17,13 +17,17 @@ import { Divider } from "@/components/ui/divider";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { useAccount } from "@/hooks/account/use-account";
-import { usePublicClient, useSwitchChain } from "wagmi";
+import { usePublicClient, useReadContract, useSwitchChain } from "wagmi";
 import { toast } from "@/components/ui/use-toast";
 import { Form } from "@/components/ui/form";
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
 import { SwapRoute } from "@/components/swap/swap-route";
 import { useSmartAccount } from "@/lib/smart-account/kernel";
-import { BRIDGE_ADDRESSES, BRIDGE_TOKEN } from "@/wagmi/addresses";
+import {
+  BRIDGE_ADDRESSES,
+  BRIDGE_TOKEN,
+  ENTRYPOINT_V0_7,
+} from "@/wagmi/addresses";
 import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
 import { prepareAndSignUserOperations } from "@zerodev/multi-chain-ecdsa-validator";
 import { useLocalStorage } from "react-use";
@@ -40,6 +44,7 @@ import { withTransactionModal } from "@/lib/contract-interactions/utils/useWaitF
 import { WithAllowance } from "@/components/with-allowance/with-allowance";
 import { useBalanceOf } from "@/lib/contract-interactions/erc-20/read/use-balance-of";
 import { encodeXtMessage } from "@/lib/smart-account/xt";
+import { EntryPointAbi } from "@/lib/abi/entrypoint";
 
 export type SwapProps = {
   // TODO: Add props or remove this type
@@ -90,7 +95,7 @@ export const UserOperationBridge: SwapFC = () => {
   const kernel = useSmartAccount();
 
   const publicClient = usePublicClient({
-    chainId: rollupA.id,
+    chainId: rollupB.id,
   });
   window.getLogs = (hash: `0x${string}`) => {
     return publicClient
@@ -125,6 +130,8 @@ export const UserOperationBridge: SwapFC = () => {
       ),
     });
 
+    console.log("publicClientFrom.chain.id:", publicClientFrom.chain.id);
+    console.log("publicClientTo.chain.id:", publicClientTo.chain.id);
     const [gasFrom, gasTo] = await Promise.all([
       publicClientFrom.estimateFeesPerGas(),
       publicClientTo.estimateFeesPerGas(),
@@ -136,13 +143,14 @@ export const UserOperationBridge: SwapFC = () => {
       abi: UserOperationBridgeAbi,
       functionName: "send",
       args: [
-        BigInt(values.from.chainId),
         BigInt(values.to.chainId),
         values.from.token,
         kernel.kernel.data!.accounts.A.address,
-        account.address!,
+        kernel.kernel.data!.accounts.B.address,
         values.from.amount,
         sessionId,
+        BRIDGE_ADDRESSES[values.to.chainId as keyof typeof BRIDGE_ADDRESSES]
+          .BRIDGE,
       ],
     });
 
@@ -151,10 +159,11 @@ export const UserOperationBridge: SwapFC = () => {
       functionName: "receiveTokens",
       args: [
         BigInt(values.from.chainId),
-        BigInt(values.to.chainId),
         kernel.kernel.data!.accounts.A.address,
-        account.address!,
+        kernel.kernel.data!.accounts.B.address,
         sessionId,
+        BRIDGE_ADDRESSES[values.from.chainId as keyof typeof BRIDGE_ADDRESSES]
+          .BRIDGE,
       ],
     });
 
@@ -178,9 +187,9 @@ export const UserOperationBridge: SwapFC = () => {
               data: dataA,
             },
           ],
-          callGasLimit: 300000n,
-          verificationGasLimit: 1200000n,
-          preVerificationGas: 80000n,
+          callGasLimit: 1300000n,
+          verificationGasLimit: 11200000n,
+          preVerificationGas: 180000n,
           maxFeePerGas: gasFrom!.maxFeePerGas!,
           maxPriorityFeePerGas: gasFrom!.maxPriorityFeePerGas!,
         },
@@ -188,9 +197,9 @@ export const UserOperationBridge: SwapFC = () => {
           account: kernel.kernel.data.accounts.B,
           chainId: values.to.chainId,
           calls: [{ to: toBridgeContract, value: 0n, data: dataB }],
-          callGasLimit: 300000n,
-          verificationGasLimit: 1200000n,
-          preVerificationGas: 80000n,
+          callGasLimit: 1300000n,
+          verificationGasLimit: 11200000n,
+          preVerificationGas: 180000n,
           maxFeePerGas: gasTo!.maxFeePerGas!,
           maxPriorityFeePerGas: gasTo!.maxPriorityFeePerGas!,
         },
@@ -211,22 +220,20 @@ export const UserOperationBridge: SwapFC = () => {
       } as any) as Promise<ComposedSignedUserOpsTxReturnType>,
     ]);
 
-    console.log(
-      "buildA:",
-      buildA,
-      new URL(
-        `tx/${buildA.hash}`,
-        publicClientFrom.chain.blockExplorers?.default?.url,
-      ).toString(),
-    );
-    console.log(
-      "buildB:",
-      buildB,
-      new URL(
-        `tx/${buildB.hash}`,
-        publicClientTo.chain.blockExplorers?.default?.url,
-      ).toString(),
-    );
+    const explorerAURL = new URL(
+      `tx/${buildA.hash}`,
+      publicClientFrom.chain.blockExplorers?.default?.url,
+    ).toString();
+    const explorerBURL = new URL(
+      `tx/${buildB.hash}`,
+      publicClientTo.chain.blockExplorers?.default?.url,
+    ).toString();
+
+    window.open(explorerAURL, "_blank");
+    window.open(explorerBURL, "_blank");
+
+    console.log("buildA:", buildA, explorerAURL);
+    console.log("buildB:", buildB, explorerBURL);
 
     const payload = encodeXtMessage({
       senderId: "client",
@@ -235,6 +242,7 @@ export const UserOperationBridge: SwapFC = () => {
         { chainId: values.to.chainId, rawTx: buildB.raw as `0x${string}` },
       ],
     });
+    console.log("payload:", payload);
 
     const hash = await publicClientFrom.request({
       method: "eth_sendXTransaction",
@@ -298,13 +306,42 @@ export const UserOperationBridge: SwapFC = () => {
 
   const mint = useMint();
 
-  const kernelMTKBalance = useBalanceOf(
+  const balanceA = useReadContract({
+    abi: EntryPointAbi,
+    address: ENTRYPOINT_V0_7,
+    functionName: "balanceOf",
+    args: [kernel.kernel.data?.accounts.A.address as `0x${string}`],
+    chainId: rollupA.id,
+  });
+  console.log("balanceA:", balanceA);
+  console.log("balanceA.data:", balanceA.data);
+
+  const balanceB = useReadContract({
+    abi: EntryPointAbi,
+    address: ENTRYPOINT_V0_7,
+    functionName: "balanceOf",
+    args: [kernel.kernel.data?.accounts.B.address as `0x${string}`],
+    chainId: rollupB.id,
+  });
+  console.log("balanceB.data:", balanceB.data);
+
+  const kernelAMTKBalance = useBalanceOf(
     {
       address: BRIDGE_TOKEN,
       chainId: rollupA.id,
     },
     {
       account: kernel.kernel.data?.accounts.A.address || zeroAddress,
+    },
+  );
+
+  const kernelBMTKBalance = useBalanceOf(
+    {
+      address: BRIDGE_TOKEN,
+      chainId: rollupB.id,
+    },
+    {
+      account: kernel.kernel.data?.accounts.B.address || zeroAddress,
     },
   );
 
@@ -439,7 +476,7 @@ export const UserOperationBridge: SwapFC = () => {
                     {formatCurrency(kernel.balanceA.data ?? 0n)} ETH
                   </Text>
                   <Text variant="headline4" className="text-gray-900">
-                    {formatCurrency(kernelMTKBalance.data ?? 0n)} MTK
+                    {formatCurrency(kernelAMTKBalance.data ?? 0n)} MTK
                   </Text>
                 </div>
                 <Button
@@ -487,6 +524,9 @@ export const UserOperationBridge: SwapFC = () => {
                   </Text>
                   <Text variant="headline4" className="text-gray-900">
                     {formatCurrency(kernel.balanceB.data ?? 0n)} ETH
+                  </Text>
+                  <Text variant="headline4" className="text-gray-900">
+                    {formatCurrency(kernelBMTKBalance.data ?? 0n)} MTK
                   </Text>
                 </div>
                 <Button
