@@ -224,6 +224,17 @@ export const UserOperationBridge: SwapFC = () => {
     //   ],
     // });
 
+    // const hash = await publicClientFrom.request({
+    //   method: "eth_sendRawTransaction",
+    //   params: [payload],
+    // });
+    // const receipt = await publicClientFrom.waitForTransactionReceipt({
+    //   hash,
+    // });
+    // console.log("receipt:", receipt);
+    // const decoded = decodeUserOperationLogs(receipt.logs);
+    // console.log("decoded:", decoded);
+
     const [hashA, hashB] = await Promise.all([
       publicClientFrom.request({
         method: "eth_sendRawTransaction",
@@ -245,7 +256,9 @@ export const UserOperationBridge: SwapFC = () => {
     ]);
 
     const decodedA = decodeUserOperationLogs(receiptA.logs);
+    console.log('decodedA:', decodedA)
     const decodedB = decodeUserOperationLogs(receiptB.logs);
+    console.log('decodedB:', decodedB)
 
     const revertedA = decodedA.find(
       (log) => log.args && "success" in log.args && log.args.success === false,

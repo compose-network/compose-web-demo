@@ -136,6 +136,19 @@ export const contracts = {
     bridge: "0x9adb5dba4f55d7ea921f34e98dc492b3a2ced734",
   },
 } as const;
+
+export const bridgeContracts = {
+  [hoodi.id]: {
+    [rollupA.id]: {
+      bridge: "0xe6456c49bae7ff20bee0d01948d6d0f82dd821e9",
+    },
+    [rollupB.id]: {
+      bridge: "0x9adb5dba4f55d7ea921f34e98dc492b3a2ced734",
+    },
+  },
+} as const;
+
+export type RollupChainId = typeof rollupA.id | typeof rollupB.id;
 export const isChainSupported = (chainId: number) => {
   return chains.some((chain) => chain.id === chainId);
 };

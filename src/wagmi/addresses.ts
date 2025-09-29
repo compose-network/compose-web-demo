@@ -19,8 +19,8 @@ export const ROLLUP_ADDRESSES = {
 
 // Bridge contracts (from prototype)
 export const BRIDGE_ADDRESSES = {
-  77777: { BRIDGE: "0x920e081762018D9a10e3248fC46f23702d1AEF61" as const },
-  88888: { BRIDGE: "0x5b0a10821EE37e84714898d5418f650d8d802c71" as const },
+  77777: { BRIDGE: "0xE581D94d3d2Df0Ab8902Ff44745043565Fce0302" as const },
+  88888: { BRIDGE: "0xE581D94d3d2Df0Ab8902Ff44745043565Fce0302" as const },
 } as const;
 
 export const BRIDGE_TOKEN =

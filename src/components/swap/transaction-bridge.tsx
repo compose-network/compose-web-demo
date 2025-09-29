@@ -8,7 +8,14 @@ import {
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { rollupB, hoodi, contracts } from "@/wagmi/config";
+import type {
+  RollupChainId} from "@/wagmi/config";
+import {
+  rollupB,
+  hoodi,
+  rollupA,
+  bridgeContracts
+} from "@/wagmi/config";
 import type { Hex } from "viem";
 import { isAddress, parseEther, zeroAddress } from "viem";
 import { TokenInput } from "@/components/swap/token-picker/token-input";
@@ -45,6 +52,14 @@ const schema = z.object({
       message: "Amount must be greater than 0.000001",
     }),
   }),
+  to: z.object({
+    chainId: z
+      .number()
+      .default(rollupB.id)
+      .refine((id) => id === rollupA.id || id === rollupB.id, {
+        message: "Chain ID must be rollupA or rollupB",
+      }),
+  }),
   slippage: z.number(),
 });
 export const TransactionBridge: SwapFC = () => {
@@ -58,6 +73,9 @@ export const TransactionBridge: SwapFC = () => {
         token: zeroAddress,
         amount: 0n,
         chainId: hoodi.id,
+      },
+      to: {
+        chainId: rollupA.id,
       },
       slippage: 0.5,
     },
@@ -77,9 +95,10 @@ export const TransactionBridge: SwapFC = () => {
   });
 
   const { useBridgeETH } = useBridgeContract();
+
   const bridgeETH = useBridgeETH({
-    chainId: hoodi.id,
-    contract: contracts[hoodi.id].bridge,
+    chainId: values.from.chainId,
+    contract: bridgeContracts[hoodi.id][values.to.chainId].bridge,
   });
 
   const [transactionData, setTransactionData] = useState<{
@@ -94,18 +113,25 @@ export const TransactionBridge: SwapFC = () => {
 
   console.log("transactionData:", transactionData);
 
-  const publicClient = usePublicClient({
+  const rollupAClient = usePublicClient({
+    chainId: rollupA.id,
+  });
+  const rollupBClient = usePublicClient({
     chainId: rollupB.id,
   });
 
   useEffect(() => {
     if (!transactionData?.id) return;
-    const unwatch = publicClient?.watchContractEvent({
+    const endTransaction = transactionData.actions.at(-1);
+    console.log("endTransaction:", endTransaction);
+    const client =
+      endTransaction?.chainId === rollupB.id ? rollupBClient : rollupAClient;
+
+    const unwatch = client?.watchContractEvent({
       address: "0x4200000000000000000000000000000000000010",
       abi: l2StandardBridgeABI,
       eventName: "ETHBridgeFinalized",
       onLogs: (logs) => {
-        console.log("logs:", logs);
         if (logs.find((l) => l.args.extraData === transactionData.id)) {
           setTransactionData((prev) => {
             if (!prev) return null;
@@ -117,12 +143,12 @@ export const TransactionBridge: SwapFC = () => {
       },
     });
 
-    console.log("watching eth bridge finalized", publicClient?.chain.name);
+    console.log("watching eth bridge finalized", client?.chain.name);
     return () => {
       unwatch?.();
       console.log("unwatching eth bridge finalized");
     };
-  }, [transactionData?.id, publicClient]);
+  }, [transactionData, rollupAClient, rollupBClient]);
 
   const submit = form.handleSubmit(async (values) => {
     await switchChain.switchChainAsync({ chainId: hoodi.id });
@@ -146,12 +172,12 @@ export const TransactionBridge: SwapFC = () => {
             actions: [
               {
                 name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
-                chainId: hoodi.id,
+                chainId: values.from.chainId,
                 status: "pending",
               },
               {
                 name: `Get ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
-                chainId: rollupB.id,
+                chainId: values.to.chainId,
                 description: "(in ~2 minutes)",
                 status: "idle",
               },
@@ -228,22 +254,26 @@ export const TransactionBridge: SwapFC = () => {
             )}
 
             <TokenInput
-              canPickToken={false}
-              chains={[{ chainId: rollupB.id, tokens: [] }]}
-              onChainSelect={handleChainSelect}
+              chains={[
+                { chainId: rollupA.id, tokens: [zeroAddress] },
+                { chainId: rollupB.id, tokens: [zeroAddress] },
+              ]}
+              onChainSelect={(chainId) =>
+                form.setValue("to.chainId", chainId as RollupChainId)
+              }
               value={values.from.amount}
               tokenAddress={values.from.token}
-              chainId={rollupB.id}
+              chainId={values.to.chainId}
               readOnly
-              onSelectToken={(token) => form.setValue("from.token", token)}
-              onChange={(amount) => form.setValue("from.amount", amount)}
+              onSelectToken={() => 0}
+              onChange={() => 0}
             />
           </div>
           <Divider />
           <SwapRoute
             action="swap"
             fromToken={{ address: values.from.token, chainId: hoodi.id }}
-            toToken={{ address: values.from.token, chainId: rollupB.id }}
+            toToken={{ address: values.from.token, chainId: values.to.chainId }}
           />
           {isConnected ? (
             <Button
