@@ -17,7 +17,12 @@ import { Divider } from "@/components/ui/divider";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { useAccount } from "@/hooks/account/use-account";
-import { usePublicClient, useReadContract, useSwitchChain } from "wagmi";
+import {
+  usePublicClient,
+  useReadContract,
+  useSwitchChain,
+  useWalletClient,
+} from "wagmi";
 import { toast } from "@/components/ui/use-toast";
 import { Form } from "@/components/ui/form";
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
@@ -41,10 +46,10 @@ import {
 } from "@/lib/smart-account/user-op";
 import { useMint } from "@/lib/contract-interactions/erc-20/write/use-mint";
 import { withTransactionModal } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
-import { WithAllowance } from "@/components/with-allowance/with-allowance";
 import { useBalanceOf } from "@/lib/contract-interactions/erc-20/read/use-balance-of";
 import { encodeXtMessage } from "@/lib/smart-account/xt";
 import { EntryPointAbi } from "@/lib/abi/entrypoint";
+import { useTransfer } from "@/lib/contract-interactions/erc-20/write/use-transfer";
 
 export type SwapProps = {
   // TODO: Add props or remove this type
@@ -78,6 +83,8 @@ const withMargin = (value: bigint, marginPct = 25n) =>
 
 export const UserOperationBridge: SwapFC = () => {
   const account = useAccount();
+  const walletClient = useWalletClient();
+  const erc20transfer = useTransfer();
 
   const [showDeposit] = useLocalStorage("showDeposit", false);
 
@@ -105,6 +112,8 @@ export const UserOperationBridge: SwapFC = () => {
   const publicClient = usePublicClient({
     chainId: rollupB.id,
   });
+
+  // for testing purposes
   window.getLogs = (hash: `0x${string}`) => {
     return publicClient
       ?.getTransactionReceipt({
@@ -122,7 +131,7 @@ export const UserOperationBridge: SwapFC = () => {
 
     await switchChainAsync({ chainId: values.from.chainId });
 
-    const publicClientFrom = createPublicClient({
+    const sourcePublicClient = createPublicClient({
       chain: chainsMap[values.from.chainId as keyof typeof chainsMap],
       transport: http(
         chainsMap[values.from.chainId as keyof typeof chainsMap].rpcUrls.default
@@ -130,7 +139,7 @@ export const UserOperationBridge: SwapFC = () => {
       ),
     });
 
-    const publicClientTo = createPublicClient({
+    const destPublicClient = createPublicClient({
       chain: chainsMap[values.to.chainId as keyof typeof chainsMap],
       transport: http(
         chainsMap[values.to.chainId as keyof typeof chainsMap].rpcUrls.default
@@ -138,23 +147,24 @@ export const UserOperationBridge: SwapFC = () => {
       ),
     });
 
-    console.log("publicClientFrom.chain.id:", publicClientFrom.chain.id);
-    console.log("publicClientTo.chain.id:", publicClientTo.chain.id);
-    const [gasFrom, gasTo] = await Promise.all([
-      publicClientFrom.estimateFeesPerGas(),
-      publicClientTo.estimateFeesPerGas(),
+    const sourceKernel = kernel.getKernelByChainId(values.from.chainId);
+    const destKernel = kernel.getKernelByChainId(values.to.chainId);
+
+    const [sourceGas, destGas] = await Promise.all([
+      sourcePublicClient.estimateFeesPerGas(),
+      destPublicClient.estimateFeesPerGas(),
     ]);
 
     const sessionId = BigInt(Math.floor(Math.random() * 1000000));
 
-    const dataA = encodeFunctionData({
+    const sourceData = encodeFunctionData({
       abi: UserOperationBridgeAbi,
       functionName: "send",
       args: [
         BigInt(values.to.chainId),
         values.from.token,
-        kernel.kernel.data!.accounts.A.address,
-        kernel.kernel.data!.accounts.B.address,
+        sourceKernel!.address,
+        destKernel!.address,
         values.from.amount,
         sessionId,
         BRIDGE_ADDRESSES[values.to.chainId as keyof typeof BRIDGE_ADDRESSES]
@@ -162,33 +172,33 @@ export const UserOperationBridge: SwapFC = () => {
       ],
     });
 
-    const dataB = encodeFunctionData({
+    const destData = encodeFunctionData({
       abi: UserOperationBridgeAbi,
       functionName: "receiveTokens",
       args: [
         BigInt(values.from.chainId),
-        kernel.kernel.data!.accounts.A.address,
-        kernel.kernel.data!.accounts.B.address,
+        sourceKernel!.address,
+        destKernel!.address,
         sessionId,
         BRIDGE_ADDRESSES[values.from.chainId as keyof typeof BRIDGE_ADDRESSES]
           .BRIDGE,
       ],
     });
 
-    const fromBridgeContract =
+    const sourceBridgeContract =
       BRIDGE_ADDRESSES[values.from.chainId as keyof typeof BRIDGE_ADDRESSES]
         .BRIDGE;
-    const toBridgeContract =
+    const destBridgeContract =
       BRIDGE_ADDRESSES[values.to.chainId as keyof typeof BRIDGE_ADDRESSES]
         .BRIDGE;
 
     const [callGasLimitA, callGasLimitB] = await Promise.all([
       (async () => {
         try {
-          const estimate = await publicClientFrom.estimateGas({
+          const estimate = await sourcePublicClient.estimateGas({
             account: kernel.kernel.data!.accounts.A.address as `0x${string}`,
-            to: fromBridgeContract,
-            data: dataA,
+            to: sourceBridgeContract,
+            data: sourceData,
           });
           return withMargin(estimate);
         } catch (error) {
@@ -198,10 +208,10 @@ export const UserOperationBridge: SwapFC = () => {
       })(),
       (async () => {
         try {
-          const estimate = await publicClientTo.estimateGas({
+          const estimate = await destPublicClient.estimateGas({
             account: kernel.kernel.data!.accounts.B.address as `0x${string}`,
-            to: toBridgeContract,
-            data: dataB,
+            to: destBridgeContract,
+            data: destData,
           });
           return withMargin(estimate);
         } catch (error) {
@@ -214,26 +224,20 @@ export const UserOperationBridge: SwapFC = () => {
       })(),
     ]);
 
-    console.log(
-      "callGasLimit estimates",
-      callGasLimitA.toString(),
-      callGasLimitB.toString(),
-    );
-
     const verificationGasLimitA = callGasLimitA + PRE_VERIFICATION_GAS;
     const verificationGasLimitB = callGasLimitB + PRE_VERIFICATION_GAS;
 
     const [signedA, signedB] = await prepareAndSignUserOperations(
-      [publicClientFrom, publicClientTo],
+      [sourcePublicClient, destPublicClient],
       [
         {
-          account: kernel.kernel.data.accounts.A,
+          account: sourceKernel!,
           chainId: values.from.chainId,
           calls: [
             {
-              to: fromBridgeContract,
+              to: sourceBridgeContract,
               value: 0n,
-              data: dataA,
+              data: sourceData,
             },
           ],
           callGasLimit: callGasLimitA,
@@ -242,38 +246,38 @@ export const UserOperationBridge: SwapFC = () => {
               ? verificationGasLimitA
               : MIN_VERIFICATION_GAS_LIMIT,
           preVerificationGas: PRE_VERIFICATION_GAS,
-          maxFeePerGas: gasFrom!.maxFeePerGas!,
-          maxPriorityFeePerGas: gasFrom!.maxPriorityFeePerGas!,
+          maxFeePerGas: sourceGas!.maxFeePerGas!,
+          maxPriorityFeePerGas: sourceGas!.maxPriorityFeePerGas!,
         },
         {
-          account: kernel.kernel.data.accounts.B,
+          account: destKernel!,
           chainId: values.to.chainId,
-          calls: [{ to: toBridgeContract, value: 0n, data: dataB }],
+          calls: [{ to: destBridgeContract, value: 0n, data: destData }],
           callGasLimit: callGasLimitB,
           verificationGasLimit:
             verificationGasLimitB > MIN_VERIFICATION_GAS_LIMIT
               ? verificationGasLimitB
               : MIN_VERIFICATION_GAS_LIMIT,
           preVerificationGas: PRE_VERIFICATION_GAS,
-          maxFeePerGas: gasTo!.maxFeePerGas!,
-          maxPriorityFeePerGas: gasTo!.maxPriorityFeePerGas!,
+          maxFeePerGas: destGas!.maxFeePerGas!,
+          maxPriorityFeePerGas: destGas!.maxPriorityFeePerGas!,
         },
       ],
     );
 
     const userOpA = toRpcUserOpCanonical(signedA);
-    console.log('userOpA:', userOpA)
+    console.log("userOpA:", userOpA);
     const userOpB = toRpcUserOpCanonical(signedB);
-    console.log('userOpB:', userOpB)
+    console.log("userOpB:", userOpB);
     console.log("signedA:", signedA);
     console.log("signedB:", signedB);
 
     const [buildA, buildB] = await Promise.all([
-      publicClientFrom.request({
+      sourcePublicClient.request({
         method: "compose_buildSignedUserOpsTx",
         params: [[userOpA], { chainId: values.from.chainId }],
       } as any) as Promise<ComposedSignedUserOpsTxReturnType>,
-      publicClientTo.request({
+      destPublicClient.request({
         method: "compose_buildSignedUserOpsTx",
         params: [[userOpB], { chainId: values.to.chainId }],
       } as any) as Promise<ComposedSignedUserOpsTxReturnType>,
@@ -281,18 +285,20 @@ export const UserOperationBridge: SwapFC = () => {
 
     const explorerAURL = new URL(
       `tx/${buildA.hash}`,
-      publicClientFrom.chain.blockExplorers?.default?.url,
+      sourcePublicClient.chain.blockExplorers?.default?.url,
     ).toString();
+
     const explorerBURL = new URL(
       `tx/${buildB.hash}`,
-      publicClientTo.chain.blockExplorers?.default?.url,
+      destPublicClient.chain.blockExplorers?.default?.url,
     ).toString();
 
-    window.open(explorerAURL, "_blank");
-    window.open(explorerBURL, "_blank");
-
     console.log("buildA:", buildA, explorerAURL);
-    console.log("buildB:", buildB, explorerBURL);
+    console.warn(
+      "buildB INCORRECT TX HAS NEEDS TO BE FIXED by Karol probably:",
+      buildB,
+      explorerBURL,
+    );
 
     const payload = encodeXtMessage({
       senderId: "client",
@@ -303,18 +309,10 @@ export const UserOperationBridge: SwapFC = () => {
     });
     console.log("payload:", payload);
 
-    const hash = await publicClientFrom.request({
+    await sourcePublicClient.request({
       method: "eth_sendXTransaction",
       params: [payload],
     });
-    // console.log("hash:", hash);
-
-    // const receipt = await publicClientFrom.waitForTransactionReceipt({
-    //   hash,
-    // });
-    // console.log("receipt:", receipt);
-    // const decoded = decodeUserOperationLogs(receipt.logs);
-    // console.log("decoded:", decoded);
 
     // const [hashA, hashB] = await Promise.all([
     //   publicClientFrom.request({
@@ -473,31 +471,31 @@ export const UserOperationBridge: SwapFC = () => {
             }}
           />
           {account.isConnected ? (
-            <WithAllowance
+            // <WithAllowance
+            //   size="xl"
+            //   spender={
+            //     BRIDGE_ADDRESSES[
+            //       values.from.chainId as keyof typeof BRIDGE_ADDRESSES
+            //     ].BRIDGE
+            //   }
+            //   token={{
+            //     address: values.from.token,
+            //     symbol: "MTK",
+            //   }}
+            //   amount={values.from.amount}
+            //   chainId={values.from.chainId}
+            // >
+            <Button
               size="xl"
-              spender={
-                BRIDGE_ADDRESSES[
-                  values.from.chainId as keyof typeof BRIDGE_ADDRESSES
-                ].BRIDGE
-              }
-              token={{
-                address: values.from.token,
-                symbol: "MTK",
-              }}
-              amount={values.from.amount}
-              chainId={values.from.chainId}
+              className="w-full"
+              type="submit"
+              disabled={!form.formState.isValid}
+              loadingText="Bridging..."
             >
-              <Button
-                size="xl"
-                className="w-full"
-                type="submit"
-                disabled={!form.formState.isValid}
-                loadingText="Bridging..."
-              >
-                Bridge
-              </Button>
-            </WithAllowance>
+              Bridge
+            </Button>
           ) : (
+            // </WithAllowance>
             <ConnectWalletBtn size="xl" />
           )}
         </form>

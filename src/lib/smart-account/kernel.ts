@@ -111,7 +111,7 @@ export const useSmartAccount = () => {
     if (chainId === rollupB.id) return publicClientB;
   };
 
-  const getKernelAccount = (chainId: number) => {
+  const getKernelByChainId = (chainId: number) => {
     if (chainId === rollupA.id) return kernel.data?.accounts?.A;
     if (chainId === rollupB.id) return kernel.data?.accounts?.B;
   };
@@ -125,6 +125,6 @@ export const useSmartAccount = () => {
     depositToB,
     kernel,
     getPublicClient,
-    getKernelAccount,
+    getKernelByChainId,
   };
 };

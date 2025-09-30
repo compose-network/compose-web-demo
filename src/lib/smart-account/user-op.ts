@@ -1,4 +1,5 @@
 import { EntryPointAbi } from "@/lib/abi/entrypoint";
+import { MailboxABI } from "@/lib/abi/swap/mailbox";
 import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
 import { TokenABI } from "@/lib/abi/token";
 import { tryCatch } from "@/lib/utils/tryCatch";
@@ -59,61 +60,57 @@ export interface ComposedSignedUserOpsTxReturnType {
   userOpHashes: Hex[];
 }
 
+const abis = [
+  EntryPointAbi,
+  UserOperationBridgeAbi,
+  TokenABI,
+  erc20Abi,
+  MailboxABI,
+];
 export const decodeUserOperationLogs = (logs: Log[]) => {
-  return logs
-    .map((log) => {
-      const decoded = [
-        EntryPointAbi,
-        UserOperationBridgeAbi,
-        TokenABI,
-        erc20Abi,
-      ]
-        .map((abi) =>
-          tryCatch(
-            () =>
-              decodeEventLog({
-                abi,
-                data: log.data,
-                topics: log.topics,
-              }),
-            undefined,
-          ),
-        )
-        .find(Boolean);
-      if (!decoded) return undefined;
-
-      if (decoded.args && "revertReason" in decoded.args) {
-        console.log("decoded.args.revertReason:", decoded.args.revertReason);
-        const reason = [
-          EntryPointAbi,
-          UserOperationBridgeAbi,
-          TokenABI,
-          erc20Abi,
-        ].map((abi) => {
-          try {
-            return decodeErrorResult({
+  console.log("abis:", abis);
+  return logs.map((log) => {
+    const decoded = abis
+      .map((abi) =>
+        tryCatch(
+          () =>
+            decodeEventLog({
               abi,
-              // @ts-expect-error revertReason is not always present
-              data: decoded.args.revertReason,
-            });
-          } catch (error) {
-            console.log("error:", error.message);
-            return undefined;
-          }
-        });
-        console.log("reason:", reason);
+              data: log.data,
+              topics: log.topics,
+            }),
+          undefined,
+        ),
+      )
+      .find(Boolean);
+    if (!decoded) return undefined;
 
-        return {
-          ...decoded,
-          args: {
-            ...decoded.args,
-            revertReason: reason.find(Boolean),
-          },
-        };
-      }
-      return decoded;
-    })
-    .filter(Boolean) as DecodeEventLogReturnType<
+    if (decoded.args && "revertReason" in decoded.args) {
+      console.log("decoded.args.revertReason:", decoded.args.revertReason);
+      const reason = abis.map((abi) => {
+        try {
+          return decodeErrorResult({
+            abi,
+            // @ts-expect-error revertReason is not always present
+            data: decoded.args.revertReason,
+          });
+        } catch (error) {
+          console.log("error:", error instanceof Error ? error.message : error);
+          return undefined;
+        }
+      });
+      console.log("reason:", reason);
+
+      return {
+        ...decoded,
+        args: {
+          ...decoded.args,
+          revertReason: reason.find(Boolean),
+        },
+      };
+    }
+    return decoded;
+  }) as DecodeEventLogReturnType<
     | typeof EntryPointAbi
     | typeof UserOperationBridgeAbi
     | typeof TokenABI
