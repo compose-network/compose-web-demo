@@ -24,11 +24,7 @@ export default defineConfig(({ mode }) => {
       open: true,
     },
     plugins: [
-      react({
-        babel: {
-          plugins: [["module:@preact/signals-react-transform"]],
-        },
-      }),
+      react(),
       nodePolyfills({
         globals: {
           Buffer: mode === "production",
