@@ -1,15 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { type FC, type ComponentPropsWithoutRef } from "react";
+import { type ComponentPropsWithoutRef, type FC, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { rollupB, rollupA, chainsMap } from "@/wagmi/config";
+import { chainsMap, rollupA, rollupB } from "@/wagmi/config";
 import {
   createPublicClient,
   encodeFunctionData,
+  type Hex,
   http,
   isAddress,
   parseEther,
+  rpcSchema,
   zeroAddress,
 } from "viem";
 import { TokenInput } from "@/components/swap/token-picker/token-input";
@@ -17,12 +19,7 @@ import { Divider } from "@/components/ui/divider";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { useAccount } from "@/hooks/account/use-account";
-import {
-  usePublicClient,
-  useReadContract,
-  useSwitchChain,
-  useWalletClient,
-} from "wagmi";
+import { usePublicClient, useReadContract, useSwitchChain } from "wagmi";
 import { toast } from "@/components/ui/use-toast";
 import { Form } from "@/components/ui/form";
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
@@ -49,7 +46,8 @@ import { withTransactionModal } from "@/lib/contract-interactions/utils/useWaitF
 import { useBalanceOf } from "@/lib/contract-interactions/erc-20/read/use-balance-of";
 import { encodeXtMessage } from "@/lib/smart-account/xt";
 import { EntryPointAbi } from "@/lib/abi/entrypoint";
-import { useTransfer } from "@/lib/contract-interactions/erc-20/write/use-transfer";
+import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal.tsx";
+import type { statusIcons } from "@/components/modals/batch-transaction-modal.tsx";
 
 export type SwapProps = {
   // TODO: Add props or remove this type
@@ -58,6 +56,22 @@ export type SwapProps = {
 type SwapFC = FC<
   Omit<ComponentPropsWithoutRef<"div">, keyof SwapProps> & SwapProps
 >;
+
+type ComposeRpcSchema = [
+  {
+    Method: "eth_sendXTransaction";
+    Parameters: [string];
+    ReturnType: null;
+  },
+  {
+    Method: "compose_buildSignedUserOpsTx";
+    Parameters: [
+      ReturnType<typeof toRpcUserOpCanonical>[],
+      { chainId: number },
+    ];
+    ReturnType: ComposedSignedUserOpsTxReturnType;
+  },
+];
 
 const schema = z.object({
   from: z.object({
@@ -83,10 +97,20 @@ const withMargin = (value: bigint, marginPct = 25n) =>
 
 export const UserOperationBridge: SwapFC = () => {
   const account = useAccount();
-  const walletClient = useWalletClient();
-  const erc20transfer = useTransfer();
+  // const walletClient = useWalletClient();
+  // const erc20transfer = useTransfer();
 
-  const [showDeposit] = useLocalStorage("showDeposit", false);
+  const [transactionData, setTransactionData] = useState<{
+    id: Hex;
+    actions: {
+      name: string;
+      description?: string;
+      chainId: number;
+      status: keyof typeof statusIcons;
+    }[];
+  } | null>(null);
+
+  const [showDeposit] = useLocalStorage("showDeposit", true);
 
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
@@ -113,14 +137,16 @@ export const UserOperationBridge: SwapFC = () => {
     chainId: rollupB.id,
   });
 
-  // for testing purposes
-  window.getLogs = (hash: `0x${string}`) => {
-    return publicClient
-      ?.getTransactionReceipt({
-        hash,
-      })
-      .then((receipt) => decodeUserOperationLogs(receipt.logs));
-  };
+  ((w) => {
+    // for testing purposes
+    w.getLogs = (hash: `0x${string}`) => {
+      return publicClient
+        ?.getTransactionReceipt({
+          hash,
+        })
+        .then((receipt) => decodeUserOperationLogs(receipt.logs));
+    };
+  })(window as any);
 
   const submit = form.handleSubmit(async (values) => {
     if (!account.address || !kernel.kernel.data)
@@ -137,6 +163,7 @@ export const UserOperationBridge: SwapFC = () => {
         chainsMap[values.from.chainId as keyof typeof chainsMap].rpcUrls.default
           .http[0],
       ),
+      rpcSchema: rpcSchema<ComposeRpcSchema>(),
     });
 
     const destPublicClient = createPublicClient({
@@ -145,6 +172,7 @@ export const UserOperationBridge: SwapFC = () => {
         chainsMap[values.to.chainId as keyof typeof chainsMap].rpcUrls.default
           .http[0],
       ),
+      rpcSchema: rpcSchema<ComposeRpcSchema>(),
     });
 
     const sourceKernel = kernel.getKernelByChainId(values.from.chainId);
@@ -276,29 +304,28 @@ export const UserOperationBridge: SwapFC = () => {
       sourcePublicClient.request({
         method: "compose_buildSignedUserOpsTx",
         params: [[userOpA], { chainId: values.from.chainId }],
-      } as any) as Promise<ComposedSignedUserOpsTxReturnType>,
+      }),
       destPublicClient.request({
         method: "compose_buildSignedUserOpsTx",
         params: [[userOpB], { chainId: values.to.chainId }],
-      } as any) as Promise<ComposedSignedUserOpsTxReturnType>,
+      }),
     ]);
 
+    const hashA = buildA.hash;
+    const hashB = buildB.hash;
+
     const explorerAURL = new URL(
-      `tx/${buildA.hash}`,
+      `tx/${hashA}`,
       sourcePublicClient.chain.blockExplorers?.default?.url,
     ).toString();
 
     const explorerBURL = new URL(
-      `tx/${buildB.hash}`,
+      `tx/${hashB}`,
       destPublicClient.chain.blockExplorers?.default?.url,
     ).toString();
 
     console.log("buildA:", buildA, explorerAURL);
-    console.warn(
-      "buildB INCORRECT TX HAS NEEDS TO BE FIXED by Karol probably:",
-      buildB,
-      explorerBURL,
-    );
+    console.log("buildB ", buildB, explorerBURL);
 
     const payload = encodeXtMessage({
       senderId: "client",
@@ -309,10 +336,12 @@ export const UserOperationBridge: SwapFC = () => {
     });
     console.log("payload:", payload);
 
-    await sourcePublicClient.request({
+    const res = await sourcePublicClient.request({
       method: "eth_sendXTransaction",
       params: [payload],
     });
+
+    console.log("RAW eth_sendXTransaction res for Rollup A", res);
 
     // const [hashA, hashB] = await Promise.all([
     //   publicClientFrom.request({
@@ -325,40 +354,40 @@ export const UserOperationBridge: SwapFC = () => {
     //   }),
     // ]);
 
-    // const [receiptA, receiptB] = await Promise.all([
-    //   publicClientFrom.waitForTransactionReceipt({
-    //     hash: hashA,
-    //   }),
-    //   publicClientTo.waitForTransactionReceipt({
-    //     hash: hashB,
-    //   }),
-    // ]);
+    const [receiptA, receiptB] = await Promise.all([
+      sourcePublicClient.waitForTransactionReceipt({
+        hash: hashA,
+      }),
+      destPublicClient.waitForTransactionReceipt({
+        hash: hashB,
+      }),
+    ]);
 
-    // const decodedA = decodeUserOperationLogs(receiptA.logs);
-    // console.log('decodedA:', decodedA)
-    // const decodedB = decodeUserOperationLogs(receiptB.logs);
-    // console.log('decodedB:', decodedB)
+    const decodedA = decodeUserOperationLogs(receiptA.logs);
+    console.log("decoded logs for Rollup A:", decodedA);
+    const decodedB = decodeUserOperationLogs(receiptB.logs);
+    console.log("decoded logs for Rollup B:", decodedB);
 
-    // const revertedA = decodedA.find(
-    //   (log) => log.args && "success" in log.args && log.args.success === false,
-    // );
+    const revertedA = decodedA.find(
+      (log) => log.args && "success" in log.args && !log.args.success,
+    );
 
-    // const revertedB = decodedB.find(
-    //   (log) => log.args && "success" in log.args && log.args.success === false,
-    // );
+    const revertedB = decodedB.find(
+      (log) => log.args && "success" in log.args && !log.args.success,
+    );
 
-    // if (revertedA || revertedB) {
-    //   return toast({
-    //     variant: "destructive",
-    //     title: "User operation failed",
-    //     description: "Check your wallet to confirm the transaction",
-    //   });
-    // }
+    if (revertedA || revertedB) {
+      return toast({
+        variant: "destructive",
+        title: "User operation failed",
+        description: "Check your wallet to confirm the transaction",
+      });
+    }
 
-    // toast({
-    //   title: "Transaction sent",
-    //   description: "Check your wallet to confirm the transaction",
-    // });
+    toast({
+      title: "Transaction sent",
+      description: "Check your wallet to confirm the transaction",
+    });
   });
 
   const mint = useMint();
@@ -404,6 +433,14 @@ export const UserOperationBridge: SwapFC = () => {
 
   return (
     <>
+      <TransactionModal
+        data={transactionData}
+        isOpen={!!transactionData}
+        onOpenChange={(open) => {
+          if (open) return;
+          return setTransactionData(null);
+        }}
+      />
       <Form {...form}>
         <form onSubmit={submit} className="flex flex-col gap-8">
           <div className="flex gap-4 flex-col">
@@ -539,8 +576,9 @@ export const UserOperationBridge: SwapFC = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    kernel.depositToA.write({
+                  onClick={async () => {
+                    await switchChainAsync({ chainId: rollupA.id });
+                    await kernel.depositToA.write({
                       account: kernel.kernel.data!.accounts.A.address,
                       value: parseEther("1"),
                     });
@@ -589,9 +627,10 @@ export const UserOperationBridge: SwapFC = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    kernel.depositToB.write({
-                      account: kernel.kernel.data?.accounts.B.address,
+                  onClick={async () => {
+                    await switchChainAsync({ chainId: rollupB.id });
+                    await kernel.depositToB.write({
+                      account: kernel.kernel.data!.accounts.B.address,
                       value: parseEther("1"),
                     });
                   }}
@@ -606,9 +645,9 @@ export const UserOperationBridge: SwapFC = () => {
 
           <div className="flex">
             <Button
-              onClick={() => {
-                switchChainAsync({ chainId: rollupA.id });
-                mint.write(
+              onClick={async () => {
+                await switchChainAsync({ chainId: rollupA.id });
+                await mint.write(
                   { address: BRIDGE_TOKEN, chainId: rollupA.id },
                   {
                     to: account.address!,
@@ -621,9 +660,9 @@ export const UserOperationBridge: SwapFC = () => {
               Mint 10 MTK Rollup A
             </Button>
             <Button
-              onClick={() => {
-                switchChainAsync({ chainId: rollupB.id });
-                mint.write(
+              onClick={async () => {
+                await switchChainAsync({ chainId: rollupB.id });
+                await mint.write(
                   { address: BRIDGE_TOKEN, chainId: rollupA.id },
                   {
                     to: account.address!,
