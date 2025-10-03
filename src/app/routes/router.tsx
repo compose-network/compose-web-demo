@@ -10,6 +10,7 @@ import type { RoutePaths, WritableRoutePaths } from "./router/route-types";
 import { Swap } from "@/components/swap/swap";
 import { MainPage } from "@/components/swap/main";
 import { Bridge } from "@/components/swap/bridge";
+import { Navigate } from "react-router";
 
 const routes = [
   {
@@ -22,13 +23,14 @@ const routes = [
       </DashboardLayout>
     ),
     children: [
-      {
-        path: "",
-        element: <Swap />,
-      },
+      { index: true, element: <Navigate to="bridge" replace /> },
       {
         path: "bridge",
         element: <Bridge />,
+      },
+      {
+        path: "swap",
+        element: <Swap />,
       },
     ],
   },
