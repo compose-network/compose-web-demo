@@ -28,13 +28,11 @@ jobs:
 
       - name: Install packages
         run: pnpm install
-      - name: Add 4G swap
-        run: |
-          sudo fallocate -l 4G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
-          swapon --show
+
+      - name: Setup swap
+        uses: pierotofy/setup-swap-space@v1
+        with:
+          swap-size-gb: 4
 
       - name: Run stage webapp build
         env:
