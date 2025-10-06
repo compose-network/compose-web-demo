@@ -29,11 +29,6 @@ jobs:
       - name: Install packages
         run: pnpm install
 
-      - name: Load .env file
-        uses: xom9ikk/dotenv@ac290ca23a42155a0cba1031d23afa46240116a9 # v2.3.0
-        with:
-          path: ./
-
       - name: Run stage webapp build
         env:
           TEST: test
