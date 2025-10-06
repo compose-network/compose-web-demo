@@ -33,7 +33,7 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=2048
         run:
-          pnpm build
+          pnpm -r --workspace-concurrency=1 build
 
       - name: Configure AWS credentials
         if: github.ref == 'refs/heads/stage'
