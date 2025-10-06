@@ -42,7 +42,6 @@
     "@chainsafe/ssz": "^0.18.0",
     "@deepsignal/core": "^4.0.0",
     "@deepsignal/react": "^4.0.0",
-    "@esbuild/darwin-arm64": "0.21.5",
     "@fontsource/geist-mono": "^5.2.6",
     "@fontsource/manrope": "^5.0.20",
     "@hookform/resolvers": "^3.9.0",
@@ -155,8 +154,8 @@
     "tailwindcss": "^3.4.4",
     "tsc-files": "^1.1.4",
     "typescript": "^5.2.2",
-    "vite": "^5.3.1",
-    "vite-plugin-node-polyfills": "^0.22.0",
+    "vite": "7.1.9",
+    "vite-plugin-node-polyfills": "^0.24.0",
     "vite-plugin-svgr": "^4.2.0"
   }
 }
