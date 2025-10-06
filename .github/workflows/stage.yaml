@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest-4core
+    runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
@@ -31,9 +31,9 @@ jobs:
 
       - name: Run stage webapp build
         env:
-          TEST: test
+          NODE_OPTIONS: --max-old-space-size=2048
         run:
-          pnpm build
+          pnpm build -r --workspace-concurrency=1
 
       - name: Configure AWS credentials
         if: github.ref == 'refs/heads/stage'
