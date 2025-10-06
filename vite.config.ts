@@ -12,7 +12,8 @@ export default defineConfig(({ mode }) => {
     build: {
       target: "es2022",
       outDir: "build",
-      sourcemap: true,
+      sourcemap: mode !== "production",
+      cssCodeSplit: true,
       rollupOptions: {
         output: {
           sourcemapExcludeSources: true, // Ignore sources in node_modules
@@ -41,12 +42,12 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "src"),
       },
     },
-    optimizeDeps: {
-      esbuildOptions: {
-        define: {
-          "process.env.NODE_OPTIONS": '"--max-old-space-size=4096"',
-        },
-      },
-    },
+    //   optimizeDeps: {
+    //     esbuildOptions: {
+    //       define: {
+    //         "process.env.NODE_OPTIONS": '"--max-old-space-size=4096"',
+    //       },
+    //     },
+    //   },
   };
 });
