@@ -16,11 +16,7 @@ export const MainPage = ({ children }: { children: React.ReactNode }) => {
         defaultValue="swap"
         value={isSwap ? "swap" : isBridge ? "bridge" : "swap"}
         onValueChange={(value) => {
-          if (value === "swap") {
-            navigate("/");
-          } else if (value === "bridge") {
-            navigate("/bridge");
-          }
+          navigate(`/${value}`);
         }}
       >
         <TabsList className="w-full bg-gray-200">
