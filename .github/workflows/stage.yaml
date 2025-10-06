@@ -18,11 +18,11 @@ jobs:
       - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: '**/node_modules'
-          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/pnpm-lock.lock') }}
 
       - name: Install packages
-        if: steps.yarn-cache.outputs.cache-hit != 'true'
-        run: yarn install
+        if: steps.pnpm-cache.outputs.cache-hit != 'true'
+        run: pnpm install
 
       - name: Load .env file
         uses: xom9ikk/dotenv@ac290ca23a42155a0cba1031d23afa46240116a9 # v2.3.0
@@ -33,7 +33,7 @@ jobs:
         env:
           TEST: test
         run:
-          yarn build
+          pnpm build
 
       - name: Configure AWS credentials
         if: github.ref == 'refs/heads/stage'
