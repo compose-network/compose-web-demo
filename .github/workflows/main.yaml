@@ -1,0 +1,50 @@
+name: Build & deploy
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install packages
+        run: pnpm install
+
+      - name: Setup swap
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 4
+
+      - name: Run stage webapp build
+        env:
+          NODE_OPTIONS: --max-old-space-size=2048
+        run:
+          pnpm -r --workspace-concurrency=1 build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@50ac8dd1e1b10d09dac7b8727528b91bed831ac0 # v3
+        with:
+          role-to-assume: ${{ secrets.COMPOSE_WEB_DEMO_PRODUCTION_AWS_IAM_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Upload files to S3
+        run: |
+          aws s3 cp ./build s3://${{ secrets.COMPOSE_WEB_DEMO_PRODUCTION_AWS_S3_BUCKET }} --recursive
