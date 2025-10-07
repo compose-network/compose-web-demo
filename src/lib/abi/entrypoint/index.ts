@@ -1,5 +1,5 @@
 import { createContractHooks } from "@/lib/contract-interactions/core/create-write-hooks";
-import { ENTRYPOINT_V0_7 } from "@/wagmi/addresses";
+import { ENTRYPOINT_V0_8 } from "@/wagmi/addresses";
 
 export const EntryPointAbi = [
   {
@@ -661,6 +661,6 @@ export const EntryPointAbi = [
 
 export const entrypointContractHooks = createContractHooks(
   EntryPointAbi,
-  () => ENTRYPOINT_V0_7,
+  () => ENTRYPOINT_V0_8,
 );
 export const useEntrypointContract = () => entrypointContractHooks;

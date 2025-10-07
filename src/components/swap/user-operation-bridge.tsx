@@ -7,6 +7,7 @@ import { chainsMap, rollupA, rollupB } from "@/wagmi/config";
 import {
   createPublicClient,
   encodeFunctionData,
+  erc20Abi,
   type Hex,
   http,
   isAddress,
@@ -19,7 +20,7 @@ import { Divider } from "@/components/ui/divider";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { useAccount } from "@/hooks/account/use-account";
-import { usePublicClient, useReadContract, useSwitchChain } from "wagmi";
+import { useReadContract, useSwitchChain } from "wagmi";
 import { toast } from "@/components/ui/use-toast";
 import { Form } from "@/components/ui/form";
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
@@ -28,7 +29,7 @@ import { useSmartAccount } from "@/lib/smart-account/kernel";
 import {
   BRIDGE_ADDRESSES,
   BRIDGE_TOKEN,
-  ENTRYPOINT_V0_7,
+  ENTRYPOINT_V0_8,
 } from "@/wagmi/addresses";
 import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
 import { prepareAndSignUserOperations } from "@zerodev/multi-chain-ecdsa-validator";
@@ -48,6 +49,9 @@ import { encodeXtMessage } from "@/lib/smart-account/xt";
 import { EntryPointAbi } from "@/lib/abi/entrypoint";
 import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal.tsx";
 import type { statusIcons } from "@/components/modals/batch-transaction-modal.tsx";
+import { useTransfer } from "@/lib/contract-interactions/erc-20/write/use-transfer.ts";
+import { useAsset } from "@/hooks/use-asset.ts";
+import { cloneDeep } from "lodash-es";
 
 export type SwapProps = {
   // TODO: Add props or remove this type
@@ -97,8 +101,7 @@ const withMargin = (value: bigint, marginPct = 25n) =>
 
 export const UserOperationBridge: SwapFC = () => {
   const account = useAccount();
-  // const walletClient = useWalletClient();
-  // const erc20transfer = useTransfer();
+  const erc20transfer = useTransfer();
 
   const [transactionData, setTransactionData] = useState<{
     id: Hex;
@@ -107,6 +110,7 @@ export const UserOperationBridge: SwapFC = () => {
       description?: string;
       chainId: number;
       status: keyof typeof statusIcons;
+      hash?: `0x${string}`;
     }[];
   } | null>(null);
 
@@ -132,30 +136,104 @@ export const UserOperationBridge: SwapFC = () => {
 
   const { switchChainAsync } = useSwitchChain();
   const kernel = useSmartAccount();
+  const EOA = useAccount();
 
-  const publicClient = usePublicClient({
-    chainId: rollupB.id,
+  const fromToken = useAsset({
+    tokenAddress: values.from.token,
+    chainId: values.from.chainId,
   });
 
-  ((w) => {
-    // for testing purposes
-    w.getLogs = (hash: `0x${string}`) => {
-      return publicClient
-        ?.getTransactionReceipt({
-          hash,
-        })
-        .then((receipt) => decodeUserOperationLogs(receipt.logs));
-    };
-  })(window as any);
+  const { data: selectedTokenKernelBalance = 0n } = useBalanceOf(
+    {
+      address: values.from.token,
+      chainId: rollupA.id,
+    },
+    {
+      account: kernel.kernel.data?.accounts.A.address || zeroAddress,
+    },
+  );
+
+  console.log("Selected token kernel balance", selectedTokenKernelBalance);
 
   const submit = form.handleSubmit(async (values) => {
+    const id: Hex = `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`;
+
     if (!account.address || !kernel.kernel.data)
       return toast({
         title: "Please connect your wallet",
         variant: "destructive",
       });
 
+    toast({
+      title: "Token bridge initiated",
+      description: "Check your wallet to confirm the transaction",
+    });
+
     await switchChainAsync({ chainId: values.from.chainId });
+
+    setTransactionData({
+      id,
+      actions: [
+        {
+          name: `Ensuring tokens are on Smart Account`,
+          chainId: values.from.chainId,
+          status: "pending",
+          description: `${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
+        },
+        {
+          name: `Moving tokens to bridge on rollup`,
+          chainId: values.from.chainId,
+          status: "idle",
+        },
+        {
+          name: `Moving tokens from bridge on rollup`,
+          chainId: values.to.chainId,
+          status: "idle",
+        },
+      ],
+    });
+
+    if (selectedTokenKernelBalance < values.from.amount) {
+      await erc20transfer.write(
+        {
+          address: values.from.token,
+          chainId: values.from.chainId,
+        },
+        {
+          recipient: kernel.kernel.data?.accounts.A.address,
+          amount: values.from.amount,
+        },
+        {
+          onConfirmed: (hash) => {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              clone.actions[0].hash = hash;
+              clone.actions[0].name = `${clone.actions[0].name} - already transferred`;
+              return clone;
+            });
+          },
+        },
+      );
+    } else {
+      setTransactionData((prev) => {
+        if (!prev) return null;
+        const clone = cloneDeep(prev);
+        clone.actions[0].name = `${clone.actions[0].name} - already transferred`;
+        return clone;
+      });
+      console.log("Kernel has enough balance of the selected token to bridge");
+      console.log("Skipping transfer transaction");
+    }
+
+    setTransactionData((prev) => {
+      if (!prev) return null;
+      const clone = cloneDeep(prev);
+      clone.actions[0].status = "success";
+      clone.actions[1].status = "pending";
+      clone.actions[2].status = "pending";
+      return clone;
+    });
 
     const sourcePublicClient = createPublicClient({
       chain: chainsMap[values.from.chainId as keyof typeof chainsMap],
@@ -213,6 +291,12 @@ export const UserOperationBridge: SwapFC = () => {
       ],
     });
 
+    const claimTokensFromKernelData = encodeFunctionData({
+      abi: erc20Abi,
+      functionName: "transfer",
+      args: [EOA.address!, values.from.amount],
+    });
+
     const sourceBridgeContract =
       BRIDGE_ADDRESSES[values.from.chainId as keyof typeof BRIDGE_ADDRESSES]
         .BRIDGE;
@@ -220,85 +304,128 @@ export const UserOperationBridge: SwapFC = () => {
       BRIDGE_ADDRESSES[values.to.chainId as keyof typeof BRIDGE_ADDRESSES]
         .BRIDGE;
 
-    const [callGasLimitA, callGasLimitB] = await Promise.all([
-      (async () => {
-        try {
-          const estimate = await sourcePublicClient.estimateGas({
-            account: kernel.kernel.data!.accounts.A.address as `0x${string}`,
-            to: sourceBridgeContract,
-            data: sourceData,
-          });
-          return withMargin(estimate);
-        } catch (error) {
-          console.warn("send() gas estimation failed, falling back", error);
-          return FALLBACK_CALL_GAS_LIMIT;
-        }
-      })(),
-      (async () => {
-        try {
-          const estimate = await destPublicClient.estimateGas({
-            account: kernel.kernel.data!.accounts.B.address as `0x${string}`,
-            to: destBridgeContract,
-            data: destData,
-          });
-          return withMargin(estimate);
-        } catch (error) {
-          console.warn(
-            "receiveTokens() gas estimation failed, falling back",
-            error,
-          );
-          return FALLBACK_CALL_GAS_LIMIT;
-        }
-      })(),
-    ]);
+    const [callGasLimitA, callGasLimitB, callGasLimitTransferB] =
+      await Promise.all([
+        (async () => {
+          try {
+            const estimate = await sourcePublicClient.estimateGas({
+              account: kernel.kernel.data!.accounts.A.address as `0x${string}`,
+              to: sourceBridgeContract,
+              data: sourceData,
+            });
+            return withMargin(estimate);
+          } catch (error) {
+            console.warn("send() gas estimation failed, falling back", error);
+            return FALLBACK_CALL_GAS_LIMIT;
+          }
+        })(),
+        (async () => {
+          try {
+            const estimate = await destPublicClient.estimateGas({
+              account: kernel.kernel.data!.accounts.B.address as `0x${string}`,
+              to: destBridgeContract,
+              data: destData,
+            });
+            return withMargin(estimate);
+          } catch (error) {
+            console.warn(
+              "receiveTokens() gas estimation failed, falling back",
+              error,
+            );
+            return FALLBACK_CALL_GAS_LIMIT;
+          }
+        })(),
+        (async () => {
+          try {
+            const estimate = await destPublicClient.estimateGas({
+              account: kernel.kernel.data!.accounts.B.address as `0x${string}`,
+              to: values.from.token,
+              data: claimTokensFromKernelData,
+            });
+            return withMargin(estimate);
+          } catch (error) {
+            console.warn(
+              "transfer tokens gas estimation failed, falling back",
+              error,
+            );
+            return FALLBACK_CALL_GAS_LIMIT;
+          }
+        })(),
+      ]);
 
     const verificationGasLimitA = callGasLimitA + PRE_VERIFICATION_GAS;
     const verificationGasLimitB = callGasLimitB + PRE_VERIFICATION_GAS;
+    const verificationGasLimitTransferB =
+      callGasLimitTransferB + PRE_VERIFICATION_GAS;
 
-    const [signedA, signedB] = await prepareAndSignUserOperations(
-      [sourcePublicClient, destPublicClient],
-      [
-        {
-          account: sourceKernel!,
-          chainId: values.from.chainId,
-          calls: [
-            {
-              to: sourceBridgeContract,
-              value: 0n,
-              data: sourceData,
-            },
-          ],
-          callGasLimit: callGasLimitA,
-          verificationGasLimit:
-            verificationGasLimitA > MIN_VERIFICATION_GAS_LIMIT
-              ? verificationGasLimitA
-              : MIN_VERIFICATION_GAS_LIMIT,
-          preVerificationGas: PRE_VERIFICATION_GAS,
-          maxFeePerGas: sourceGas!.maxFeePerGas!,
-          maxPriorityFeePerGas: sourceGas!.maxPriorityFeePerGas!,
-        },
-        {
-          account: destKernel!,
-          chainId: values.to.chainId,
-          calls: [{ to: destBridgeContract, value: 0n, data: destData }],
-          callGasLimit: callGasLimitB,
-          verificationGasLimit:
-            verificationGasLimitB > MIN_VERIFICATION_GAS_LIMIT
-              ? verificationGasLimitB
-              : MIN_VERIFICATION_GAS_LIMIT,
-          preVerificationGas: PRE_VERIFICATION_GAS,
-          maxFeePerGas: destGas!.maxFeePerGas!,
-          maxPriorityFeePerGas: destGas!.maxPriorityFeePerGas!,
-        },
-      ],
-    );
+    const [signedA, signedB, signedTransferB] =
+      await prepareAndSignUserOperations(
+        [sourcePublicClient, destPublicClient, destPublicClient],
+        [
+          {
+            account: sourceKernel!,
+            chainId: values.from.chainId,
+            calls: [
+              {
+                to: sourceBridgeContract,
+                value: 0n,
+                data: sourceData,
+              },
+            ],
+            callGasLimit: callGasLimitA,
+            verificationGasLimit:
+              verificationGasLimitA > MIN_VERIFICATION_GAS_LIMIT
+                ? verificationGasLimitA
+                : MIN_VERIFICATION_GAS_LIMIT,
+            preVerificationGas: PRE_VERIFICATION_GAS,
+            maxFeePerGas: sourceGas!.maxFeePerGas!,
+            maxPriorityFeePerGas: sourceGas!.maxPriorityFeePerGas!,
+          },
+          {
+            account: destKernel!,
+            chainId: values.to.chainId,
+            calls: [{ to: destBridgeContract, value: 0n, data: destData }],
+            callGasLimit: callGasLimitB,
+            verificationGasLimit:
+              verificationGasLimitB > MIN_VERIFICATION_GAS_LIMIT
+                ? verificationGasLimitB
+                : MIN_VERIFICATION_GAS_LIMIT,
+            preVerificationGas: PRE_VERIFICATION_GAS,
+            maxFeePerGas: destGas!.maxFeePerGas!,
+            maxPriorityFeePerGas: destGas!.maxPriorityFeePerGas!,
+          },
+          {
+            account: destKernel!,
+            chainId: values.to.chainId,
+            calls: [
+              {
+                to: values.from.token,
+                value: 0n,
+                data: claimTokensFromKernelData,
+              },
+            ],
+            callGasLimit: callGasLimitTransferB,
+            verificationGasLimit:
+              verificationGasLimitTransferB > MIN_VERIFICATION_GAS_LIMIT
+                ? verificationGasLimitB
+                : MIN_VERIFICATION_GAS_LIMIT,
+            preVerificationGas: PRE_VERIFICATION_GAS,
+            maxFeePerGas: destGas!.maxFeePerGas!,
+            maxPriorityFeePerGas: destGas!.maxPriorityFeePerGas!,
+          },
+        ],
+      );
 
     const userOpA = toRpcUserOpCanonical(signedA);
     console.log("userOpA:", userOpA);
     const userOpB = toRpcUserOpCanonical(signedB);
     console.log("userOpB:", userOpB);
+    const userOpTransferB = toRpcUserOpCanonical(signedTransferB);
+    console.log("userOpTransferB:", userOpTransferB);
+
     console.log("signedA:", signedA);
     console.log("signedB:", signedB);
+    console.log("signedTransferB:", signedTransferB);
 
     const [buildA, buildB] = await Promise.all([
       sourcePublicClient.request({
@@ -307,12 +434,30 @@ export const UserOperationBridge: SwapFC = () => {
       }),
       destPublicClient.request({
         method: "compose_buildSignedUserOpsTx",
-        params: [[userOpB], { chainId: values.to.chainId }],
+        params: [[userOpB, userOpTransferB], { chainId: values.to.chainId }],
       }),
-    ]);
+    ]).catch((errs) => {
+      console.log("errors", errs);
+      setTransactionData((prev) => {
+        if (!prev) return null;
+        const clone = cloneDeep(prev);
+        clone.actions[1].status = "failed";
+        clone.actions[2].status = "failed";
+        return clone;
+      });
+      throw errs;
+    });
 
     const hashA = buildA.hash;
     const hashB = buildB.hash;
+
+    setTransactionData((prev) => {
+      if (!prev) return null;
+      const clone = cloneDeep(prev);
+      clone.actions[1].hash = hashA;
+      clone.actions[2].hash = hashB;
+      return clone;
+    });
 
     const explorerAURL = new URL(
       `tx/${hashA}`,
@@ -363,6 +508,14 @@ export const UserOperationBridge: SwapFC = () => {
       }),
     ]);
 
+    setTransactionData((prev) => {
+      if (!prev) return null;
+      const clone = cloneDeep(prev);
+      clone.actions[1].status = "success";
+      clone.actions[2].status = "success";
+      return clone;
+    });
+
     const decodedA = decodeUserOperationLogs(receiptA.logs);
     console.log("decoded logs for Rollup A:", decodedA);
     const decodedB = decodeUserOperationLogs(receiptB.logs);
@@ -377,6 +530,14 @@ export const UserOperationBridge: SwapFC = () => {
     );
 
     if (revertedA || revertedB) {
+      setTransactionData((prev) => {
+        if (!prev) return null;
+        const clone = cloneDeep(prev);
+        if (revertedA) clone.actions[1].status = "failed";
+        if (revertedB) clone.actions[2].status = "failed";
+        return clone;
+      });
+
       return toast({
         variant: "destructive",
         title: "User operation failed",
@@ -394,7 +555,7 @@ export const UserOperationBridge: SwapFC = () => {
 
   const balanceA = useReadContract({
     abi: EntryPointAbi,
-    address: ENTRYPOINT_V0_7,
+    address: ENTRYPOINT_V0_8,
     functionName: "balanceOf",
     args: [kernel.kernel.data?.accounts.A.address as `0x${string}`],
     chainId: rollupA.id,
@@ -404,7 +565,7 @@ export const UserOperationBridge: SwapFC = () => {
 
   const balanceB = useReadContract({
     abi: EntryPointAbi,
-    address: ENTRYPOINT_V0_7,
+    address: ENTRYPOINT_V0_8,
     functionName: "balanceOf",
     args: [kernel.kernel.data?.accounts.B.address as `0x${string}`],
     chainId: rollupB.id,

@@ -1,13 +1,13 @@
 import { useAccount } from "@/hooks/account/use-account";
 import { useEntrypointContract } from "@/lib/abi/entrypoint";
-import { ENTRYPOINT_V0_7, ROLLUP_ADDRESSES } from "@/wagmi/addresses";
+import { ENTRYPOINT_V0_8, ROLLUP_ADDRESSES } from "@/wagmi/addresses";
 import { rollupA, rollupB } from "@/wagmi/config";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { toMultiChainECDSAValidator } from "@zerodev/multi-chain-ecdsa-validator";
 import type { KernelSmartAccountImplementation } from "@zerodev/sdk";
 import { createKernelAccount } from "@zerodev/sdk";
 import { getEntryPoint, KERNEL_V3_1 } from "@zerodev/sdk/constants";
-import { isAddress, type Address, type Client } from "viem";
+import { type Address, type Client, isAddress } from "viem";
 import { usePublicClient, useWalletClient } from "wagmi";
 
 const entryPoint = getEntryPoint("0.7");
@@ -75,12 +75,12 @@ export const useSmartAccount = () => {
   const { useBalanceOf, useDepositTo } = useEntrypointContract();
 
   const depositToA = useDepositTo({
-    contract: ENTRYPOINT_V0_7,
+    contract: ENTRYPOINT_V0_8,
     chainId: rollupA.id,
   });
 
   const depositToB = useDepositTo({
-    contract: ENTRYPOINT_V0_7,
+    contract: ENTRYPOINT_V0_8,
     chainId: rollupB.id,
   });
 
@@ -89,7 +89,7 @@ export const useSmartAccount = () => {
     {
       chainId: rollupA.id,
       enabled: !!kernel.data?.accounts?.A?.address,
-      contract: ENTRYPOINT_V0_7,
+      contract: ENTRYPOINT_V0_8,
       watch: true,
       placeholderData: keepPreviousData,
     },
@@ -101,7 +101,7 @@ export const useSmartAccount = () => {
       chainId: rollupB.id,
       enabled: !!kernel.data?.accounts?.B?.address,
       watch: true,
-      contract: ENTRYPOINT_V0_7,
+      contract: ENTRYPOINT_V0_8,
       placeholderData: keepPreviousData,
     },
   );

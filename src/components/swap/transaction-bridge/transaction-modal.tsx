@@ -1,8 +1,8 @@
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogTitle,
-  DialogClose,
 } from "@/components/ui/dialog";
 import type { ComponentPropsWithoutRef } from "react";
 import { type FC } from "react";
@@ -11,6 +11,7 @@ import { statusIcons } from "@/components/modals/batch-transaction-modal";
 import { Span, Text } from "@/components/ui/text";
 import { ChainIcon } from "@/components/ui/chain-icon";
 import { getChainById } from "@/wagmi/config";
+import { GoToExplorerBtn } from "@/components/ui/go-to-explorer-btn.tsx";
 
 export type TransactionModalProps = {
   data: {
@@ -20,6 +21,7 @@ export type TransactionModalProps = {
       description?: string;
       chainId: number;
       status: keyof typeof statusIcons;
+      hash?: `0x${string}`;
     }[];
   } | null;
 };
@@ -55,6 +57,12 @@ export const TransactionModal: FCProps = ({ data, ...props }) => {
                     {i === 0 ? "Start on" : "On"}{" "}
                     {getChainById(action.chainId).name}
                   </Text>
+                  {action.hash && (
+                    <GoToExplorerBtn
+                      chainId={action.chainId}
+                      hash={action.hash}
+                    />
+                  )}
                 </div>
               </div>
             </div>

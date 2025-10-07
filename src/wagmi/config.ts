@@ -1,7 +1,7 @@
 import { connectorsForWallets } from "@rainbow-me/rainbowkit";
 import {
-  walletConnectWallet,
   coinbaseWallet,
+  walletConnectWallet,
 } from "@rainbow-me/rainbowkit/wallets";
 import type { Transport } from "@wagmi/core";
 
@@ -174,6 +174,12 @@ export const chainsMap = {
 
 export const getChainById = (chainId: number) => {
   return chainsMap[chainId as keyof typeof chainsMap];
+};
+
+export const getExplorerHashUrl = (chainId: number, hash: string) => {
+  const chain = getChainById(chainId);
+  if (!chain) return "";
+  return new URL(`tx/${hash}`, chain.blockExplorers?.default?.url).toString();
 };
 
 export const rollupIdMap = {
