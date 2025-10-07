@@ -6,9 +6,49 @@ import {
 import type { Transport } from "@wagmi/core";
 
 import type { Chain } from "viem";
-import { defineChain, http } from "viem";
+import { defineChain, fallback, http } from "viem";
 import { mainnet as mainnetChain, polygon as polygonChain } from "viem/chains";
 import { createConfig } from "wagmi";
+
+import { resolveRpcUrls, type RpcDescriptor } from "./rpc-env";
+
+const RPC_DESCRIPTORS = {
+  hoodi: {
+    envKey: "VITE_HOODI_RPC_HTTP",
+    defaults: [
+      "https://ethereum-hoodi-rpc.publicnode.com/d8a2cc6e7483872e917d7899f9403d738b001c80e37d66834f4e40e9efb54a27",
+    ] as const,
+  },
+  rollupA: {
+    envKey: "VITE_ROLLUP_A_RPC_HTTP",
+    defaults: ["https://rollup-rpc-1.stage.ops.ssvlabsinternal.com"] as const,
+  },
+  rollupB: {
+    envKey: "VITE_ROLLUP_B_RPC_HTTP",
+    defaults: ["https://rollup-rpc-2.stage.ops.ssvlabsinternal.com"] as const,
+  },
+  polygon: {
+    envKey: "VITE_POLYGON_RPC_HTTP",
+    defaults: ["https://polygon-rpc.com"] as const,
+  },
+  mainnet: {
+    envKey: "VITE_MAINNET_RPC_HTTP",
+    defaults: ["https://eth.llamarpc.com"] as const,
+  },
+} as const satisfies Record<string, RpcDescriptor>;
+
+const rpcHttp = resolveRpcUrls(RPC_DESCRIPTORS);
+
+const createTransportForUrls = (urls: string[]): Transport => {
+  const uniqueUrls = Array.from(new Set(urls));
+  if (!uniqueUrls.length) {
+    throw new Error("[wagmi-config] Missing RPC URLs for transport creation.");
+  }
+
+  return uniqueUrls.length === 1
+    ? http(uniqueUrls[0])
+    : fallback(uniqueUrls.map((url) => http(url)));
+};
 
 export const hoodi = defineChain({
   id: 560048,
@@ -21,9 +61,7 @@ export const hoodi = defineChain({
   },
   rpcUrls: {
     default: {
-      http: [
-        "https://ethereum-hoodi-rpc.publicnode.com/d8a2cc6e7483872e917d7899f9403d738b001c80e37d66834f4e40e9efb54a27",
-      ],
+      http: rpcHttp.hoodi,
     },
   },
   iconBackground: "none",
@@ -40,14 +78,9 @@ export const rollupA = defineChain({
   },
   rpcUrls: {
     default: {
-      http: ["https://rollup-rpc-1.stage.ops.ssvlabsinternal.com"],
-      // http: ["http://57.129.73.156:31130"],
+      http: rpcHttp.rollupA,
     },
   },
-  // rpcUrls: {
-  //   default: { http: ["http://57.129.73.156:31130"] },
-  //   public: { http: ["http://57.129.73.156:31130"] },
-  // },
   blockExplorers: {
     default: {
       name: "Rollup A",
@@ -69,14 +102,9 @@ export const rollupB = defineChain({
   },
   rpcUrls: {
     default: {
-      http: ["https://rollup-rpc-2.stage.ops.ssvlabsinternal.com"],
-      // http: ["http://57.129.73.144:31133"],
+      http: rpcHttp.rollupB,
     },
   },
-  // rpcUrls: {
-  //   default: { http: ["http://57.129.73.144:31133"] },
-  //   public: { http: ["http://57.129.73.144:31133"] },
-  // },
   blockExplorers: {
     default: {
       name: "Rollup B",
@@ -92,7 +120,7 @@ export const polygon = {
   ...polygonChain,
   rpcUrls: {
     default: {
-      http: ["https://polygon-rpc.com"],
+      http: rpcHttp.polygon,
     },
   },
 };
@@ -101,10 +129,26 @@ export const mainnet = {
   ...mainnetChain,
   rpcUrls: {
     default: {
-      http: ["https://eth.llamarpc.com"],
+      http: rpcHttp.mainnet,
     },
   },
 };
+
+type ChainRpcKey = keyof typeof RPC_DESCRIPTORS;
+type ChainId =
+  | typeof hoodi.id
+  | typeof rollupA.id
+  | typeof rollupB.id
+  | typeof polygon.id
+  | typeof mainnet.id;
+
+const chainRpcKeyById = {
+  [hoodi.id]: "hoodi",
+  [rollupA.id]: "rollupA",
+  [rollupB.id]: "rollupB",
+  [polygon.id]: "polygon",
+  [mainnet.id]: "mainnet",
+} as const satisfies Record<ChainId, ChainRpcKey>;
 
 // Chains array
 export const chains = [rollupA, rollupB, mainnet, polygon, hoodi] satisfies [
@@ -171,7 +215,14 @@ export const config = createConfig({
   connectors: connectors,
   transports: chains.reduce(
     (acc, chain) => {
-      acc[chain.id] = http(chain.rpcUrls.default.http[0]);
+      const rpcKey = chainRpcKeyById[chain.id as ChainId];
+      if (!rpcKey) {
+        throw new Error(
+          `[wagmi-config] Missing RPC descriptor mapping for chain ${chain.id}`,
+        );
+      }
+
+      acc[chain.id] = createTransportForUrls(rpcHttp[rpcKey]);
       return acc;
     },
     {} as Record<number, Transport>,

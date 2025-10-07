@@ -11,6 +11,11 @@ interface ImportMetaEnv {
       decimals: number;
     };
   }[];
+  readonly VITE_HOODI_RPC_HTTP?: string;
+  readonly VITE_ROLLUP_A_RPC_HTTP?: string;
+  readonly VITE_ROLLUP_B_RPC_HTTP?: string;
+  readonly VITE_MAINNET_RPC_HTTP?: string;
+  readonly VITE_POLYGON_RPC_HTTP?: string;
 }
 
 declare const APP_VERSION: string;
