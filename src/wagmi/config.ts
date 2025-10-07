@@ -10,7 +10,12 @@ import { defineChain, fallback, http } from "viem";
 import { mainnet as mainnetChain, polygon as polygonChain } from "viem/chains";
 import { createConfig } from "wagmi";
 
-import { parseChainId, resolveRpcUrls, type RpcDescriptor } from "./rpc-env";
+import {
+  parseBlockExplorerUrl,
+  parseChainId,
+  resolveRpcUrls,
+  type RpcDescriptor,
+} from "./rpc-env";
 
 const RPC_DESCRIPTORS = {
   hoodi: {
@@ -41,6 +46,14 @@ const rpcHttp = resolveRpcUrls(RPC_DESCRIPTORS);
 const hoodiChainId = parseChainId("VITE_HOODI_CHAIN_ID", 560048);
 const rollupAChainId = parseChainId("VITE_ROLLUP_A_CHAIN_ID", 77777);
 const rollupBChainId = parseChainId("VITE_ROLLUP_B_CHAIN_ID", 88888);
+const rollupABlockExplorerUrl = parseBlockExplorerUrl(
+  "VITE_ROLLUP_A_BLOCK_EXPLORER_URL",
+  "https://blockscout-rollup-1.stage.ops.ssvlabsinternal.com/",
+);
+const rollupBBlockExplorerUrl = parseBlockExplorerUrl(
+  "VITE_ROLLUP_B_BLOCK_EXPLORER_URL",
+  "https://blockscout-rollup-2.stage.ops.ssvlabsinternal.com/",
+);
 
 const createTransportForUrls = (urls: string[]): Transport => {
   const uniqueUrls = Array.from(new Set(urls));
@@ -87,7 +100,7 @@ export const rollupA = defineChain({
   blockExplorers: {
     default: {
       name: "Rollup A",
-      url: "https://blockscout-rollup-1.stage.ops.ssvlabsinternal.com/",
+      url: rollupABlockExplorerUrl,
     },
   },
   iconBackground: "none",
@@ -111,7 +124,7 @@ export const rollupB = defineChain({
   blockExplorers: {
     default: {
       name: "Rollup B",
-      url: "https://blockscout-rollup-2.stage.ops.ssvlabsinternal.com/",
+      url: rollupBBlockExplorerUrl,
     },
   },
   iconBackground: "none",

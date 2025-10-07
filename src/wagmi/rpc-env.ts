@@ -120,3 +120,38 @@ export const parseChainId = (
 
   return parsed;
 };
+
+type ExplorerEnvKey = keyof Pick<
+  ImportMetaEnv,
+  | "VITE_ROLLUP_A_BLOCK_EXPLORER_URL"
+  | "VITE_ROLLUP_B_BLOCK_EXPLORER_URL"
+>;
+
+export const parseBlockExplorerUrl = (
+  envKey: ExplorerEnvKey,
+  defaultUrl: string,
+): string => {
+  const rawValue = import.meta.env[envKey];
+  if (!rawValue) return defaultUrl;
+
+  const trimmed = rawValue.trim();
+  if (!trimmed) {
+    emitConfigWarning(
+      `BLOCK_EXPLORER ${envKey}`,
+      `value was empty. Falling back to ${defaultUrl}.`,
+    );
+    return defaultUrl;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    return url.toString();
+  } catch (error) {
+    emitConfigWarning(
+      `BLOCK_EXPLORER ${envKey}`,
+      `value "${rawValue}" is not a valid absolute URL. Falling back to ${defaultUrl}.`,
+      error,
+    );
+    return defaultUrl;
+  }
+};

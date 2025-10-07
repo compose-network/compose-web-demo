@@ -21,6 +21,8 @@ jobs:
       VITE_HOODI_RPC_HTTP: '["https://ethereum-hoodi-rpc.publicnode.com/d8a2cc6e7483872e917d7899f9403d738b001c80e37d66834f4e40e9efb54a27"]'
       VITE_MAINNET_RPC_HTTP: '["https://eth.llamarpc.com"]'
       VITE_POLYGON_RPC_HTTP: '["https://polygon-rpc.com"]'
+      VITE_ROLLUP_A_BLOCK_EXPLORER_URL: "https://blockscout-rollup-1.stage.ops.ssvlabsinternal.com/"
+      VITE_ROLLUP_B_BLOCK_EXPLORER_URL: "https://blockscout-rollup-2.stage.ops.ssvlabsinternal.com/"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
