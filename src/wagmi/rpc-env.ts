@@ -12,17 +12,17 @@ export type RpcDescriptor = {
   defaults: readonly string[];
 };
 
-const warnInvalidRpc = (
-  envKey: RpcEnvKey,
+const emitConfigWarning = (
+  label: string,
   detail: string,
   error?: unknown,
 ) => {
   if (!import.meta.env.DEV) return;
   if (error) {
-    console.warn(`[wagmi-config] ${envKey}: ${detail}`, error);
+    console.warn(`[wagmi-config] ${label}: ${detail}`, error);
     return;
   }
-  console.warn(`[wagmi-config] ${envKey}: ${detail}`);
+  console.warn(`[wagmi-config] ${label}: ${detail}`);
 };
 
 const parseRpcUrls = (
@@ -49,14 +49,14 @@ const parseRpcUrls = (
         return parsed.map((url) => url.trim());
       }
 
-      warnInvalidRpc(
-        envKey,
+      emitConfigWarning(
+        `RPC ${envKey}`,
         "must be a JSON array of non-empty strings. Falling back to defaults.",
       );
       return [...defaults];
     } catch (error) {
-      warnInvalidRpc(
-        envKey,
+      emitConfigWarning(
+        `RPC ${envKey}`,
         "failed to parse JSON. Falling back to defaults.",
         error,
       );
@@ -70,8 +70,8 @@ const parseRpcUrls = (
     .filter(Boolean);
 
   if (!urls.length) {
-    warnInvalidRpc(
-      envKey,
+    emitConfigWarning(
+      `RPC ${envKey}`,
       "did not include any usable URLs. Falling back to defaults.",
     );
     return [...defaults];
@@ -93,4 +93,30 @@ export const resolveRpcUrls = <
   ) as {
     [Key in keyof TDescriptors]: string[];
   };
+};
+
+type ChainIdEnvKey = keyof Pick<
+  ImportMetaEnv,
+  | "VITE_HOODI_CHAIN_ID"
+  | "VITE_ROLLUP_A_CHAIN_ID"
+  | "VITE_ROLLUP_B_CHAIN_ID"
+>;
+
+export const parseChainId = (
+  envKey: ChainIdEnvKey,
+  defaultId: number,
+): number => {
+  const rawValue = import.meta.env[envKey];
+  if (!rawValue) return defaultId;
+
+  const parsed = Number(rawValue);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    emitConfigWarning(
+      `CHAIN_ID ${envKey}`,
+      `value "${rawValue}" is not a positive integer. Falling back to ${defaultId}.`,
+    );
+    return defaultId;
+  }
+
+  return parsed;
 };

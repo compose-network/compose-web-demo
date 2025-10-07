@@ -16,6 +16,9 @@ interface ImportMetaEnv {
   readonly VITE_ROLLUP_B_RPC_HTTP?: string;
   readonly VITE_MAINNET_RPC_HTTP?: string;
   readonly VITE_POLYGON_RPC_HTTP?: string;
+  readonly VITE_HOODI_CHAIN_ID?: string;
+  readonly VITE_ROLLUP_A_CHAIN_ID?: string;
+  readonly VITE_ROLLUP_B_CHAIN_ID?: string;
 }
 
 declare const APP_VERSION: string;

@@ -10,7 +10,7 @@ import { defineChain, fallback, http } from "viem";
 import { mainnet as mainnetChain, polygon as polygonChain } from "viem/chains";
 import { createConfig } from "wagmi";
 
-import { resolveRpcUrls, type RpcDescriptor } from "./rpc-env";
+import { parseChainId, resolveRpcUrls, type RpcDescriptor } from "./rpc-env";
 
 const RPC_DESCRIPTORS = {
   hoodi: {
@@ -38,6 +38,9 @@ const RPC_DESCRIPTORS = {
 } as const satisfies Record<string, RpcDescriptor>;
 
 const rpcHttp = resolveRpcUrls(RPC_DESCRIPTORS);
+const hoodiChainId = parseChainId("VITE_HOODI_CHAIN_ID", 560048);
+const rollupAChainId = parseChainId("VITE_ROLLUP_A_CHAIN_ID", 77777);
+const rollupBChainId = parseChainId("VITE_ROLLUP_B_CHAIN_ID", 88888);
 
 const createTransportForUrls = (urls: string[]): Transport => {
   const uniqueUrls = Array.from(new Set(urls));
@@ -51,7 +54,7 @@ const createTransportForUrls = (urls: string[]): Transport => {
 };
 
 export const hoodi = defineChain({
-  id: 560048,
+  id: hoodiChainId,
   name: "Hoodi",
   network: "hoodi",
   nativeCurrency: {
@@ -69,7 +72,7 @@ export const hoodi = defineChain({
   testnet: true,
 });
 export const rollupA = defineChain({
-  id: 77777,
+  id: rollupAChainId,
   name: "Rollup A",
   nativeCurrency: {
     name: "Rollup A",
@@ -93,7 +96,7 @@ export const rollupA = defineChain({
 });
 
 export const rollupB = defineChain({
-  id: 88888,
+  id: rollupBChainId,
   name: "Rollup B",
   nativeCurrency: {
     name: "Rollup B",
@@ -135,20 +138,13 @@ export const mainnet = {
 };
 
 type ChainRpcKey = keyof typeof RPC_DESCRIPTORS;
-type ChainId =
-  | typeof hoodi.id
-  | typeof rollupA.id
-  | typeof rollupB.id
-  | typeof polygon.id
-  | typeof mainnet.id;
-
-const chainRpcKeyById = {
-  [hoodi.id]: "hoodi",
-  [rollupA.id]: "rollupA",
-  [rollupB.id]: "rollupB",
-  [polygon.id]: "polygon",
-  [mainnet.id]: "mainnet",
-} as const satisfies Record<ChainId, ChainRpcKey>;
+const chainRpcKeyById = new Map<number, ChainRpcKey>([
+  [hoodi.id, "hoodi"],
+  [rollupA.id, "rollupA"],
+  [rollupB.id, "rollupB"],
+  [polygon.id, "polygon"],
+  [mainnet.id, "mainnet"],
+]);
 
 // Chains array
 export const chains = [rollupA, rollupB, mainnet, polygon, hoodi] satisfies [
@@ -215,7 +211,7 @@ export const config = createConfig({
   connectors: connectors,
   transports: chains.reduce(
     (acc, chain) => {
-      const rpcKey = chainRpcKeyById[chain.id as ChainId];
+      const rpcKey = chainRpcKeyById.get(chain.id);
       if (!rpcKey) {
         throw new Error(
           `[wagmi-config] Missing RPC descriptor mapping for chain ${chain.id}`,
