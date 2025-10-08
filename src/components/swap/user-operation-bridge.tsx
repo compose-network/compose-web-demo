@@ -103,6 +103,8 @@ export const UserOperationBridge: SwapFC = () => {
   const account = useAccount();
   const erc20transfer = useTransfer();
 
+  console.log("============== TEST");
+
   const [transactionData, setTransactionData] = useState<{
     id: Hex;
     actions: {
