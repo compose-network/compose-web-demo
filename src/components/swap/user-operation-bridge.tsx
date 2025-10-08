@@ -1,9 +1,42 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
+import type { statusIcons } from "@/components/modals/batch-transaction-modal.tsx";
+import { SwapRoute } from "@/components/swap/swap-route";
+import { TokenInput } from "@/components/swap/token-picker/token-input";
+import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal.tsx";
+import { AddressDisplay } from "@/components/ui/address";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Divider } from "@/components/ui/divider";
+import { Form } from "@/components/ui/form";
+import { Text } from "@/components/ui/text";
+import { toast } from "@/components/ui/use-toast";
+import { useAccount } from "@/hooks/account/use-account";
+import { useAsset } from "@/hooks/use-asset.ts";
+import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
+import { useBalanceOf } from "@/lib/contract-interactions/erc-20/read/use-balance-of";
+import { useMint } from "@/lib/contract-interactions/erc-20/write/use-mint";
+import { useTransfer } from "@/lib/contract-interactions/erc-20/write/use-transfer.ts";
+import { withTransactionModal } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
+import { useSmartAccount } from "@/lib/smart-account/kernel";
+import type { ComposedSignedUserOpsTxReturnType } from "@/lib/smart-account/user-op";
+import {
+  decodeUserOperationLogs,
+  toRpcUserOpCanonical,
+} from "@/lib/smart-account/user-op";
+import { encodeXtMessage } from "@/lib/smart-account/xt";
+import { formatCurrency } from "@/lib/utils/number";
+import {
+  BRIDGE_ADDRESSES,
+  BRIDGE_TOKEN
+} from "@/wagmi/addresses";
+import { chainsMap, rollupA, rollupB } from "@/wagmi/config";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { prepareAndSignUserOperations } from "@zerodev/multi-chain-ecdsa-validator";
+import { cloneDeep } from "lodash-es";
 import { type ComponentPropsWithoutRef, type FC, useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { chainsMap, rollupA, rollupB } from "@/wagmi/config";
+import { useLocalStorage } from "react-use";
 import {
   createPublicClient,
   encodeFunctionData,
@@ -15,43 +48,8 @@ import {
   rpcSchema,
   zeroAddress,
 } from "viem";
-import { TokenInput } from "@/components/swap/token-picker/token-input";
-import { Divider } from "@/components/ui/divider";
-import { Button } from "@/components/ui/button";
-import { Text } from "@/components/ui/text";
-import { useAccount } from "@/hooks/account/use-account";
-import { useReadContract, useSwitchChain } from "wagmi";
-import { toast } from "@/components/ui/use-toast";
-import { Form } from "@/components/ui/form";
-import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
-import { SwapRoute } from "@/components/swap/swap-route";
-import { useSmartAccount } from "@/lib/smart-account/kernel";
-import {
-  BRIDGE_ADDRESSES,
-  BRIDGE_TOKEN,
-  ENTRYPOINT_V0_8,
-} from "@/wagmi/addresses";
-import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
-import { prepareAndSignUserOperations } from "@zerodev/multi-chain-ecdsa-validator";
-import { useLocalStorage } from "react-use";
-import { formatCurrency } from "@/lib/utils/number";
-import { Card } from "@/components/ui/card";
-import { AddressDisplay } from "@/components/ui/address";
-import type { ComposedSignedUserOpsTxReturnType } from "@/lib/smart-account/user-op";
-import {
-  decodeUserOperationLogs,
-  toRpcUserOpCanonical,
-} from "@/lib/smart-account/user-op";
-import { useMint } from "@/lib/contract-interactions/erc-20/write/use-mint";
-import { withTransactionModal } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
-import { useBalanceOf } from "@/lib/contract-interactions/erc-20/read/use-balance-of";
-import { encodeXtMessage } from "@/lib/smart-account/xt";
-import { EntryPointAbi } from "@/lib/abi/entrypoint";
-import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal.tsx";
-import type { statusIcons } from "@/components/modals/batch-transaction-modal.tsx";
-import { useTransfer } from "@/lib/contract-interactions/erc-20/write/use-transfer.ts";
-import { useAsset } from "@/hooks/use-asset.ts";
-import { cloneDeep } from "lodash-es";
+import { useSwitchChain } from "wagmi";
+import { z } from "zod";
 
 export type SwapProps = {
   // TODO: Add props or remove this type
@@ -554,25 +552,6 @@ export const UserOperationBridge: SwapFC = () => {
   });
 
   const mint = useMint();
-
-  const balanceA = useReadContract({
-    abi: EntryPointAbi,
-    address: ENTRYPOINT_V0_8,
-    functionName: "balanceOf",
-    args: [kernel.kernel.data?.accounts.A.address as `0x${string}`],
-    chainId: rollupA.id,
-  });
-  console.log("balanceA:", balanceA);
-  console.log("balanceA.data:", balanceA.data);
-
-  const balanceB = useReadContract({
-    abi: EntryPointAbi,
-    address: ENTRYPOINT_V0_8,
-    functionName: "balanceOf",
-    args: [kernel.kernel.data?.accounts.B.address as `0x${string}`],
-    chainId: rollupB.id,
-  });
-  console.log("balanceB.data:", balanceB.data);
 
   const kernelAMTKBalance = useBalanceOf(
     {

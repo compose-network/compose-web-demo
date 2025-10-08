@@ -12,11 +12,7 @@ export type RpcDescriptor = {
   defaults: readonly string[];
 };
 
-const emitConfigWarning = (
-  label: string,
-  detail: string,
-  error?: unknown,
-) => {
+const emitConfigWarning = (label: string, detail: string, error?: unknown) => {
   if (!import.meta.env.DEV) return;
   if (error) {
     console.warn(`[wagmi-config] ${label}: ${detail}`, error);
@@ -44,7 +40,9 @@ const parseRpcUrls = (
       const parsed = JSON.parse(trimmed);
       if (
         Array.isArray(parsed) &&
-        parsed.every((value) => typeof value === "string" && value.trim().length)
+        parsed.every(
+          (value) => typeof value === "string" && value.trim().length,
+        )
       ) {
         return parsed.map((url) => url.trim());
       }
@@ -97,15 +95,13 @@ export const resolveRpcUrls = <
 
 type ChainIdEnvKey = keyof Pick<
   ImportMetaEnv,
-  | "VITE_HOODI_CHAIN_ID"
-  | "VITE_ROLLUP_A_CHAIN_ID"
-  | "VITE_ROLLUP_B_CHAIN_ID"
+  "VITE_HOODI_CHAIN_ID" | "VITE_ROLLUP_A_CHAIN_ID" | "VITE_ROLLUP_B_CHAIN_ID"
 >;
 
-export const parseChainId = (
+export const parseChainId = <T extends number>(
   envKey: ChainIdEnvKey,
-  defaultId: number,
-): number => {
+  defaultId: T,
+): T => {
   const rawValue = import.meta.env[envKey];
   if (!rawValue) return defaultId;
 
@@ -118,13 +114,12 @@ export const parseChainId = (
     return defaultId;
   }
 
-  return parsed;
+  return parsed as T;
 };
 
 type ExplorerEnvKey = keyof Pick<
   ImportMetaEnv,
-  | "VITE_ROLLUP_A_BLOCK_EXPLORER_URL"
-  | "VITE_ROLLUP_B_BLOCK_EXPLORER_URL"
+  "VITE_ROLLUP_A_BLOCK_EXPLORER_URL" | "VITE_ROLLUP_B_BLOCK_EXPLORER_URL"
 >;
 
 export const parseBlockExplorerUrl = (
