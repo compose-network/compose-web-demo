@@ -22,5 +22,9 @@ export const BRIDGE_ADDRESSES = {
   88888: { BRIDGE: "0x31c57E2910496e46Bb883EDeb1eB2bee8E3Ee82C" as const },
 } as const;
 
+export const getBridgeAddress = (chainId: keyof typeof BRIDGE_ADDRESSES) => {
+  return BRIDGE_ADDRESSES[chainId]?.BRIDGE;
+};
+
 export const BRIDGE_TOKEN =
   "0x4c77De11C15d8b5e2584e67e2E6E1Ec7A78B0b5b" as const;
