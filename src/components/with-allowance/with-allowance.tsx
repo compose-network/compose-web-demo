@@ -1,0 +1,142 @@
+import type { FC, ComponentPropsWithoutRef } from "react";
+import { cn } from "@/lib/utils/tw";
+import type { ButtonProps } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { useBlockNumber, useReadContract, useSwitchChain } from "wagmi";
+import { TokenABI } from "@/lib/abi/token";
+import { useApprove } from "@/lib/contract-interactions/erc-20/write/use-approve";
+import React, { useMemo } from "react";
+import { Stepper } from "@/components/ui/stepper";
+import { globals } from "@/config";
+import { withTransactionModal } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
+import { keepPreviousData } from "@tanstack/react-query";
+import { isUndefined } from "lodash-es";
+import { useAccount } from "@/hooks/account/use-account";
+import type { Address } from "abitype";
+
+export type WithAllowanceProps = {
+  size?: ButtonProps["size"];
+  chainId: number;
+  token: {
+    address: Address;
+    symbol: string;
+  };
+  spender: Address;
+  amount: bigint;
+};
+
+type WithAllowanceFC = FC<
+  Omit<ComponentPropsWithoutRef<"div">, keyof WithAllowanceProps> &
+    WithAllowanceProps
+>;
+
+export const WithAllowance: WithAllowanceFC = ({
+  className,
+  amount,
+  size,
+  token,
+  spender,
+  chainId,
+  ...props
+}) => {
+  const account = useAccount();
+  const block = useBlockNumber({ watch: true, chainId });
+  const { switchChainAsync } = useSwitchChain();
+
+  const allowance = useReadContract({
+    abi: TokenABI,
+    address: token.address,
+    functionName: "allowance",
+    args: [account.address!, spender],
+    blockNumber: block.data,
+    chainId,
+    query: {
+      placeholderData: keepPreviousData,
+      enabled: Boolean(account.address && block.data),
+    },
+  });
+
+  const approver = useApprove();
+  const approve = async () => {
+    await switchChainAsync({ chainId });
+    approver.write(
+      {
+        address: token.address,
+        chainId,
+      },
+      {
+        spender: spender,
+        amount: globals.MAX_WEI_AMOUNT,
+      },
+      withTransactionModal(),
+    );
+  };
+
+  const hasAllowance = allowance.isSuccess ? allowance.data >= amount : true;
+  const canProceed =
+    allowance.isSuccess && hasAllowance && approver.wait.isSuccess;
+
+  const childrenWithProps = useMemo(
+    () =>
+      React.Children.map(props.children, (child) => {
+        if (React.isValidElement(child)) {
+          return React.cloneElement(child, {
+            disabled: !canProceed,
+            size,
+          });
+        }
+        return child;
+      }),
+    [canProceed, props.children, size],
+  );
+
+  const children = useMemo(
+    () =>
+      React.Children.map(props.children, (child) => {
+        if (React.isValidElement(child)) {
+          return React.cloneElement(child, {
+            isLoading: allowance.isLoading,
+            size,
+          });
+        }
+        return child;
+      }),
+    [allowance.isLoading, props.children, size],
+  );
+
+  if (allowance.isLoading || isUndefined(allowance.data)) return children;
+
+  if (allowance.isSuccess && hasAllowance && approver.wait.status === "idle")
+    return props.children;
+
+  return (
+    <div className={cn("space-y-4", className)} {...props}>
+      <div className={cn("flex gap-3 [&>*]:flex-1")}>
+        <Button
+          size={size}
+          onClick={approve}
+          isLoading={approver.isPending}
+          disabled={canProceed}
+          isActionBtn
+          loadingText="Approving..."
+        >
+          Approve {token.symbol ?? "SSV"}
+        </Button>
+        {childrenWithProps}
+      </div>
+      <Stepper
+        className="w-[56%] mx-auto"
+        steps={[
+          {
+            variant: !canProceed ? "active" : "done",
+          },
+          {
+            variant: canProceed ? "active" : "default",
+          },
+        ]}
+      />
+    </div>
+  );
+};
+
+WithAllowance.displayName = "WithAllowance";
