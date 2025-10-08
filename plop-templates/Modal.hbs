@@ -1,0 +1,41 @@
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import type { FC } from 'react';
+
+export type {{pascalCase name}}Props = {
+  // TODO: Add props or remove this type
+};
+
+export const {{pascalCase name}}: FC<{{pascalCase name}}Props> = () => {
+  const modal = /* TODO: Add modal hook */
+  
+  return (
+    <Dialog {...modal}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Dialog Title</DialogTitle>
+          <DialogClose />
+        </DialogHeader>
+        <DialogDescription>
+          
+        </DialogDescription>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Close
+          </Button>
+          <Button>Secondary Action</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+};
+
+{{pascalCase name}}.displayName = '{{pascalCase name}}';

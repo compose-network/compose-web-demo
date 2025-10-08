@@ -1,0 +1,51 @@
+import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "@/lib/utils/tw";
+
+const {{camelCase name}}Variants = cva("",
+  {
+    variants: {
+      variant: {
+        default: "",
+      },
+      size: {
+        default: "",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  },
+);
+{{#if addProps}}
+
+export type {{pascalCase name}}Props = {
+  // TODO: Add props or remove this type
+};{{/if}}
+
+export type {{pascalCase name}}Variants = VariantProps<typeof {{camelCase name}}Variants>;
+{{#if addProps}}
+
+type {{pascalCase name}}FC = React.ForwardRefExoticComponent<
+  Omit<React.ComponentPropsWithoutRef<"{{componentType}}">, keyof {{pascalCase name}}Props> & 
+  {{pascalCase name}}Props & 
+  {{pascalCase name}}Variants & 
+  React.RefAttributes<React.ElementRef<"{{componentType}}">>
+>;
+
+{{/if}}
+export const {{pascalCase name}}{{#if addProps}}: {{pascalCase name}}FC{{else}}: React.ForwardRefExoticComponent<React.ComponentPropsWithoutRef<"{{componentType}}"> & {{pascalCase name}}Variants & React.RefAttributes<React.ElementRef<"{{componentType}}">>>{{/if}} = React.forwardRef<
+  React.ElementRef<"{{componentType}}">,
+  {{#if addProps}}Omit<React.ComponentPropsWithoutRef<"{{componentType}}">, keyof {{pascalCase name}}Props> & {{pascalCase name}}Props & {{pascalCase name}}Variants{{else}}React.ComponentPropsWithoutRef<"{{componentType}}"> & {{pascalCase name}}Variants{{/if}}
+>(({ className, variant, size, ...props }, ref) => {
+  return (
+    <{{componentType}}
+      ref={ref}
+      className={cn({{camelCase name}}Variants({ variant, size }), className)}
+      {...props}
+    />
+  );
+});
+
+{{pascalCase name}}.displayName = "{{pascalCase name}}";
