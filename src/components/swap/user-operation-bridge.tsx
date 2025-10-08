@@ -209,7 +209,6 @@ export const UserOperationBridge: SwapFC = () => {
               if (!prev) return null;
               const clone = cloneDeep(prev);
               clone.actions[0].hash = hash;
-              clone.actions[0].name = `${clone.actions[0].name} - already transferred`;
               return clone;
             });
           },

@@ -1,6 +1,6 @@
 import { useAccount } from "@/hooks/account/use-account";
 import { useEntrypointContract } from "@/lib/abi/entrypoint";
-import { ENTRYPOINT_V0_8, ROLLUP_ADDRESSES } from "@/wagmi/addresses";
+import { ENTRYPOINT, ROLLUP_ADDRESSES } from "@/wagmi/addresses";
 import { rollupA, rollupB } from "@/wagmi/config";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { toMultiChainECDSAValidator } from "@zerodev/multi-chain-ecdsa-validator";
@@ -75,12 +75,12 @@ export const useSmartAccount = () => {
   const { useBalanceOf, useDepositTo } = useEntrypointContract();
 
   const depositToA = useDepositTo({
-    contract: ENTRYPOINT_V0_8,
+    contract: ENTRYPOINT,
     chainId: rollupA.id,
   });
 
   const depositToB = useDepositTo({
-    contract: ENTRYPOINT_V0_8,
+    contract: ENTRYPOINT,
     chainId: rollupB.id,
   });
 
@@ -89,7 +89,7 @@ export const useSmartAccount = () => {
     {
       chainId: rollupA.id,
       enabled: !!kernel.data?.accounts?.A?.address,
-      contract: ENTRYPOINT_V0_8,
+      contract: ENTRYPOINT,
       watch: true,
       placeholderData: keepPreviousData,
     },
@@ -101,7 +101,7 @@ export const useSmartAccount = () => {
       chainId: rollupB.id,
       enabled: !!kernel.data?.accounts?.B?.address,
       watch: true,
-      contract: ENTRYPOINT_V0_8,
+      contract: ENTRYPOINT,
       placeholderData: keepPreviousData,
     },
   );
