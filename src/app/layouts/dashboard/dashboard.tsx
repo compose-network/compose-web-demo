@@ -45,7 +45,7 @@ export const DashboardLayout: FC<ComponentPropsWithRef<"div">> = ({
           ) : (
             <motion.div
               className={cn(
-                "text-gray-800 flex flex-col h-screen max-h-screen overflow-hidden",
+                "text-gray-800 bg-white flex flex-col h-screen max-h-screen overflow-hidden",
               )}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

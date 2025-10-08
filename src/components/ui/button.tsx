@@ -7,12 +7,12 @@ import { CgSpinner } from "react-icons/cg";
 import { Spinner } from "@/components/ui/spinner";
 
 export const buttonVariants = cva(
-  "inline-flex gap-2 items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ",
+  "inline-flex gap-2 items-center justify-center whitespace-nowrap rounded-[100px] text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ",
   {
     variants: {
       variant: {
         default:
-          "bg-primary-500 text-[#ffffff] hover:bg-primary-600 active:bg-primary-700 ",
+          "bg-black text-[#ffffff]",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
@@ -33,13 +33,13 @@ export const buttonVariants = cva(
         error: "",
       },
       size: {
-        default: "h-10 px-4 py-2 font-medium text-md rounded-lg",
-        sm: "h-9 px-3 font-medium text-sm rounded-lg",
-        lg: "h-12 px-6 font-medium text-md rounded-lg",
-        xl: "h-[60px] px-6 font-medium text-base rounded-lg",
-        icon: "size-7 rounded-lg",
-        network: "h-12 pl-3 pr-4 font-medium text-md rounded-lg",
-        wallet: "h-12 px-4 font-medium text-md rounded-lg",
+        default: "h-10 px-4 py-2 font-medium text-md ",
+        sm: "h-9 px-3 font-medium text-sm ",
+        lg: "h-12 px-6 font-medium text-md ",
+        xl: "h-[60px] px-6 font-medium text-base ",
+        icon: "size-7 ",
+        network: "h-12 pl-3 pr-4 font-medium text-md ",
+        wallet: "h-12 px-4 font-medium text-md ",
         none: "",
       },
       width: {
@@ -167,7 +167,6 @@ export const IconButton: ButtonFC = React.forwardRef<
       if (React.isValidElement(children)) {
         return React.cloneElement(children, {
           ...props,
-          // @ts-expect-error className is not a valid prop
           className: cn("size-[65%]", children.props.className),
         });
       }

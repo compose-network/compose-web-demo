@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { SsvLogo } from "@/components/ui/ssv-logo";
+import { ComposeLogo } from "@/components/ui/compose-logo.tsx";
 import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 import { Container } from "@/components/ui/container";
 import { Text } from "@/components/ui/text";
@@ -23,7 +23,7 @@ export const Maintenance: FC = () => {
     >
       <div className="flex w-full flex-col items-center justify-center">
         <div className="flex w-full justify-between items-center">
-          <SsvLogo className="h-full" />
+          <ComposeLogo className="h-full" />
           <ThemeSwitcher />
         </div>
       </div>

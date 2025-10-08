@@ -12,16 +12,21 @@ import { Divider } from "@/components/ui/divider";
 import { Button } from "@/components/ui/button";
 import { FaArrowDown } from "react-icons/fa6";
 import { Text } from "@/components/ui/text";
-import { WithAllowance } from "@/components/with-allowance/with-allowance";
 import { useAccount } from "@/hooks/account/use-account";
-import { useSwitchChain } from "wagmi";
+import { useSwitchChain, useBlockNumber, useReadContract } from "wagmi";
 import { toast } from "@/components/ui/use-toast";
 import { Form } from "@/components/ui/form";
-import { withTransactionModal } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
 import { useAsset } from "@/hooks/use-asset";
 import { merge } from "lodash-es";
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
 import { SwapRoute } from "@/components/swap/swap-route";
+import { useBatchTransactionMachine } from "@/lib/machines/batch-transactions/context";
+import { BatchTransactionModal } from "@/components/modals/batch-transaction-modal";
+import { useApprove } from "@/lib/contract-interactions/erc-20/write/use-approve";
+import { TokenABI } from "@/lib/abi/token";
+import { globals } from "@/config";
+import { formatCurrency } from "@/lib/utils/number";
+import type { Hash } from "viem";
 
 export type SwapProps = {
   // TODO: Add props or remove this type
@@ -49,6 +54,8 @@ export const Swap: SwapFC = () => {
   const { chainId, address, isConnected } = useAccount();
   const isRollupB = chainId === rollupB.id;
   const switchChain = useSwitchChain();
+  const [state, send] = useBatchTransactionMachine();
+  const block = useBlockNumber({ watch: true, chainId: rollupB.id });
 
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
@@ -78,6 +85,21 @@ export const Swap: SwapFC = () => {
     chainId: rollupB.id,
   });
 
+  const approver = useApprove();
+
+  const allowance = useReadContract({
+    abi: TokenABI,
+    address: values.from.token,
+    functionName: "allowance",
+    args: [address!, contracts[rollupB.id].swap],
+    blockNumber: block.data,
+    chainId: rollupB.id,
+    query: {
+      placeholderData: keepPreviousData,
+      enabled: Boolean(address && block.data),
+    },
+  });
+
   const prices = useGetSwapPrice(
     {
       tokenIn: getToken(values.from.token)?.id ?? 0,
@@ -92,6 +114,8 @@ export const Swap: SwapFC = () => {
   );
 
   const isSameToken = values.from.token === values.to.token;
+  const hasAllowance = allowance.isSuccess ? allowance.data >= values.from.amount : false;
+  const needsApproval = !hasAllowance && values.from.amount > 0n;
 
   const fromToken = useAsset({
     tokenAddress: values.from.token,
@@ -105,166 +129,193 @@ export const Swap: SwapFC = () => {
 
   const submit = form.handleSubmit(async (values) => {
     await switchChain.switchChainAsync({ chainId: values.chainId });
-    swap.write(
-      {
-        amountIn: values.from.amount,
-        recipient: address!,
-        tokenIn: getToken(values.from.token)?.id ?? 0,
-        tokenOut: getToken(values.to.token)?.id ?? 0,
-      },
-      withTransactionModal({
-        onInitiated: () => {
-          toast({
-            title: "Swap initiated",
-            description: "Check your wallet to confirm the transaction",
+
+    const writers = [];
+
+    if (needsApproval) {
+      writers.push({
+        name: `Approve ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
+        write: async (): Promise<Hash> => {
+          return new Promise((resolve, reject) => {
+            approver.write(
+              {
+                address: values.from.token,
+                chainId: rollupB.id,
+              },
+              {
+                spender: contracts[rollupB.id].swap,
+                amount: globals.MAX_WEI_AMOUNT,
+              },
+              {
+                onConfirmed: (hash) => resolve(hash),
+                onError: (error) => reject(error),
+              },
+            );
           });
         },
-        onMined: () => {
-          toast({
-            title: "Swap mined",
-          });
-          fromToken.refreshBalance();
-          toToken.refreshBalance();
-          form.reset(
-            merge({}, values, {
-              from: { amount: 0n },
-              to: { amount: 0n },
-            }),
+      });
+    }
+
+    writers.push({
+      name: `Swap ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} for ${formatCurrency(prices.data?.[0] ?? 0n, toToken.decimals || 18)} ${toToken.symbol}`,
+      write: async (): Promise<Hash> => {
+        return new Promise((resolve, reject) => {
+          swap.write(
             {
-              keepIsValid: true,
+              amountIn: values.from.amount,
+              recipient: address!,
+              tokenIn: getToken(values.from.token)?.id ?? 0,
+              tokenOut: getToken(values.to.token)?.id ?? 0,
+            },
+            {
+              onConfirmed: (hash) => resolve(hash),
+              onError: (error) => {
+                reject(error);
+              },
             },
           );
-          form.clearErrors();
-        },
-        onError: (error) => {
-          toast({
-            variant: "destructive",
-            title: "Swap failed",
-            description: error.message,
-          });
-        },
-      }),
-    );
+        });
+      },
+      onMined: () => {
+        fromToken.refreshBalance();
+        toToken.refreshBalance();
+        form.reset(
+          merge({}, values, {
+            from: { amount: 0n },
+            to: { amount: 0n },
+          }),
+          {
+            keepIsValid: true,
+          },
+        );
+        form.clearErrors();
+      },
+    });
+
+
+    send({
+      type: "write",
+      writers,
+      header: "Swap Tokens",
+      onDone: () => {
+        toast({
+          title: "Swap completed",
+          description: "Your tokens have been swapped successfully",
+        });
+      },
+    });
   });
 
   return (
-    <Form {...form}>
-      <form onSubmit={submit} className="flex flex-col gap-8">
-        <div className="flex gap-4 flex-col">
-          <TokenInput
-            chains={[
-              { chainId: rollupA.id, isNotSupported: true },
-              {
-                chainId: rollupB.id,
-                tokens: tokens[rollupB.id].map((token) => token.address),
-              },
-            ]}
-            onChainSelect={handleChainSelect}
-            value={values.from.amount}
-            tokenAddress={values.from.token}
-            chainId={values.chainId}
-            onSelectToken={(token) => form.setValue("from.token", token)}
-            onChange={(amount) => {
-              form.setValue("from.amount", amount, {
-                shouldValidate: true,
-                shouldDirty: true,
-                shouldTouch: true,
-              });
-            }}
-          />
-          {form.formState.errors.from?.amount && (
-            <Text variant="body-3-medium" className="text-error-500">
-              {form.formState.errors.from.amount?.message}
-            </Text>
-          )}
-          <div className="flex items-center gap-3">
-            <Divider className="flex-1" />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-12 rounded-xl"
-              style={{
-                boxShadow: "0px 4px 8px -3px rgba(11, 42, 60, 0.08)",
-              }}
-              onClick={() => {
-                form.setValue(
-                  "from",
-                  {
-                    ...values.to,
-                    amount: prices.data?.[0] ?? 0n,
-                  },
-                  {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  },
-                );
-                form.setValue("to", values.from, {
-                  shouldDirty: true,
+    <>
+      <BatchTransactionModal />
+      <Form {...form}>
+        <form onSubmit={submit} className="flex flex-col gap-8">
+          <div className="flex gap-4 flex-col">
+            <TokenInput
+              chains={[
+                { chainId: rollupA.id, isNotSupported: true },
+                {
+                  chainId: rollupB.id,
+                  tokens: tokens[rollupB.id].map((token) => token.address),
+                },
+              ]}
+              onChainSelect={handleChainSelect}
+              value={values.from.amount}
+              tokenAddress={values.from.token}
+              chainId={values.chainId}
+              onSelectToken={(token) => form.setValue("from.token", token)}
+              onChange={(amount) => {
+                form.setValue("from.amount", amount, {
                   shouldValidate: true,
+                  shouldDirty: true,
+                  shouldTouch: true,
                 });
               }}
-            >
-              <FaArrowDown className="text-primary-500" />
-            </Button>
-            <Divider className="flex-1" />
+            />
+            {form.formState.errors.from?.amount && (
+              <Text variant="body-3-medium" className="text-error-500">
+                {form.formState.errors.from.amount?.message}
+              </Text>
+            )}
+            <div className="flex items-center gap-3">
+              <Divider className="flex-1" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-12 rounded-xl"
+                style={{
+                  boxShadow: "0px 4px 8px -3px rgba(11, 42, 60, 0.08)",
+                }}
+                onClick={() => {
+                  form.setValue(
+                    "from",
+                    {
+                      ...values.to,
+                      amount: prices.data?.[0] ?? 0n,
+                    },
+                    {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    },
+                  );
+                  form.setValue("to", values.from, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                }}
+              >
+                <FaArrowDown className="text-primary-500" />
+              </Button>
+              <Divider className="flex-1" />
+            </div>
+            <TokenInput
+              chains={[
+                { chainId: rollupA.id, isNotSupported: true },
+                {
+                  chainId: rollupB.id,
+                  tokens: tokens[rollupB.id].map((token) => token.address),
+                },
+              ]}
+              onChainSelect={handleChainSelect}
+              value={isSameToken ? values.from.amount : prices.data?.[0] ?? 0n}
+              tokenAddress={values.to.token}
+              chainId={values.chainId}
+              isLoading={prices.isPending}
+              readOnly
+              onSelectToken={(token) => form.setValue("to.token", token)}
+              onChange={(amount) => form.setValue("to.amount", amount)}
+            />
           </div>
-          <TokenInput
-            chains={[
-              { chainId: rollupA.id, isNotSupported: true },
-              {
-                chainId: rollupB.id,
-                tokens: tokens[rollupB.id].map((token) => token.address),
-              },
-            ]}
-            onChainSelect={handleChainSelect}
-            value={isSameToken ? values.from.amount : prices.data?.[0] ?? 0n}
-            tokenAddress={values.to.token}
-            chainId={values.chainId}
-            isLoading={prices.isPending}
-            readOnly
-            onSelectToken={(token) => form.setValue("to.token", token)}
-            onChange={(amount) => form.setValue("to.amount", amount)}
+          <Divider />
+          <SwapRoute
+            action="swap"
+            fromToken={{ address: values.from.token, chainId: values.chainId }}
+            toToken={{ address: values.to.token, chainId: values.chainId }}
           />
-        </div>
-        <Divider />
-        <SwapRoute
-          action="swap"
-          fromToken={{ address: values.from.token, chainId: values.chainId }}
-          toToken={{ address: values.to.token, chainId: values.chainId }}
-        />
-        {isConnected ? (
-          <WithAllowance
-            size="xl"
-            spender={contracts[rollupB.id].swap}
-            token={{
-              address: values.from.token,
-              symbol: getToken(values.from.token)?.symbol ?? "",
-            }}
-            amount={values.from.amount}
-            chainId={rollupB.id}
-          >
+          {isConnected ? (
             <Button
               size="xl"
               className="w-full"
               type="submit"
-              isLoading={swap.isPending || switchChain.isPending}
+              isLoading={state.value !== "idle" || switchChain.isPending}
               loadingText={
                 switchChain.isPending
                   ? "Switching network..."
-                  : swap.isPending
-                    ? "Swapping..."
+                  : state.value !== "idle"
+                    ? "Processing..."
                     : undefined
               }
-              disabled={!form.formState.isValid}
+              disabled={!form.formState.isValid || allowance.isLoading}
             >
               {!isRollupB ? "Switch to Rollup B And Swap" : "Swap"}
             </Button>
-          </WithAllowance>
-        ) : (
-          <ConnectWalletBtn size="xl" />
-        )}
-      </form>
-    </Form>
+          ) : (
+            <ConnectWalletBtn size="xl" />
+          )}
+        </form>
+      </Form>
+    </>
   );
 };
 

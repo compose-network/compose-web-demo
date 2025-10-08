@@ -52,7 +52,7 @@ export const TokenPicker: TokenPickerFC = ({
         }}
         variant="ghost"
         className={cn(
-          "p-4 pr-6 pl-4 rounded-xl border border-gray-300 bg-gray-50 flex gap-3 items-center min-w-[188px] h-auto",
+          "p-4 pr-6 pl-4 rounded-[100px] border border-gray-300 bg-gray-50 flex gap-3 items-center min-w-[188px] h-auto",
           { "pointer-events-none": readOnly },
           className,
         )}

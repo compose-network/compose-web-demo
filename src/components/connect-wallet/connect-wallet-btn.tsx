@@ -42,6 +42,7 @@ export const ConnectWalletBtn: FC<ButtonProps> = (props) => {
           return (
             <Button
               data-cy="connect-btn"
+              variant={'black'}
               size="lg"
               width="full"
               onClick={openConnectModal}
@@ -79,7 +80,7 @@ export const ConnectWalletBtn: FC<ButtonProps> = (props) => {
               variant: "body-3-medium",
               className: "flex items-center gap-3 h-12 pl-4 pr-3 rounded-xl",
             })}
-            variant="secondary"
+            variant="black"
             colorScheme="wallet"
             onClick={openAccountModal}
             {...props}
