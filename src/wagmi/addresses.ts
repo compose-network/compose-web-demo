@@ -1,4 +1,4 @@
-export const ENTRYPOINT_V0_8 = "0x258FD3828a0aB0be5d2229017ccd815D5Bd0Fec2";
+export const ENTRYPOINT_V0_8 = "0x0000000071727De22E5E9d8BAf0edAc6f37da032";
 
 // Latest block from zerodev-examples/.env (authoritative)
 export const ROLLUP_ADDRESSES = {
