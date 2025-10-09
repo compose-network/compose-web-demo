@@ -12,6 +12,7 @@ import { formatCurrency } from "@/lib/utils/number";
 import type { TokenPickerCommandDialogProps } from "@/components/swap/token-picker/token-picker-command-dialog";
 import { useAccount } from "@/hooks/account/use-account";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+
 export type TokenInputProps = {
   chainId: number;
   chains: TokenPickerCommandDialogProps["chains"];
@@ -35,6 +36,7 @@ export const TokenInput: TokenInputFC = ({
   isLoading,
   canPickToken = true,
   onChainSelect,
+  onSelectToken,
   ...props
 }) => {
   const { isConnected } = useAccount();
@@ -62,7 +64,7 @@ export const TokenInput: TokenInputFC = ({
           chains={chains}
           selectedToken={tokenAddress}
           chainId={chainId}
-          onSelectToken={props.onSelectToken}
+          onSelectToken={onSelectToken}
           readOnly={!canPickToken}
         />
       </div>
