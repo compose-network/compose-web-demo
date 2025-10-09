@@ -8,6 +8,7 @@ import { TokenABI } from "@/lib/abi/token";
 import { WETHAbi } from "@/lib/abi/weth";
 import { prepareAndSignUserOperations } from "@zerodev/multi-chain-ecdsa-validator";
 import type { CreateKernelAccountReturnType } from "@zerodev/sdk";
+import type { EntryPointVersion } from "viem/account-abstraction";
 
 const FALLBACK_CALL_GAS_LIMIT = 900_000n;
 const MIN_VERIFICATION_GAS_LIMIT = 1_200_000n;
@@ -81,8 +82,8 @@ export const createUserOp = async ({
 
 export type GenerateERC20BridgeUserOpsParams = {
   eoaAddress: Address;
-  sourceKernelAccount: CreateKernelAccountReturnType<"0.7">;
-  destKernelAccount: CreateKernelAccountReturnType<"0.7">;
+  sourceKernelAccount: CreateKernelAccountReturnType<EntryPointVersion>;
+  destKernelAccount: CreateKernelAccountReturnType<EntryPointVersion>;
   tokenAddress: Address;
   amount: bigint;
   sessionId: bigint;
@@ -181,8 +182,8 @@ export const createAndSignBridgeERC20UserOps = async ({
 
 export type GenerateETHBridgeUserOpsParams = {
   eoaAddress: Address;
-  sourceKernelAccount: CreateKernelAccountReturnType<"0.7">;
-  destKernelAccount: CreateKernelAccountReturnType<"0.7">;
+  sourceKernelAccount:  CreateKernelAccountReturnType<EntryPointVersion>;
+  destKernelAccount: CreateKernelAccountReturnType<EntryPointVersion>;
   amount: bigint;
   sessionId: bigint;
   sourceChainId: keyof typeof BRIDGE_ADDRESSES;

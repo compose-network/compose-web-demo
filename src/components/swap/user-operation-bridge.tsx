@@ -32,7 +32,11 @@ import {
 import { encodeXtMessage } from "@/lib/smart-account/xt";
 import { formatCurrency } from "@/lib/utils/number";
 import { isNativeToken } from "@/lib/utils/token";
-import { type BRIDGE_ADDRESSES, BRIDGE_TOKEN, ENTRYPOINT_V0_8 } from "@/wagmi/addresses";
+import {
+  type BRIDGE_ADDRESSES,
+  BRIDGE_TOKEN,
+  ENTRYPOINT_V0_8,
+} from "@/wagmi/addresses";
 import { chainsMap, config, rollupA, rollupB } from "@/wagmi/config";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { getPublicClient } from "@wagmi/core";
@@ -321,8 +325,8 @@ export const UserOperationBridge: SwapFC = () => {
     // Create and sign user operations for bridge
     const [signedA, signedB] = await createOps({
       eoaAddress: eoa.address!,
-      sourceKernelAddress: sourceKernel!,
-      destKernelAddress: destKernel!,
+      sourceKernelAccount: sourceKernel!,
+      destKernelAccount: destKernel!,
       tokenAddress: values.token,
       amount: values.from.amount,
       sessionId,
@@ -490,7 +494,7 @@ export const UserOperationBridge: SwapFC = () => {
     args: [kernel.kernel.data?.accounts.A.address || zeroAddress],
     chainId: rollupA.id,
   });
-  console.log('balanceeee.data:', balanceeee.data)
+  console.log("balanceeee.data:", balanceeee.data);
 
   return (
     <>
