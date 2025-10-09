@@ -35,7 +35,7 @@ import { isNativeToken } from "@/lib/utils/token";
 import {
   type BRIDGE_ADDRESSES,
   BRIDGE_TOKEN,
-  ENTRYPOINT,
+  ENTRYPOINT_ADDRESS,
 } from "@/wagmi/addresses";
 import { chainsMap, rollupA, rollupB, baseChain, arbitrumChain, optimismChain } from "@/wagmi/config";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -490,7 +490,7 @@ export const UserOperationBridge: SwapFC = () => {
   );
 
   const balanceeee = useReadContract({
-    address: ENTRYPOINT,
+    address: ENTRYPOINT_ADDRESS,
     functionName: "balanceOf",
     args: [kernel.kernel.data?.accounts.A.address || zeroAddress],
     chainId: rollupA.id,

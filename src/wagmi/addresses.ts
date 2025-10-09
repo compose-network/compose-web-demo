@@ -1,6 +1,7 @@
 import { getEntryPoint } from "@zerodev/sdk/constants";
 
-export const ENTRYPOINT = getEntryPoint("0.7").address;
+export const ENTRYPOINT_WITH_VERSION = getEntryPoint("0.7");
+export const ENTRYPOINT_ADDRESS = ENTRYPOINT_WITH_VERSION.address;
 
 // Latest block from zerodev-examples/.env (authoritative)
 export const ROLLUP_ADDRESSES = {
