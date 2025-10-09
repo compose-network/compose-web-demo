@@ -4,7 +4,10 @@ import type { statusIcons } from "@/components/modals/batch-transaction-modal.ts
 import { SwapRoute } from "@/components/swap/swap-route";
 import { TokenInput } from "@/components/swap/token-picker/token-input";
 import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal.tsx";
-import { createAndSignBridgeERC20UserOps } from "@/components/swap/utils/generate-bridge-userops";
+import {
+  createAndSignBridgeERC20UserOps,
+  createAndSignBridgeETHUserOps,
+} from "@/components/swap/utils/generate-bridge-userops";
 import { AddressDisplay } from "@/components/ui/address";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,11 +15,13 @@ import { Divider } from "@/components/ui/divider";
 import { Form } from "@/components/ui/form";
 import { Text } from "@/components/ui/text";
 import { toast } from "@/components/ui/use-toast";
+import { globals } from "@/config";
 import { useAccount } from "@/hooks/account/use-account";
 import { useAsset } from "@/hooks/use-asset.ts";
+import { useAllowance } from "@/lib/contract-interactions/erc-20/read/use-allowance";
 import { useBalanceOf } from "@/lib/contract-interactions/erc-20/read/use-balance-of";
+import { useApprove } from "@/lib/contract-interactions/erc-20/write/use-approve";
 import { useMint } from "@/lib/contract-interactions/erc-20/write/use-mint";
-import { useTransfer } from "@/lib/contract-interactions/erc-20/write/use-transfer.ts";
 import { withTransactionModal } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
 import { useSmartAccount } from "@/lib/smart-account/kernel";
 import type { ComposedSignedUserOpsTxReturnType } from "@/lib/smart-account/user-op";
@@ -27,9 +32,10 @@ import {
 import { encodeXtMessage } from "@/lib/smart-account/xt";
 import { formatCurrency } from "@/lib/utils/number";
 import { isNativeToken } from "@/lib/utils/token";
-import { type BRIDGE_ADDRESSES, BRIDGE_TOKEN } from "@/wagmi/addresses";
-import { chainsMap, rollupA, rollupB } from "@/wagmi/config";
+import { type BRIDGE_ADDRESSES, BRIDGE_TOKEN, ENTRYPOINT_V0_8 } from "@/wagmi/addresses";
+import { chainsMap, config, rollupA, rollupB } from "@/wagmi/config";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { getPublicClient } from "@wagmi/core";
 import { cloneDeep } from "lodash-es";
 import { type ComponentPropsWithoutRef, type FC, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -43,10 +49,8 @@ import {
   rpcSchema,
   zeroAddress,
 } from "viem";
-import { useSendTransaction, useSwitchChain } from "wagmi";
+import { useReadContract, useSendTransaction, useSwitchChain } from "wagmi";
 import { z } from "zod";
-import { WithAllowance } from "../with-allowance/with-allowance";
-
 export type SwapProps = {
   // TODO: Add props or remove this type
 };
@@ -95,9 +99,18 @@ const schema = z.object({
   slippage: z.number(),
 });
 
+window.getLogs = async (hash: `0x${string}`, chainId = 88888) => {
+  const client = getPublicClient(config, { chainId });
+
+  const receipt = await client.waitForTransactionReceipt({ hash });
+
+  const logs = decodeUserOperationLogs(receipt.logs);
+  console.log("logs:", logs);
+  return logs;
+};
+
 export const UserOperationBridge: SwapFC = () => {
-  const account = useAccount();
-  const erc20transfer = useTransfer();
+  const eoa = useAccount();
   const sendTx = useSendTransaction();
 
   console.log("============== TEST");
@@ -132,9 +145,13 @@ export const UserOperationBridge: SwapFC = () => {
 
   const values = form.watch();
 
+  const selectedToken = useAsset({
+    tokenAddress: values.token,
+    chainId: values.from.chainId,
+  });
+
   const { switchChainAsync } = useSwitchChain();
   const kernel = useSmartAccount();
-  const EOA = useAccount();
 
   const fromToken = useAsset({
     tokenAddress: values.token,
@@ -151,12 +168,28 @@ export const UserOperationBridge: SwapFC = () => {
     },
   );
 
+  const allowance = useAllowance(
+    {
+      address: values.token,
+      chainId: values.from.chainId,
+    },
+    {
+      owner: eoa.address!,
+      spender: kernel.kernel.data?.accounts.A.address || zeroAddress,
+    },
+    {
+      enabled: Boolean(eoa.address),
+    },
+  );
+
+  const approve = useApprove();
+
   console.log("Selected token kernel balance", selectedTokenKernelBalance);
 
   const submit = form.handleSubmit(async (values) => {
     const id: Hex = `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`;
 
-    if (!account.address || !kernel.kernel.data)
+    if (!eoa.address || !kernel.kernel.data)
       return toast({
         title: "Please connect your wallet",
         variant: "destructive",
@@ -170,12 +203,13 @@ export const UserOperationBridge: SwapFC = () => {
     await switchChainAsync({ chainId: values.from.chainId });
 
     const symbol = values.token === zeroAddress ? "ETH" : fromToken.symbol;
+    const isNative = isNativeToken(values.token);
 
     setTransactionData({
       id,
       actions: [
         {
-          name: `Ensuring ${symbol} are on Smart Account`,
+          name: `${isNative ? "Send ETH to Smart Account" : `Approve ${symbol}`}`,
           chainId: values.from.chainId,
           status: "pending",
           description: `${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
@@ -211,29 +245,57 @@ export const UserOperationBridge: SwapFC = () => {
       rpcSchema: rpcSchema<ComposeRpcSchema>(),
     });
 
-    if (selectedTokenKernelBalance < values.from.amount) {
-      if (isNativeToken(values.token)) {
-        const hash = await sendTx.sendTransactionAsync({
-          to: kernel.getKernelByChainId(values.from.chainId)!.address,
-          value: values.from.amount,
-          chainId: values.from.chainId,
-        });
-        await sourcePublicClient.waitForTransactionReceipt({ hash });
-        setTransactionData((prev) => {
-          if (!prev) return null;
-          const clone = cloneDeep(prev);
-          clone.actions[0].hash = hash;
-          clone.actions[0].name = `${clone.actions[0].name} - already transferred`;
-          return clone;
-        });
-      }
-    } else {
+    if (isNative) {
+      const hash = await sendTx.sendTransactionAsync({
+        to: kernel.getKernelByChainId(values.from.chainId)!.address,
+        value: values.from.amount,
+        chainId: values.from.chainId,
+      });
       setTransactionData((prev) => {
         if (!prev) return null;
         const clone = cloneDeep(prev);
-        clone.actions[0].name = `${clone.actions[0].name} - already transferred`;
+        clone.actions[0].hash = hash;
         return clone;
       });
+      await sourcePublicClient.waitForTransactionReceipt({ hash });
+      setTransactionData((prev) => {
+        if (!prev) return null;
+        const clone = cloneDeep(prev);
+        clone.actions[0].hash = hash;
+        clone.actions[0].name = `${clone.actions[0].name} - ${isNative ? "sent" : "approved"}`;
+        return clone;
+      });
+    } else if (allowance.data && allowance.data < values.from.amount) {
+      await approve.write(
+        {
+          address: values.token,
+          chainId: values.from.chainId,
+        },
+        {
+          spender: kernel.kernel.data?.accounts.A.address || zeroAddress,
+          amount: globals.MAX_WEI_AMOUNT,
+        },
+        withTransactionModal({
+          onConfirmed: (hash) => {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              clone.actions[0].hash = hash;
+              clone.actions[0].name = `${clone.actions[0].name}`;
+              return clone;
+            });
+          },
+          onMined: () => {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              clone.actions[0].status = "success";
+              return clone;
+            });
+          },
+        }),
+      );
+    } else {
       console.log("Kernel has enough balance of the selected token to bridge");
       console.log("Skipping transfer transaction");
     }
@@ -252,9 +314,13 @@ export const UserOperationBridge: SwapFC = () => {
 
     const sessionId = BigInt(Math.floor(Math.random() * 1000000));
 
+    const createOps = isNative
+      ? createAndSignBridgeETHUserOps
+      : createAndSignBridgeERC20UserOps;
+
     // Create and sign user operations for bridge
-    const [signedA, signedB] = await createAndSignBridgeERC20UserOps({
-      eoaAddress: EOA.address!,
+    const [signedA, signedB] = await createOps({
+      eoaAddress: eoa.address!,
       sourceKernelAddress: sourceKernel!,
       destKernelAddress: destKernel!,
       tokenAddress: values.token,
@@ -418,6 +484,14 @@ export const UserOperationBridge: SwapFC = () => {
     },
   );
 
+  const balanceeee = useReadContract({
+    address: ENTRYPOINT_V0_8,
+    functionName: "balanceOf",
+    args: [kernel.kernel.data?.accounts.A.address || zeroAddress],
+    chainId: rollupA.id,
+  });
+  console.log('balanceeee.data:', balanceeee.data)
+
   return (
     <>
       <TransactionModal
@@ -439,6 +513,7 @@ export const UserOperationBridge: SwapFC = () => {
                     BRIDGE_TOKEN,
                     zeroAddress,
                     "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553",
+                    "0xeA0DB94b4c702d9cA0Fcc65715A035B24dF3452D",
                   ],
                 },
                 {
@@ -447,6 +522,7 @@ export const UserOperationBridge: SwapFC = () => {
                     BRIDGE_TOKEN,
                     zeroAddress,
                     "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553",
+                    "0xeA0DB94b4c702d9cA0Fcc65715A035B24dF3452D",
                   ],
                 },
               ]}
@@ -518,27 +594,16 @@ export const UserOperationBridge: SwapFC = () => {
               chainId: values.to.chainId,
             }}
           />
-          {account.isConnected ? (
-            <WithAllowance
+          {eoa.isConnected ? (
+            <Button
               size="xl"
-              spender={kernel.kernel.data?.accounts.A.address}
-              token={{
-                address: values.token,
-                symbol: "MTK",
-              }}
-              amount={values.from.amount}
-              chainId={values.from.chainId}
+              className="w-full"
+              type="submit"
+              disabled={!form.formState.isValid}
+              loadingText="Bridging..."
             >
-              <Button
-                size="xl"
-                className="w-full"
-                type="submit"
-                disabled={!form.formState.isValid}
-                loadingText="Bridging..."
-              >
-                Bridge
-              </Button>
-            </WithAllowance>
+              Bridge
+            </Button>
           ) : (
             <ConnectWalletBtn size="xl" />
           )}
@@ -574,7 +639,11 @@ export const UserOperationBridge: SwapFC = () => {
                     Balance
                   </Text>
                   <Text variant="headline4" className="text-gray-900">
-                    {formatCurrency(kernel.balanceA.data ?? 0n)} ETH
+                    {formatCurrency(kernel.balanceA.data?.value ?? 0n)}{" "}
+                    {kernel.balanceA.data?.symbol}
+                  </Text>
+                  <Text variant="headline4" className="text-gray-900">
+                    {formatCurrency(kernel.gasBalanceA.data ?? 0n)} Gas ETH
                   </Text>
                   <Text variant="headline4" className="text-gray-900">
                     {formatCurrency(kernelAMTKBalance.data ?? 0n)} MTK
@@ -587,13 +656,13 @@ export const UserOperationBridge: SwapFC = () => {
                     await switchChainAsync({ chainId: rollupA.id });
                     await kernel.depositToA.write({
                       account: kernel.kernel.data!.accounts.A.address,
-                      value: parseEther("1"),
+                      value: parseEther("0.1"),
                     });
                   }}
                   disabled={kernel.depositToA.isPending}
                   isLoading={kernel.depositToA.isPending}
                 >
-                  Deposit 1 ETH
+                  Deposit 0.1 GAS ETH
                 </Button>
               </div>
             </div>
@@ -625,7 +694,11 @@ export const UserOperationBridge: SwapFC = () => {
                     Balance
                   </Text>
                   <Text variant="headline4" className="text-gray-900">
-                    {formatCurrency(kernel.balanceB.data ?? 0n)} ETH
+                    {formatCurrency(kernel.balanceB.data?.value ?? 0n)}{" "}
+                    {kernel.balanceB.data?.symbol}
+                  </Text>
+                  <Text variant="headline4" className="text-gray-900">
+                    {formatCurrency(kernel.gasBalanceB.data ?? 0n)} Gas ETH
                   </Text>
                   <Text variant="headline4" className="text-gray-900">
                     {formatCurrency(kernelBMTKBalance.data ?? 0n)} MTK
@@ -638,13 +711,13 @@ export const UserOperationBridge: SwapFC = () => {
                     await switchChainAsync({ chainId: rollupB.id });
                     await kernel.depositToB.write({
                       account: kernel.kernel.data!.accounts.B.address,
-                      value: parseEther("1"),
+                      value: parseEther("0.1"),
                     });
                   }}
                   disabled={kernel.depositToB.isPending}
                   isLoading={kernel.depositToB.isPending}
                 >
-                  Deposit 1 ETH
+                  Deposit 0.1 GAS ETH
                 </Button>
               </div>
             </div>
@@ -657,7 +730,7 @@ export const UserOperationBridge: SwapFC = () => {
                 await mint.write(
                   { address: BRIDGE_TOKEN, chainId: rollupA.id },
                   {
-                    to: account.address!,
+                    to: eoa.address!,
                     amount: parseEther("10"),
                   },
                   withTransactionModal(),
@@ -672,7 +745,7 @@ export const UserOperationBridge: SwapFC = () => {
                 await mint.write(
                   { address: BRIDGE_TOKEN, chainId: rollupA.id },
                   {
-                    to: account.address!,
+                    to: eoa.address!,
                     amount: parseEther("10"),
                   },
                   withTransactionModal(),

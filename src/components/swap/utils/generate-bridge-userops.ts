@@ -5,6 +5,7 @@ import { config } from "@/wagmi/config";
 import { getPublicClient } from "@wagmi/core";
 import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
 import { TokenABI } from "@/lib/abi/token";
+import { WETHAbi } from "@/lib/abi/weth";
 import { prepareAndSignUserOperations } from "@zerodev/multi-chain-ecdsa-validator";
 import type { CreateKernelAccountReturnType } from "@zerodev/sdk";
 
@@ -80,8 +81,8 @@ export const createUserOp = async ({
 
 export type GenerateERC20BridgeUserOpsParams = {
   eoaAddress: Address;
-  sourceKernelAddress: CreateKernelAccountReturnType<"0.7">;
-  destKernelAddress: CreateKernelAccountReturnType<"0.7">;
+  sourceKernelAccount: CreateKernelAccountReturnType<"0.7">;
+  destKernelAccount: CreateKernelAccountReturnType<"0.7">;
   tokenAddress: Address;
   amount: bigint;
   sessionId: bigint;
@@ -91,8 +92,8 @@ export type GenerateERC20BridgeUserOpsParams = {
 
 export const createAndSignBridgeERC20UserOps = async ({
   eoaAddress,
-  sourceKernelAddress,
-  destKernelAddress,
+  sourceKernelAccount,
+  destKernelAccount,
   tokenAddress,
   amount,
   sessionId,
@@ -109,7 +110,7 @@ export const createAndSignBridgeERC20UserOps = async ({
 
   const [sourceUserOp, destUserOp] = await Promise.all([
     createUserOp({
-      account: sourceKernelAddress,
+      account: sourceKernelAccount,
       chainId: sourceChainId,
       calls: [
         {
@@ -118,7 +119,7 @@ export const createAndSignBridgeERC20UserOps = async ({
           data: encodeFunctionData({
             abi: TokenABI,
             functionName: "transferFrom",
-            args: [eoaAddress, sourceKernelAddress.address, amount],
+            args: [eoaAddress, sourceKernelAccount.address, amount],
           }),
         },
         {
@@ -130,8 +131,8 @@ export const createAndSignBridgeERC20UserOps = async ({
             args: [
               BigInt(destChainId),
               tokenAddress,
-              sourceKernelAddress.address,
-              destKernelAddress.address,
+              sourceKernelAccount.address,
+              destKernelAccount.address,
               amount,
               sessionId,
               destBridgeContract,
@@ -141,7 +142,7 @@ export const createAndSignBridgeERC20UserOps = async ({
       ],
     }),
     createUserOp({
-      account: destKernelAddress,
+      account: destKernelAccount,
       chainId: destChainId,
       calls: [
         {
@@ -152,8 +153,8 @@ export const createAndSignBridgeERC20UserOps = async ({
             functionName: "receiveTokens",
             args: [
               BigInt(sourceChainId),
-              sourceKernelAddress.address,
-              destKernelAddress.address,
+              sourceKernelAccount.address,
+              destKernelAccount.address,
               sessionId,
               sourceBridgeContract,
             ],
@@ -167,6 +168,111 @@ export const createAndSignBridgeERC20UserOps = async ({
             functionName: "transfer",
             args: [eoaAddress, amount],
           }),
+        },
+      ],
+    }),
+  ]);
+
+  return prepareAndSignUserOperations(
+    [sourcePublicClient as any, destPublicClient as any],
+    [sourceUserOp, destUserOp],
+  );
+};
+
+export type GenerateETHBridgeUserOpsParams = {
+  eoaAddress: Address;
+  sourceKernelAccount: CreateKernelAccountReturnType<"0.7">;
+  destKernelAccount: CreateKernelAccountReturnType<"0.7">;
+  amount: bigint;
+  sessionId: bigint;
+  sourceChainId: keyof typeof BRIDGE_ADDRESSES;
+  destChainId: keyof typeof BRIDGE_ADDRESSES;
+};
+
+export const createAndSignBridgeETHUserOps = async ({
+  eoaAddress,
+  sourceKernelAccount,
+  destKernelAccount,
+  amount,
+  sessionId,
+  sourceChainId,
+  destChainId,
+}: GenerateETHBridgeUserOpsParams) => {
+  const destPublicClient = getPublicClient(config, { chainId: destChainId });
+  const sourcePublicClient = getPublicClient(config, {
+    chainId: sourceChainId,
+  });
+
+  const sourceBridgeContract = getBridgeAddress(sourceChainId);
+  const destBridgeContract = getBridgeAddress(destChainId);
+
+  const wethAddress = "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553";
+
+  const [sourceUserOp, destUserOp] = await Promise.all([
+    createUserOp({
+      account: sourceKernelAccount,
+      chainId: sourceChainId,
+      calls: [
+        {
+          to: wethAddress,
+          value: amount,
+          data: encodeFunctionData({
+            abi: WETHAbi,
+            functionName: "deposit",
+            args: [],
+          }),
+        },
+        {
+          to: sourceBridgeContract,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: UserOperationBridgeAbi,
+            functionName: "send",
+            args: [
+              BigInt(destChainId),
+              wethAddress,
+              sourceKernelAccount.address,
+              destKernelAccount.address,
+              amount,
+              sessionId,
+              destBridgeContract,
+            ],
+          }),
+        },
+      ],
+    }),
+    createUserOp({
+      account: destKernelAccount,
+      chainId: destChainId,
+      calls: [
+        {
+          to: destBridgeContract,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: UserOperationBridgeAbi,
+            functionName: "receiveTokens",
+            args: [
+              BigInt(sourceChainId),
+              sourceKernelAccount.address,
+              destKernelAccount.address,
+              sessionId,
+              sourceBridgeContract,
+            ],
+          }),
+        },
+        {
+          to: wethAddress,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: WETHAbi,
+            functionName: "withdraw",
+            args: [amount],
+          }),
+        },
+        {
+          to: eoaAddress,
+          value: amount,
+          data: "0x" as Hex,
         },
       ],
     }),

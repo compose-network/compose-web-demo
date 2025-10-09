@@ -6,11 +6,14 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { toMultiChainECDSAValidator } from "@zerodev/multi-chain-ecdsa-validator";
 import type { KernelSmartAccountImplementation } from "@zerodev/sdk";
 import { createKernelAccount } from "@zerodev/sdk";
-import { getEntryPoint, KERNEL_V3_1 } from "@zerodev/sdk/constants";
+import { KERNEL_V3_1 } from "@zerodev/sdk/constants";
 import { type Address, type Client, isAddress } from "viem";
-import { usePublicClient, useWalletClient } from "wagmi";
+import { useBalance, usePublicClient, useWalletClient } from "wagmi";
+import { fetchBalanceOf } from "../contract-interactions/erc-20/read/use-balance-of";
+import { KERNEL_V3_1 } from "@zerodev/sdk/constants";
 
 const entryPoint = getEntryPoint("0.7");
+
 export const useSmartAccount = () => {
   const account = useAccount();
   const walletClient = useWalletClient();
@@ -84,7 +87,58 @@ export const useSmartAccount = () => {
     chainId: rollupB.id,
   });
 
-  const balanceA = useBalanceOf(
+  const balanceA = useBalance({
+    address: kernel.data?.accounts?.A?.address as Address,
+    chainId: rollupA.id,
+  });
+
+  const tokensA = useQuery({
+    queryKey: ["tokens-a", kernel.data?.accounts?.A?.address, rollupA.id],
+    queryFn: async () => {
+      return Promise.all([
+        {
+          weth: await fetchBalanceOf(
+            {
+              address: "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553",
+              chainId: rollupA.id,
+            },
+            {
+              account: kernel.data?.accounts?.A?.address as Address,
+            },
+          ),
+        },
+      ]);
+    },
+  });
+
+  const tokensB = useQuery({
+    queryKey: ["tokens-b", kernel.data?.accounts?.B?.address, rollupB.id],
+    queryFn: async () => {
+      return Promise.all([
+        {
+          weth: await fetchBalanceOf(
+            {
+              address: "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553",
+              chainId: rollupB.id,
+            },
+            {
+              account: kernel.data?.accounts?.B?.address as Address,
+            },
+          ),
+        },
+      ]);
+    },
+  });
+
+  console.log("tokensA:", tokensA.data);
+  console.log("tokensB:", tokensB.data);
+
+  const balanceB = useBalance({
+    address: kernel.data?.accounts?.B?.address as Address,
+    chainId: rollupB.id,
+  });
+
+  const gasBalanceA = useBalanceOf(
     { account: kernel.data?.accounts?.A?.address as Address },
     {
       chainId: rollupA.id,
@@ -95,7 +149,7 @@ export const useSmartAccount = () => {
     },
   );
 
-  const balanceB = useBalanceOf(
+  const gasBalanceB = useBalanceOf(
     { account: kernel.data?.accounts?.B?.address as Address },
     {
       chainId: rollupB.id,
@@ -121,6 +175,8 @@ export const useSmartAccount = () => {
     publicClientB,
     balanceA,
     balanceB,
+    gasBalanceA,
+    gasBalanceB,
     depositToA,
     depositToB,
     kernel,

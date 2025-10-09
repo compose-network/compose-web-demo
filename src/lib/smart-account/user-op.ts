@@ -14,6 +14,7 @@ import {
   erc20Abi,
 } from "viem";
 import type { PrepareUserOperationReturnType } from "viem/account-abstraction";
+import { WETHAbi } from "../abi/weth";
 
 export function toRpcUserOpCanonical(op: PrepareUserOperationReturnType) {
   const hx = (v: string | bigint) =>
@@ -66,6 +67,7 @@ const abis = [
   TokenABI,
   erc20Abi,
   MailboxABI,
+  WETHAbi,
 ];
 export const decodeUserOperationLogs = (logs: Log[]) => {
   console.log("abis:", abis);
@@ -89,11 +91,13 @@ export const decodeUserOperationLogs = (logs: Log[]) => {
       console.log("decoded.args.revertReason:", decoded.args.revertReason);
       const reason = abis.map((abi) => {
         try {
-          return decodeErrorResult({
+          const data = decodeErrorResult({
             abi,
             // @ts-expect-error revertReason is not always present
             data: decoded.args.revertReason,
           });
+          data.abi = abi;
+          return data;
         } catch (error) {
           console.log("error:", error instanceof Error ? error.message : error);
           return undefined;
