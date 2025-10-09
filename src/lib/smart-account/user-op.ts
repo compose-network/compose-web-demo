@@ -3,15 +3,15 @@ import { MailboxABI } from "@/lib/abi/swap/mailbox";
 import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
 import { TokenABI } from "@/lib/abi/token";
 import { tryCatch } from "@/lib/utils/tryCatch";
-import type { Hex, Address, Log, DecodeEventLogReturnType } from "viem";
+import type { Address, DecodeEventLogReturnType, Hex, Log } from "viem";
 import {
+  concatHex,
+  decodeErrorResult,
+  decodeEventLog,
+  erc20Abi,
   isHex,
   toHex,
   zeroAddress,
-  concatHex,
-  decodeEventLog,
-  decodeErrorResult,
-  erc20Abi,
 } from "viem";
 import type { PrepareUserOperationReturnType } from "viem/account-abstraction";
 import { WETHAbi } from "../abi/weth";
@@ -21,6 +21,7 @@ export function toRpcUserOpCanonical(op: PrepareUserOperationReturnType) {
     typeof v === "string" && isHex(v as `0x${string}`)
       ? (v as `0x${string}`)
       : toHex(BigInt(v));
+
   const initCode: `0x${string}` =
     op.initCode && isHex(op.initCode) && op.initCode !== "0x"
       ? op.initCode

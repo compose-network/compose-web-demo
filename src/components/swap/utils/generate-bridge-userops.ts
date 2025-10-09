@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { getBridgeAddress, type BRIDGE_ADDRESSES } from "@/wagmi/addresses";
-import { encodeFunctionData, type Address, type Hex } from "viem";
+import { type BRIDGE_ADDRESSES, getBridgeAddress } from "@/wagmi/addresses";
+import { type Address, encodeFunctionData, type Hex } from "viem";
 import { config } from "@/wagmi/config";
 import { getPublicClient } from "@wagmi/core";
 import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
@@ -8,7 +8,11 @@ import { TokenABI } from "@/lib/abi/token";
 import { WETHAbi } from "@/lib/abi/weth";
 import { prepareAndSignUserOperations } from "@zerodev/multi-chain-ecdsa-validator";
 import type { CreateKernelAccountReturnType } from "@zerodev/sdk";
-import type { EntryPointVersion } from "viem/account-abstraction";
+import type {
+  GetPaymasterDataParameters,
+  PaymasterActions,
+} from "viem/account-abstraction";
+import { getPaymasterDataForChain } from "@/api/paymaster.ts";
 
 const FALLBACK_CALL_GAS_LIMIT = 900_000n;
 const MIN_VERIFICATION_GAS_LIMIT = 1_200_000n;
@@ -68,6 +72,15 @@ export const createUserOp = async ({
   // Estimate fees per gas
   const gasEstimate = await publicClient.estimateFeesPerGas();
 
+  const paymaster: PaymasterActions = {
+    getPaymasterData: (parameters: GetPaymasterDataParameters) => {
+      return getPaymasterDataForChain(parameters, "pm_getPaymasterData");
+    },
+    getPaymasterStubData: (parameters: GetPaymasterDataParameters) => {
+      return getPaymasterDataForChain(parameters, "pm_getPaymasterStubData");
+    },
+  };
+
   return {
     account,
     chainId,
@@ -77,13 +90,14 @@ export const createUserOp = async ({
     preVerificationGas: PRE_VERIFICATION_GAS,
     maxFeePerGas: gasEstimate.maxFeePerGas!,
     maxPriorityFeePerGas: gasEstimate.maxPriorityFeePerGas!,
+    paymaster,
   };
 };
 
 export type GenerateERC20BridgeUserOpsParams = {
   eoaAddress: Address;
-  sourceKernelAccount: CreateKernelAccountReturnType<EntryPointVersion>;
-  destKernelAccount: CreateKernelAccountReturnType<EntryPointVersion>;
+  sourceKernelAccount: CreateKernelAccountReturnType;
+  destKernelAccount: CreateKernelAccountReturnType;
   tokenAddress: Address;
   amount: bigint;
   sessionId: bigint;
@@ -182,8 +196,8 @@ export const createAndSignBridgeERC20UserOps = async ({
 
 export type GenerateETHBridgeUserOpsParams = {
   eoaAddress: Address;
-  sourceKernelAccount:  CreateKernelAccountReturnType<EntryPointVersion>;
-  destKernelAccount: CreateKernelAccountReturnType<EntryPointVersion>;
+  sourceKernelAccount: CreateKernelAccountReturnType;
+  destKernelAccount: CreateKernelAccountReturnType;
   amount: bigint;
   sessionId: bigint;
   sourceChainId: keyof typeof BRIDGE_ADDRESSES;

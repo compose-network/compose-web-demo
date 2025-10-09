@@ -104,21 +104,21 @@ const schema = z.object({
   slippage: z.number(),
 });
 
-window.getLogs = async (hash: `0x${string}`, chainId = 88888) => {
-  const client = getPublicClient(config, { chainId });
+((w) => {
+  w.getLogs = async (hash: `0x${string}`, chainId = 88888) => {
+    const client = getPublicClient(config, { chainId });
 
-  const receipt = await client.waitForTransactionReceipt({ hash });
+    const receipt = await client.waitForTransactionReceipt({ hash });
 
-  const logs = decodeUserOperationLogs(receipt.logs);
-  console.log("logs:", logs);
-  return logs;
-};
+    const logs = decodeUserOperationLogs(receipt.logs);
+    console.log("logs:", logs);
+    return logs;
+  };
+})(window as any);
 
 export const UserOperationBridge: SwapFC = () => {
   const eoa = useAccount();
   const sendTx = useSendTransaction();
-
-  console.log("============== TEST");
 
   const [transactionData, setTransactionData] = useState<{
     id: Hex;
@@ -150,11 +150,6 @@ export const UserOperationBridge: SwapFC = () => {
 
   const values = form.watch();
 
-  const selectedToken = useAsset({
-    tokenAddress: values.token,
-    chainId: values.from.chainId,
-  });
-
   const { switchChainAsync } = useSwitchChain();
   const kernel = useSmartAccount();
 
@@ -162,16 +157,6 @@ export const UserOperationBridge: SwapFC = () => {
     tokenAddress: values.token,
     chainId: values.from.chainId,
   });
-
-  const { data: selectedTokenKernelBalance = 0n } = useBalanceOf(
-    {
-      address: values.token,
-      chainId: rollupA.id,
-    },
-    {
-      account: kernel.kernel.data?.accounts.A.address || zeroAddress,
-    },
-  );
 
   const allowance = useAllowance(
     {
@@ -188,8 +173,6 @@ export const UserOperationBridge: SwapFC = () => {
   );
 
   const approve = useApprove();
-
-  console.log("Selected token kernel balance", selectedTokenKernelBalance);
 
   const submit = form.handleSubmit(async (values) => {
     const id: Hex = `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`;
@@ -495,7 +478,7 @@ export const UserOperationBridge: SwapFC = () => {
     args: [kernel.kernel.data?.accounts.A.address || zeroAddress],
     chainId: rollupA.id,
   });
-  console.log("balanceeee.data:", balanceeee.data);
+  // console.log("balanceeee.data:", balanceeee.data);
 
   return (
     <>
