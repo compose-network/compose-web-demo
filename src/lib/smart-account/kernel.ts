@@ -6,12 +6,10 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { toMultiChainECDSAValidator } from "@zerodev/multi-chain-ecdsa-validator";
 import type { KernelSmartAccountImplementation } from "@zerodev/sdk";
 import { createKernelAccount } from "@zerodev/sdk";
-import { getEntryPoint, KERNEL_V3_1 } from "@zerodev/sdk/constants";
+import { KERNEL_V3_1 } from "@zerodev/sdk/constants";
 import { type Address, type Client, isAddress } from "viem";
 import { useBalance, usePublicClient, useWalletClient } from "wagmi";
 import { fetchBalanceOf } from "../contract-interactions/erc-20/read/use-balance-of";
-
-const entryPoint = getEntryPoint("0.7");
 
 export const useSmartAccount = () => {
   const account = useAccount();
