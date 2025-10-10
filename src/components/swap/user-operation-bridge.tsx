@@ -32,14 +32,9 @@ import {
 import { encodeXtMessage } from "@/lib/smart-account/xt";
 import { formatCurrency } from "@/lib/utils/number";
 import { isNativeToken } from "@/lib/utils/token";
-import {
-  type BRIDGE_ADDRESSES,
-  BRIDGE_TOKEN,
-  ENTRYPOINT_ADDRESS,
-} from "@/wagmi/addresses";
-import { chainsMap, rollupA, rollupB, baseChain, arbitrumChain, optimismChain } from "@/wagmi/config";
+import { type BRIDGE_ADDRESSES, BRIDGE_TOKEN } from "@/wagmi/addresses";
+import { chainsMap, rollupA, rollupB } from "@/wagmi/config";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getPublicClient } from "@wagmi/core";
 import { cloneDeep } from "lodash-es";
 import { type ComponentPropsWithoutRef, type FC, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -53,7 +48,7 @@ import {
   rpcSchema,
   zeroAddress,
 } from "viem";
-import { useReadContract, useSendTransaction, useSwitchChain } from "wagmi";
+import { useSendTransaction, useSwitchChain } from "wagmi";
 import { z } from "zod";
 
 export type SwapProps = {
@@ -103,18 +98,6 @@ const schema = z.object({
   }),
   slippage: z.number(),
 });
-
-((w) => {
-  w.getLogs = async (hash: `0x${string}`, chainId = 88888) => {
-    const client = getPublicClient(config, { chainId });
-
-    const receipt = await client.waitForTransactionReceipt({ hash });
-
-    const logs = decodeUserOperationLogs(receipt.logs);
-    console.log("logs:", logs);
-    return logs;
-  };
-})(window as any);
 
 export const UserOperationBridge: SwapFC = () => {
   const eoa = useAccount();
@@ -471,14 +454,6 @@ export const UserOperationBridge: SwapFC = () => {
       account: kernel.kernel.data?.accounts.B.address || zeroAddress,
     },
   );
-
-  const balanceeee = useReadContract({
-    address: ENTRYPOINT_ADDRESS,
-    functionName: "balanceOf",
-    args: [kernel.kernel.data?.accounts.A.address || zeroAddress],
-    chainId: rollupA.id,
-  });
-  // console.log("balanceeee.data:", balanceeee.data);
 
   return (
     <>

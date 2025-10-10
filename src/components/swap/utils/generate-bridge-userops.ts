@@ -115,10 +115,10 @@ export const createAndSignBridgeERC20UserOps = async ({
   sourceChainId,
   destChainId,
 }: GenerateERC20BridgeUserOpsParams) => {
-  const destPublicClient = getPublicClient(config, { chainId: destChainId });
   const sourcePublicClient = getPublicClient(config, {
     chainId: sourceChainId,
   });
+  const destPublicClient = getPublicClient(config, { chainId: destChainId });
 
   const sourceBridgeContract = getBridgeAddress(sourceChainId);
   const destBridgeContract = getBridgeAddress(destChainId);
