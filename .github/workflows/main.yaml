@@ -11,6 +11,17 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    env:
+      VITE_ROLLUP_A_CHAIN_ID: "77777"
+      VITE_ROLLUP_B_CHAIN_ID: "88888"
+      VITE_HOODI_CHAIN_ID: "560048"
+      VITE_ROLLUP_A_RPC_HTTP: '["https://rpc-a.testnet.compose.network"]'
+      VITE_ROLLUP_B_RPC_HTTP: '["https://rpc-b.testnet.compose.network"]'
+      VITE_HOODI_RPC_HTTP: '["${{ secrets.COMPOSE_WEB_DEMO_HOODI_RPC_HTTP }}"]'
+      VITE_MAINNET_RPC_HTTP: '["https://eth.llamarpc.com"]'
+      VITE_POLYGON_RPC_HTTP: '["https://polygon-rpc.com"]'
+      VITE_ROLLUP_A_BLOCK_EXPLORER_URL: "https://rollup-a.explorer.testnet.compose.network"
+      VITE_ROLLUP_B_BLOCK_EXPLORER_URL: "https://rollup-b.explorer.testnet.compose.network"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
