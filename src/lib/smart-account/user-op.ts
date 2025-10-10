@@ -46,7 +46,11 @@ export function toRpcUserOpCanonical(op: PrepareUserOperationReturnType) {
     preVerificationGas: hx(op.preVerificationGas),
     maxFeePerGas: hx(op.maxFeePerGas),
     maxPriorityFeePerGas: hx(op.maxPriorityFeePerGas),
-    paymasterAndData: op.paymasterAndData ?? "0x",
+    // paymasterAndData: op.paymasterAndData ?? "0x",
+    paymaster: op.paymaster,
+    paymasterData: op.paymasterData,
+    paymasterVerificationGasLimit: op.paymasterVerificationGasLimit,
+    paymasterPostOpGasLimit: op.paymasterPostOpGasLimit,
     signature: op.signature ?? "0x",
   };
 }
