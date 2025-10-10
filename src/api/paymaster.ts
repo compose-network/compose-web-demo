@@ -47,6 +47,12 @@ export const getPaymasterDataForChain = async (
     ),
   };
 
+  if (!import.meta.env.VITE_PAYMASTER_URL) {
+    throw new Error(
+      "VITE_PAYMASTER_URL is not set - Paymaster Service URL - set it in .env to support paymaster",
+    );
+  }
+
   return api
     .post<PaymasterResponseData>(
       endpoint(import.meta.env.VITE_PAYMASTER_URL, "rpc/v1", chainName),

@@ -23,6 +23,7 @@ jobs:
       VITE_POLYGON_RPC_HTTP: '["https://polygon-rpc.com"]'
       VITE_ROLLUP_A_BLOCK_EXPLORER_URL: "https://blockscout-rollup-1.stage.ops.ssvlabsinternal.com/"
       VITE_ROLLUP_B_BLOCK_EXPLORER_URL: "https://blockscout-rollup-2.stage.ops.ssvlabsinternal.com/"
+      VITE_PAYMASTER_URL: "https://paymaster.stage.ops.ssvlabsinternal.com"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
