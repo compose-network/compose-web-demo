@@ -108,7 +108,7 @@ export const BatchTransactionModal: FC<BatchTransactionModalProps> = () => {
                       <a
                         target="_blank"
                         href={`${links.etherscan}/tx/${hash}`}
-                        className="flex items-center gap-1 text-[12px] text-primary-500 rounded-[4px] bg-primary-50 px-2 py-1 cursor-pointer font-mono"
+                        className="flex items-center gap-1 text-[12px] text-gray-700 rounded-[4px] bg-gray-300 px-2 py-1 cursor-pointer font-mono"
                       >
                         {shortenAddress(hash)}
                         <TbExternalLink className="size-3" />

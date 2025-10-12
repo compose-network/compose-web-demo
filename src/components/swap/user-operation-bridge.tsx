@@ -37,7 +37,7 @@ import {
   BRIDGE_TOKEN,
   ENTRYPOINT,
 } from "@/wagmi/addresses";
-import { chainsMap, config, rollupA, rollupB } from "@/wagmi/config";
+import { chainsMap, rollupA, rollupB, baseChain, arbitrumChain, optimismChain } from "@/wagmi/config";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { getPublicClient } from "@wagmi/core";
 import { cloneDeep } from "lodash-es";
@@ -530,6 +530,9 @@ export const UserOperationBridge: SwapFC = () => {
                     "0xeA0DB94b4c702d9cA0Fcc65715A035B24dF3452D",
                   ],
                 },
+                { chainId: baseChain.id, isNotSupported: true },
+                { chainId: arbitrumChain.id, isNotSupported: true },
+                { chainId: optimismChain.id, isNotSupported: true },
               ]}
               onChainSelect={(chainId) =>
                 form.setValue(
@@ -572,6 +575,9 @@ export const UserOperationBridge: SwapFC = () => {
                     "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553",
                   ],
                 },
+                { chainId: baseChain.id, isNotSupported: true },
+                { chainId: arbitrumChain.id, isNotSupported: true },
+                { chainId: optimismChain.id, isNotSupported: true },
               ]}
               onChainSelect={(chainId) =>
                 form.setValue(
