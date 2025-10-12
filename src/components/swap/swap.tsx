@@ -2,7 +2,7 @@ import { type FC, type ComponentPropsWithoutRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { rollupB, contracts, rollupA } from "@/wagmi/config";
+import { rollupB, contracts, rollupA, baseChain, arbitrumChain, optimismChain } from "@/wagmi/config";
 import { isAddress, parseEther } from "viem";
 import { TokenInput } from "@/components/swap/token-picker/token-input";
 import { useSwapContract } from "@/lib/contract-interactions/core/create-write-hooks";
@@ -219,6 +219,9 @@ export const Swap: SwapFC = () => {
                   chainId: rollupB.id,
                   tokens: tokens[rollupB.id].map((token) => token.address),
                 },
+                { chainId: baseChain.id, isNotSupported: true },
+                { chainId: arbitrumChain.id, isNotSupported: true },
+                { chainId: optimismChain.id, isNotSupported: true },
               ]}
               onChainSelect={handleChainSelect}
               value={values.from.amount}
@@ -276,6 +279,9 @@ export const Swap: SwapFC = () => {
                   chainId: rollupB.id,
                   tokens: tokens[rollupB.id].map((token) => token.address),
                 },
+                { chainId: baseChain.id, isNotSupported: true },
+                { chainId: arbitrumChain.id, isNotSupported: true },
+                { chainId: optimismChain.id, isNotSupported: true },
               ]}
               onChainSelect={handleChainSelect}
               value={isSameToken ? values.from.amount : prices.data?.[0] ?? 0n}

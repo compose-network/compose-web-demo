@@ -30,7 +30,7 @@ import {
   BRIDGE_ADDRESSES,
   BRIDGE_TOKEN
 } from "@/wagmi/addresses";
-import { chainsMap, rollupA, rollupB } from "@/wagmi/config";
+import { chainsMap, rollupA, rollupB, baseChain, arbitrumChain, optimismChain } from "@/wagmi/config";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { prepareAndSignUserOperations } from "@zerodev/multi-chain-ecdsa-validator";
 import { cloneDeep } from "lodash-es";
@@ -595,6 +595,9 @@ export const UserOperationBridge: SwapFC = () => {
                   chainId: rollupB.id,
                   tokens: [BRIDGE_TOKEN],
                 },
+                { chainId: baseChain.id, isNotSupported: true },
+                { chainId: arbitrumChain.id, isNotSupported: true },
+                { chainId: optimismChain.id, isNotSupported: true },
               ]}
               onChainSelect={(chainId) =>
                 form.setValue("from.chainId", chainId)
@@ -626,6 +629,9 @@ export const UserOperationBridge: SwapFC = () => {
                   chainId: rollupB.id,
                   tokens: [BRIDGE_TOKEN],
                 },
+                { chainId: baseChain.id, isNotSupported: true },
+                { chainId: arbitrumChain.id, isNotSupported: true },
+                { chainId: optimismChain.id, isNotSupported: true },
               ]}
               onChainSelect={(chainId) => form.setValue("to.chainId", chainId)}
               value={values.from.amount}

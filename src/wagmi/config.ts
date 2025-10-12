@@ -7,7 +7,13 @@ import type { Transport } from "@wagmi/core";
 
 import type { Chain } from "viem";
 import { defineChain, fallback, http } from "viem";
-import { mainnet as mainnetChain, polygon as polygonChain } from "viem/chains";
+import {
+  mainnet as mainnetChain,
+  polygon as polygonChain,
+  base,
+  arbitrum,
+  optimism
+} from "viem/chains";
 import { createConfig } from "wagmi";
 
 import {
@@ -39,6 +45,18 @@ const RPC_DESCRIPTORS = {
   mainnet: {
     envKey: "VITE_MAINNET_RPC_HTTP",
     defaults: ["https://eth.llamarpc.com"] as const,
+  },
+  base: {
+    envKey: "VITE_BASE_RPC_HTTP",
+    defaults: ["https://mainnet.base.org"] as const,
+  },
+  arbitrum: {
+    envKey: "VITE_ARBITRUM_RPC_HTTP",
+    defaults: ["https://arb1.arbitrum.io/rpc"] as const,
+  },
+  optimism: {
+    envKey: "VITE_OPTIMISM_RPC_HTTP",
+    defaults: ["https://mainnet.optimism.io"] as const,
   },
 } as const satisfies Record<string, RpcDescriptor>;
 
@@ -150,6 +168,33 @@ export const mainnet = {
   },
 };
 
+export const baseChain = {
+  ...base,
+  rpcUrls: {
+    default: {
+      http: rpcHttp.base,
+    },
+  },
+};
+
+export const arbitrumChain = {
+  ...arbitrum,
+  rpcUrls: {
+    default: {
+      http: rpcHttp.arbitrum,
+    },
+  },
+};
+
+export const optimismChain = {
+  ...optimism,
+  rpcUrls: {
+    default: {
+      http: rpcHttp.optimism,
+    },
+  },
+};
+
 type ChainRpcKey = keyof typeof RPC_DESCRIPTORS;
 const chainRpcKeyById = new Map<number, ChainRpcKey>([
   [hoodi.id, "hoodi"],
@@ -157,10 +202,13 @@ const chainRpcKeyById = new Map<number, ChainRpcKey>([
   [rollupB.id, "rollupB"],
   [polygon.id, "polygon"],
   [mainnet.id, "mainnet"],
+  [baseChain.id, "base"],
+  [arbitrumChain.id, "arbitrum"],
+  [optimismChain.id, "optimism"],
 ]);
 
 // Chains array
-export const chains = [rollupA, rollupB, mainnet, polygon, hoodi] satisfies [
+export const chains = [rollupA, rollupB, mainnet, polygon, hoodi, baseChain, arbitrumChain, optimismChain] satisfies [
   Chain,
   ...Chain[],
 ];
@@ -170,6 +218,9 @@ export const chainsMap = {
   [mainnet.id]: mainnet,
   [polygon.id]: polygon,
   [hoodi.id]: hoodi,
+  [baseChain.id]: baseChain,
+  [arbitrumChain.id]: arbitrumChain,
+  [optimismChain.id]: optimismChain,
 };
 
 export const getChainById = (chainId: number) => {
