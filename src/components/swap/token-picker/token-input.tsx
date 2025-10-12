@@ -41,6 +41,7 @@ export const TokenInput: TokenInputFC = ({
   const asset = useAsset({
     tokenAddress: tokenAddress,
     chainId: chainId,
+    watch: true,
   });
 
   return (
