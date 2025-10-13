@@ -33,7 +33,14 @@ import { encodeXtMessage } from "@/lib/smart-account/xt";
 import { formatCurrency } from "@/lib/utils/number";
 import { isNativeToken } from "@/lib/utils/token";
 import { type BRIDGE_ADDRESSES, BRIDGE_TOKEN } from "@/wagmi/addresses";
-import { chainsMap, rollupA, rollupB } from "@/wagmi/config";
+import {
+  arbitrumChain,
+  baseChain,
+  chainsMap,
+  optimismChain,
+  rollupA,
+  rollupB,
+} from "@/wagmi/config";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cloneDeep } from "lodash-es";
 import { type ComponentPropsWithoutRef, type FC, useState } from "react";
