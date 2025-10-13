@@ -34,18 +34,25 @@ import { formatCurrency } from "@/lib/utils/number";
 import { isNativeToken } from "@/lib/utils/token";
 import { type BRIDGE_ADDRESSES, BRIDGE_TOKEN } from "@/wagmi/addresses";
 import {
-  arbitrumChain,
-  baseChain,
+  type BRIDGE_ADDRESSES,
+  BRIDGE_TOKEN,
+  ENTRYPOINT,
+} from "@/wagmi/addresses";
+import {
   chainsMap,
-  optimismChain,
   rollupA,
   rollupB,
+  baseChain,
+  arbitrumChain,
+  optimismChain,
+  config,
 } from "@/wagmi/config";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cloneDeep } from "lodash-es";
 import { type ComponentPropsWithoutRef, type FC, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useLocalStorage } from "react-use";
+import type { Address } from "viem";
 import {
   createPublicClient,
   type Hex,
@@ -109,6 +116,10 @@ const schema = z.object({
 export const UserOperationBridge: SwapFC = () => {
   const eoa = useAccount();
   const sendTx = useSendTransaction();
+  const [lastSelectedToken, setLastSelectedToken] = useLocalStorage<Address>(
+    "lastSelectedToken",
+    zeroAddress,
+  );
 
   const [transactionData, setTransactionData] = useState<{
     id: Hex;
@@ -125,7 +136,7 @@ export const UserOperationBridge: SwapFC = () => {
 
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
-      token: zeroAddress,
+      token: lastSelectedToken,
       from: {
         amount: 0n,
         chainId: rollupA.id,
@@ -243,7 +254,7 @@ export const UserOperationBridge: SwapFC = () => {
         clone.actions[0].name = `${clone.actions[0].name} - ${isNative ? "sent" : "approved"}`;
         return clone;
       });
-    } else if (allowance.data && allowance.data < values.from.amount) {
+    } else if ((allowance.data ?? 0n) < values.from.amount) {
       await approve.write(
         {
           address: values.token,
@@ -444,7 +455,7 @@ export const UserOperationBridge: SwapFC = () => {
 
   const kernelAMTKBalance = useBalanceOf(
     {
-      address: BRIDGE_TOKEN,
+      address: "0x88282Bc19cAE4990020BF4cd6E7898E966744eB9",
       chainId: rollupA.id,
     },
     {
@@ -454,7 +465,7 @@ export const UserOperationBridge: SwapFC = () => {
 
   const kernelBMTKBalance = useBalanceOf(
     {
-      address: BRIDGE_TOKEN,
+      address: "0x88282Bc19cAE4990020BF4cd6E7898E966744eB9",
       chainId: rollupB.id,
     },
     {
@@ -480,19 +491,19 @@ export const UserOperationBridge: SwapFC = () => {
                 {
                   chainId: rollupA.id,
                   tokens: [
-                    BRIDGE_TOKEN,
                     zeroAddress,
                     "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553",
                     "0xeA0DB94b4c702d9cA0Fcc65715A035B24dF3452D",
+                    "0x79155fb8d8dE01522bE1Cbd17e538966d78d1565",
                   ],
                 },
                 {
                   chainId: rollupB.id,
                   tokens: [
-                    BRIDGE_TOKEN,
                     zeroAddress,
                     "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553",
                     "0xeA0DB94b4c702d9cA0Fcc65715A035B24dF3452D",
+                    "0x79155fb8d8dE01522bE1Cbd17e538966d78d1565",
                   ],
                 },
                 { chainId: baseChain.id, isNotSupported: true },
@@ -508,7 +519,10 @@ export const UserOperationBridge: SwapFC = () => {
               value={values.from.amount}
               tokenAddress={values.token}
               chainId={values.from.chainId}
-              onSelectToken={(token) => form.setValue("token", token)}
+              onSelectToken={(token) => {
+                form.setValue("token", token);
+                setLastSelectedToken(token);
+              }}
               onChange={(amount) =>
                 form.setValue("from.amount", amount, {
                   shouldValidate: true,
@@ -527,17 +541,19 @@ export const UserOperationBridge: SwapFC = () => {
                 {
                   chainId: rollupA.id,
                   tokens: [
-                    BRIDGE_TOKEN,
                     zeroAddress,
                     "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553",
+                    "0xeA0DB94b4c702d9cA0Fcc65715A035B24dF3452D",
+                    "0x79155fb8d8dE01522bE1Cbd17e538966d78d1565",
                   ],
                 },
                 {
                   chainId: rollupB.id,
                   tokens: [
-                    BRIDGE_TOKEN,
                     zeroAddress,
                     "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553",
+                    "0xeA0DB94b4c702d9cA0Fcc65715A035B24dF3452D",
+                    "0x79155fb8d8dE01522bE1Cbd17e538966d78d1565",
                   ],
                 },
                 { chainId: baseChain.id, isNotSupported: true },
@@ -553,7 +569,10 @@ export const UserOperationBridge: SwapFC = () => {
               value={values.from.amount}
               tokenAddress={values.token}
               chainId={values.to.chainId}
-              onSelectToken={(token) => form.setValue("token", token)}
+              onSelectToken={(token) => {
+                form.setValue("token", token);
+                setLastSelectedToken(token);
+              }}
               onChange={() => {}}
               readOnly
             />
