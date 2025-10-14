@@ -192,17 +192,17 @@ export const contracts = {
     swap: "0x52cfc57b976936ba8d6beea547900c4425836bea",
   },
   [hoodi.id]: {
-    bridge: "0x9adb5dba4f55d7ea921f34e98dc492b3a2ced734",
+    bridge: "0x119b79f1bd3ef2e9e386bf52ca344d6aa3075c93",
   },
 } as const;
 
 export const bridgeContracts = {
   [hoodi.id]: {
     [rollupA.id]: {
-      bridge: "0xe6456c49bae7ff20bee0d01948d6d0f82dd821e9",
+      bridge: "0x119b79f1bd3ef2e9e386bf52ca344d6aa3075c93",
     },
     [rollupB.id]: {
-      bridge: "0x9adb5dba4f55d7ea921f34e98dc492b3a2ced734",
+      bridge: "0xc4e5387bb31dee941db6e7d93d7ffb5b3dfe4627",
     },
   },
 } as const;
