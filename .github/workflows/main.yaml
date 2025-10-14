@@ -12,8 +12,8 @@ jobs:
       id-token: write
       contents: read
     env:
-      VITE_ROLLUP_A_CHAIN_ID: "77777"
-      VITE_ROLLUP_B_CHAIN_ID: "88888"
+      VITE_ROLLUP_A_CHAIN_ID: "11111"
+      VITE_ROLLUP_B_CHAIN_ID: "22222"
       VITE_HOODI_CHAIN_ID: "560048"
       VITE_ROLLUP_A_RPC_HTTP: '["https://rpc-a.testnet.compose.network"]'
       VITE_ROLLUP_B_RPC_HTTP: '["https://rpc-b.testnet.compose.network"]'
