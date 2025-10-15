@@ -32,22 +32,16 @@ import {
 import { encodeXtMessage } from "@/lib/smart-account/xt";
 import { formatCurrency } from "@/lib/utils/number";
 import { isNativeToken } from "@/lib/utils/token";
+import { type BRIDGE_ADDRESSES, BRIDGE_TOKEN } from "@/wagmi/addresses";
 import {
-  type BRIDGE_ADDRESSES,
-  BRIDGE_TOKEN,
-  ENTRYPOINT,
-} from "@/wagmi/addresses";
-import {
+  arbitrumChain,
+  baseChain,
   chainsMap,
+  optimismChain,
   rollupA,
   rollupB,
-  baseChain,
-  arbitrumChain,
-  optimismChain,
-  config,
 } from "@/wagmi/config";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getPublicClient } from "@wagmi/core";
 import { cloneDeep } from "lodash-es";
 import { type ComponentPropsWithoutRef, type FC, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -62,7 +56,7 @@ import {
   rpcSchema,
   zeroAddress,
 } from "viem";
-import { useReadContract, useSendTransaction, useSwitchChain } from "wagmi";
+import { useSendTransaction, useSwitchChain } from "wagmi";
 import { z } from "zod";
 
 export type SwapProps = {
@@ -113,16 +107,6 @@ const schema = z.object({
   slippage: z.number(),
 });
 
-window.getLogs = async (hash: `0x${string}`, chainId = 88888) => {
-  const client = getPublicClient(config, { chainId });
-
-  const receipt = await client.waitForTransactionReceipt({ hash });
-
-  const logs = decodeUserOperationLogs(receipt.logs);
-  console.log("logs:", logs);
-  return logs;
-};
-
 export const UserOperationBridge: SwapFC = () => {
   const eoa = useAccount();
   const sendTx = useSendTransaction();
@@ -130,8 +114,6 @@ export const UserOperationBridge: SwapFC = () => {
     "lastSelectedToken",
     zeroAddress,
   );
-
-  console.log("============== TEST");
 
   const [transactionData, setTransactionData] = useState<{
     id: Hex;
@@ -163,12 +145,6 @@ export const UserOperationBridge: SwapFC = () => {
 
   const values = form.watch();
 
-  const selectedToken = useAsset({
-    tokenAddress: values.token,
-    chainId: values.from.chainId,
-  });
-
-  console.log("selectedToken:", selectedToken);
   const { switchChainAsync } = useSwitchChain();
   const kernel = useSmartAccount();
 
@@ -176,16 +152,6 @@ export const UserOperationBridge: SwapFC = () => {
     tokenAddress: values.token,
     chainId: values.from.chainId,
   });
-
-  const { data: selectedTokenKernelBalance = 0n } = useBalanceOf(
-    {
-      address: values.token,
-      chainId: rollupA.id,
-    },
-    {
-      account: kernel.kernel.data?.accounts.A.address || zeroAddress,
-    },
-  );
 
   const allowance = useAllowance(
     {
@@ -202,8 +168,6 @@ export const UserOperationBridge: SwapFC = () => {
   );
 
   const approve = useApprove();
-
-  console.log("Selected token kernel balance", selectedTokenKernelBalance);
 
   const submit = form.handleSubmit(async (values) => {
     const id: Hex = `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`;
@@ -294,7 +258,7 @@ export const UserOperationBridge: SwapFC = () => {
           spender: kernel.kernel.data?.accounts.A.address || zeroAddress,
           amount: globals.MAX_WEI_AMOUNT,
         },
-        withTransactionModal({
+       {
           onConfirmed: (hash) => {
             setTransactionData((prev) => {
               if (!prev) return null;
@@ -312,7 +276,7 @@ export const UserOperationBridge: SwapFC = () => {
               return clone;
             });
           },
-        }),
+        },
       );
     } else {
       console.log("Kernel has enough balance of the selected token to bridge");
@@ -503,14 +467,6 @@ export const UserOperationBridge: SwapFC = () => {
     },
   );
 
-  const balanceeee = useReadContract({
-    address: ENTRYPOINT,
-    functionName: "balanceOf",
-    args: [kernel.kernel.data?.accounts.A.address || zeroAddress],
-    chainId: rollupA.id,
-  });
-  console.log("balanceeee.data:", balanceeee.data);
-
   return (
     <>
       <TransactionModal
@@ -632,7 +588,7 @@ export const UserOperationBridge: SwapFC = () => {
               size="xl"
               className="w-full"
               type="submit"
-              disabled={!form.formState.isValid}
+              disabled={!form.formState.isValid || kernel.isLoading}
               loadingText="Bridging..."
             >
               Bridge

@@ -3,15 +3,13 @@ import { MailboxABI } from "@/lib/abi/swap/mailbox";
 import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
 import { TokenABI } from "@/lib/abi/token";
 import { tryCatch } from "@/lib/utils/tryCatch";
-import type { Hex, Address, Log, DecodeEventLogReturnType } from "viem";
+import type { Address, DecodeEventLogReturnType, Hex, Log } from "viem";
 import {
+  decodeErrorResult,
+  decodeEventLog,
+  erc20Abi,
   isHex,
   toHex,
-  zeroAddress,
-  concatHex,
-  decodeEventLog,
-  decodeErrorResult,
-  erc20Abi,
 } from "viem";
 import type { PrepareUserOperationReturnType } from "viem/account-abstraction";
 import { WETHAbi } from "../abi/weth";
@@ -21,31 +19,35 @@ export function toRpcUserOpCanonical(op: PrepareUserOperationReturnType) {
     typeof v === "string" && isHex(v as `0x${string}`)
       ? (v as `0x${string}`)
       : toHex(BigInt(v));
-  const initCode: `0x${string}` =
-    op.initCode && isHex(op.initCode) && op.initCode !== "0x"
-      ? op.initCode
-      : op.factory && op.factory !== zeroAddress && op.factoryData
-        ? concatHex([
-            (op.factory.toLowerCase().startsWith("0x")
-              ? op.factory
-              : "0x" + op.factory) as `0x${string}`,
-            op.factoryData as `0x${string}`,
-          ])
-        : "0x";
 
-  console.log("initCode:", initCode);
+  // const initCode: `0x${string}` =
+  //   op.initCode && isHex(op.initCode) && op.initCode !== "0x"
+  //     ? op.initCode
+  //     : op.factory && op.factory !== zeroAddress && op.factoryData
+  //       ? concatHex([
+  //           (op.factory.toLowerCase().startsWith("0x")
+  //             ? op.factory
+  //             : "0x" + op.factory) as `0x${string}`,
+  //           op.factoryData as `0x${string}`,
+  //         ])
+  //       : "0x";
+  //
+  // console.log("initCode:", initCode);
 
   return {
     sender: op.sender,
     nonce: hx(op.nonce),
-    initCode,
+    initCode: op.initCode,
     callData: op.callData,
     callGasLimit: hx(op.callGasLimit),
     verificationGasLimit: hx(op.verificationGasLimit),
     preVerificationGas: hx(op.preVerificationGas),
     maxFeePerGas: hx(op.maxFeePerGas),
     maxPriorityFeePerGas: hx(op.maxPriorityFeePerGas),
-    paymasterAndData: op.paymasterAndData ?? "0x",
+    paymaster: op.paymaster,
+    paymasterData: op.paymasterData,
+    paymasterVerificationGasLimit: hx(op.paymasterVerificationGasLimit!),
+    paymasterPostOpGasLimit: hx(op.paymasterPostOpGasLimit!),
     signature: op.signature ?? "0x",
   };
 }

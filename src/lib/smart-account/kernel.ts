@@ -1,17 +1,15 @@
 import { useAccount } from "@/hooks/account/use-account";
 import { useEntrypointContract } from "@/lib/abi/entrypoint";
-import { ENTRYPOINT, ROLLUP_ADDRESSES } from "@/wagmi/addresses";
+import { ENTRYPOINT_ADDRESS, ENTRYPOINT_WITH_VERSION, ROLLUP_ADDRESSES } from "@/wagmi/addresses";
 import { rollupA, rollupB } from "@/wagmi/config";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { toMultiChainECDSAValidator } from "@zerodev/multi-chain-ecdsa-validator";
 import type { KernelSmartAccountImplementation } from "@zerodev/sdk";
 import { createKernelAccount } from "@zerodev/sdk";
-import { getEntryPoint, KERNEL_V3_1 } from "@zerodev/sdk/constants";
+import { KERNEL_V3_1 } from "@zerodev/sdk/constants";
 import { type Address, type Client, isAddress } from "viem";
 import { useBalance, usePublicClient, useWalletClient } from "wagmi";
 import { fetchBalanceOf } from "../contract-interactions/erc-20/read/use-balance-of";
-
-const entryPoint = getEntryPoint("0.7");
 
 export const useSmartAccount = () => {
   const account = useAccount();
@@ -24,14 +22,14 @@ export const useSmartAccount = () => {
     queryFn: async () => {
       const [validatorA, validatorB] = await Promise.all([
         toMultiChainECDSAValidator(publicClientA as Client, {
-          entryPoint,
+          entryPoint: ENTRYPOINT_WITH_VERSION,
           signer: walletClient.data!,
           kernelVersion: KERNEL_V3_1,
           validatorAddress: ROLLUP_ADDRESSES[rollupA.id].MULTICHAIN_VALIDATOR,
           multiChainIds: [rollupA.id, rollupB.id],
         }),
         toMultiChainECDSAValidator(publicClientB as Client, {
-          entryPoint,
+          entryPoint: ENTRYPOINT_WITH_VERSION,
           signer: walletClient.data!,
           kernelVersion: KERNEL_V3_1,
           validatorAddress: ROLLUP_ADDRESSES[rollupB.id].MULTICHAIN_VALIDATOR,
@@ -43,7 +41,7 @@ export const useSmartAccount = () => {
         createKernelAccount(
           publicClientA as KernelSmartAccountImplementation["client"],
           {
-            entryPoint,
+            entryPoint: ENTRYPOINT_WITH_VERSION,
             plugins: { sudo: validatorA },
             kernelVersion: KERNEL_V3_1,
             accountImplementationAddress:
@@ -55,7 +53,7 @@ export const useSmartAccount = () => {
         createKernelAccount(
           publicClientB as KernelSmartAccountImplementation["client"],
           {
-            entryPoint,
+            entryPoint: ENTRYPOINT_WITH_VERSION,
             plugins: { sudo: validatorB },
             kernelVersion: KERNEL_V3_1,
             accountImplementationAddress:
@@ -77,12 +75,12 @@ export const useSmartAccount = () => {
   const { useBalanceOf, useDepositTo } = useEntrypointContract();
 
   const depositToA = useDepositTo({
-    contract: ENTRYPOINT,
+    contract: ENTRYPOINT_ADDRESS,
     chainId: rollupA.id,
   });
 
   const depositToB = useDepositTo({
-    contract: ENTRYPOINT,
+    contract: ENTRYPOINT_ADDRESS,
     chainId: rollupB.id,
   });
 
@@ -139,7 +137,7 @@ export const useSmartAccount = () => {
     {
       chainId: rollupA.id,
       enabled: !!kernel.data?.accounts?.A?.address,
-      contract: ENTRYPOINT,
+      contract: ENTRYPOINT_ADDRESS,
       watch: true,
       placeholderData: keepPreviousData,
     },
@@ -151,7 +149,7 @@ export const useSmartAccount = () => {
       chainId: rollupB.id,
       enabled: !!kernel.data?.accounts?.B?.address,
       watch: true,
-      contract: ENTRYPOINT,
+      contract: ENTRYPOINT_ADDRESS,
       placeholderData: keepPreviousData,
     },
   );
@@ -178,5 +176,6 @@ export const useSmartAccount = () => {
     kernel,
     getPublicClient,
     getKernelByChainId,
+    isLoading: kernel.isLoading,
   };
 };

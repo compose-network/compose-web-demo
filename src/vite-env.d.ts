@@ -24,6 +24,7 @@ interface ImportMetaEnv {
   readonly VITE_HOODI_BRIDGE_ADDRESS?: string;
   readonly VITE_BRIDGE_HOODI_TO_ROLLUP_A?: string;
   readonly VITE_BRIDGE_HOODI_TO_ROLLUP_B?: string;
+  readonly VITE_PAYMASTER_URL: string;
 }
 
 declare const APP_VERSION: string;
