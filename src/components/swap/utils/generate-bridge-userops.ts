@@ -81,10 +81,12 @@ export const createUserOp = async ({
     },
   };
 
+  const callData = await account.encodeCalls(calls);
+
   return {
     account,
     chainId,
-    calls,
+    callData,
     callGasLimit,
     verificationGasLimit,
     preVerificationGas: PRE_VERIFICATION_GAS,

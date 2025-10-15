@@ -1,10 +1,6 @@
 import { useAccount } from "@/hooks/account/use-account";
 import { useEntrypointContract } from "@/lib/abi/entrypoint";
-import {
-  ENTRYPOINT_ADDRESS,
-  ENTRYPOINT_WITH_VERSION,
-  ROLLUP_ADDRESSES,
-} from "@/wagmi/addresses";
+import { ENTRYPOINT_ADDRESS, ENTRYPOINT_WITH_VERSION, ROLLUP_ADDRESSES } from "@/wagmi/addresses";
 import { rollupA, rollupB } from "@/wagmi/config";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { toMultiChainECDSAValidator } from "@zerodev/multi-chain-ecdsa-validator";
@@ -183,5 +179,6 @@ export const useSmartAccount = () => {
     kernel,
     getPublicClient,
     getKernelByChainId,
+    isLoading: kernel.isLoading,
   };
 };

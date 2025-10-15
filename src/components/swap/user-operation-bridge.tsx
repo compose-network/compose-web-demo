@@ -34,18 +34,12 @@ import { formatCurrency } from "@/lib/utils/number";
 import { isNativeToken } from "@/lib/utils/token";
 import { type BRIDGE_ADDRESSES, BRIDGE_TOKEN } from "@/wagmi/addresses";
 import {
-  type BRIDGE_ADDRESSES,
-  BRIDGE_TOKEN,
-  ENTRYPOINT,
-} from "@/wagmi/addresses";
-import {
+  arbitrumChain,
+  baseChain,
   chainsMap,
+  optimismChain,
   rollupA,
   rollupB,
-  baseChain,
-  arbitrumChain,
-  optimismChain,
-  config,
 } from "@/wagmi/config";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cloneDeep } from "lodash-es";
@@ -594,7 +588,7 @@ export const UserOperationBridge: SwapFC = () => {
               size="xl"
               className="w-full"
               type="submit"
-              disabled={!form.formState.isValid}
+              disabled={!form.formState.isValid || kernel.isLoading}
               loadingText="Bridging..."
             >
               Bridge
