@@ -6,13 +6,21 @@ import {
 import type { Transport } from "@wagmi/core";
 
 import type { Chain } from "viem";
+import type { Address } from "viem";
 import { defineChain, fallback, http } from "viem";
-import { mainnet as mainnetChain, polygon as polygonChain } from "viem/chains";
+import {
+  mainnet as mainnetChain,
+  polygon as polygonChain,
+  base,
+  arbitrum,
+  optimism
+} from "viem/chains";
 import { createConfig } from "wagmi";
 
 import {
   parseBlockExplorerUrl,
   parseChainId,
+  parseContractAddress,
   resolveRpcUrls,
   type RpcDescriptor,
 } from "./rpc-env";
@@ -39,6 +47,18 @@ const RPC_DESCRIPTORS = {
   mainnet: {
     envKey: "VITE_MAINNET_RPC_HTTP",
     defaults: ["https://eth.llamarpc.com"] as const,
+  },
+  base: {
+    envKey: "VITE_BASE_RPC_HTTP",
+    defaults: ["https://mainnet.base.org"] as const,
+  },
+  arbitrum: {
+    envKey: "VITE_ARBITRUM_RPC_HTTP",
+    defaults: ["https://arb1.arbitrum.io/rpc"] as const,
+  },
+  optimism: {
+    envKey: "VITE_OPTIMISM_RPC_HTTP",
+    defaults: ["https://mainnet.optimism.io"] as const,
   },
 } as const satisfies Record<string, RpcDescriptor>;
 
@@ -150,6 +170,33 @@ export const mainnet = {
   },
 };
 
+export const baseChain = {
+  ...base,
+  rpcUrls: {
+    default: {
+      http: rpcHttp.base,
+    },
+  },
+};
+
+export const arbitrumChain = {
+  ...arbitrum,
+  rpcUrls: {
+    default: {
+      http: rpcHttp.arbitrum,
+    },
+  },
+};
+
+export const optimismChain = {
+  ...optimism,
+  rpcUrls: {
+    default: {
+      http: rpcHttp.optimism,
+    },
+  },
+};
+
 type ChainRpcKey = keyof typeof RPC_DESCRIPTORS;
 const chainRpcKeyById = new Map<number, ChainRpcKey>([
   [hoodi.id, "hoodi"],
@@ -157,10 +204,13 @@ const chainRpcKeyById = new Map<number, ChainRpcKey>([
   [rollupB.id, "rollupB"],
   [polygon.id, "polygon"],
   [mainnet.id, "mainnet"],
+  [baseChain.id, "base"],
+  [arbitrumChain.id, "arbitrum"],
+  [optimismChain.id, "optimism"],
 ]);
 
 // Chains array
-export const chains = [rollupA, rollupB, mainnet, polygon, hoodi] satisfies [
+export const chains = [rollupA, rollupB, mainnet, polygon, hoodi, baseChain, arbitrumChain, optimismChain] satisfies [
   Chain,
   ...Chain[],
 ];
@@ -170,6 +220,9 @@ export const chainsMap = {
   [mainnet.id]: mainnet,
   [polygon.id]: polygon,
   [hoodi.id]: hoodi,
+  [baseChain.id]: baseChain,
+  [arbitrumChain.id]: arbitrumChain,
+  [optimismChain.id]: optimismChain,
 };
 
 export const getChainById = (chainId: number) => {
@@ -187,22 +240,40 @@ export const rollupIdMap = {
   [rollupB.id]: 2,
 } as const;
 
+const DEFAULT_HOODI_BRIDGE_ADDRESS =
+  "0x119b79f1bd3ef2e9e386bf52ca344d6aa3075c93" as Address;
+const DEFAULT_HOODI_TO_ROLLUP_B_BRIDGE_ADDRESS =
+  "0xc4e5387bb31dee941db6e7d93d7ffb5b3dfe4627" as Address;
+
+const hoodiBridgeAddress = parseContractAddress(
+  "VITE_HOODI_BRIDGE_ADDRESS",
+  DEFAULT_HOODI_BRIDGE_ADDRESS,
+);
+const hoodiToRollupABridgeAddress = parseContractAddress(
+  "VITE_BRIDGE_HOODI_TO_ROLLUP_A",
+  hoodiBridgeAddress,
+);
+const hoodiToRollupBBridgeAddress = parseContractAddress(
+  "VITE_BRIDGE_HOODI_TO_ROLLUP_B",
+  DEFAULT_HOODI_TO_ROLLUP_B_BRIDGE_ADDRESS,
+);
+
 export const contracts = {
   [rollupB.id]: {
     swap: "0x52cfc57b976936ba8d6beea547900c4425836bea",
   },
   [hoodi.id]: {
-    bridge: "0x119b79f1bd3ef2e9e386bf52ca344d6aa3075c93",
+    bridge: hoodiBridgeAddress,
   },
 } as const;
 
 export const bridgeContracts = {
   [hoodi.id]: {
     [rollupA.id]: {
-      bridge: "0x119b79f1bd3ef2e9e386bf52ca344d6aa3075c93",
+      bridge: hoodiToRollupABridgeAddress,
     },
     [rollupB.id]: {
-      bridge: "0xc4e5387bb31dee941db6e7d93d7ffb5b3dfe4627",
+      bridge: hoodiToRollupBBridgeAddress,
     },
   },
 } as const;

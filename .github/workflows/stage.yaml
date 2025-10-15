@@ -23,6 +23,9 @@ jobs:
       VITE_POLYGON_RPC_HTTP: '["https://polygon-rpc.com"]'
       VITE_ROLLUP_A_BLOCK_EXPLORER_URL: "https://blockscout-rollup-1.stage.ops.ssvlabsinternal.com/"
       VITE_ROLLUP_B_BLOCK_EXPLORER_URL: "https://blockscout-rollup-2.stage.ops.ssvlabsinternal.com/"
+      VITE_HOODI_BRIDGE_ADDRESS: "0x9adb5dba4f55d7ea921f34e98dc492b3a2ced734"
+      VITE_BRIDGE_HOODI_TO_ROLLUP_A: "0xe6456c49bae7ff20bee0d01948d6d0f82dd821e9"
+      VITE_BRIDGE_HOODI_TO_ROLLUP_B: "0x9adb5dba4f55d7ea921f34e98dc492b3a2ced734"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 

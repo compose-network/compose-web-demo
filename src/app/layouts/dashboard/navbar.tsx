@@ -4,7 +4,7 @@ import type { ComponentPropsWithoutRef, FC } from "react";
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
 import { NetworkSwitchBtn } from "@/components/connect-wallet/network-switch-btn";
 
-import { SsvLogo } from "@/components/ui/ssv-logo";
+import { ComposeLogo } from "@/components/ui/compose-logo.tsx";
 import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 import { NavLink } from "react-router-dom";
 
@@ -21,14 +21,14 @@ export const Navbar: FCProps = ({ className, ...props }) => {
     <div
       className={cn(
         className,
-        "flex justify-center w-full border-b border-gray-300 dark:border-gray-100",
+        "flex justify-center w-full",
       )}
       {...props}
     >
       <div className="w-[1320px] flex items-center gap-3 h-20 whitespace-nowrap ">
         <div className="flex-1">
           <NavLink to={"/"} className="w-fit">
-            <SsvLogo className="h-8" />
+            <ComposeLogo className="h-[48px]" />
           </NavLink>
         </div>
 
