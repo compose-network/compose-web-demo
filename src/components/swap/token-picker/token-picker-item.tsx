@@ -11,6 +11,8 @@ import { isNativeToken } from "@/lib/utils/token";
 import { useMint } from "@/lib/contract-interactions/erc-20/write/use-mint";
 import { parseEther } from "viem";
 import { useAccount } from "@/hooks/account/use-account";
+import { useSwitchChain } from "wagmi";
+import { withTransactionModal } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
 
 export type TokenPickerItemProps = {
   token: Address;
@@ -37,6 +39,7 @@ export const TokenPickerItem: TokenPickerItemFC = ({
   };
 
   const account = useAccount();
+  const switchChain = useSwitchChain();
 
   const mint = useMint();
 
@@ -61,12 +64,14 @@ export const TokenPickerItem: TokenPickerItemFC = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() =>
+            onClick={async () => {
+              await switchChain.switchChainAsync({ chainId });
               mint.write(
                 { address: token, chainId },
                 { to: account.address!, amount: parseEther("10") },
-              )
-            }
+                withTransactionModal(),
+              );
+            }}
             isLoading={mint.isPending}
             className="flex items-center gap-1.5 text-xs"
             title="Mint token"

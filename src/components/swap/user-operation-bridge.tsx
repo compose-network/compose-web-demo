@@ -345,14 +345,6 @@ export const UserOperationBridge: SwapFC = () => {
     const hashA = buildA.hash;
     const hashB = buildB.hash;
 
-    setTransactionData((prev) => {
-      if (!prev) return null;
-      const clone = cloneDeep(prev);
-      clone.actions[1].hash = hashA;
-      clone.actions[2].hash = hashB;
-      return clone;
-    });
-
     const explorerAURL = new URL(
       `tx/${hashA}`,
       sourcePublicClient.chain.blockExplorers?.default?.url,
@@ -362,6 +354,14 @@ export const UserOperationBridge: SwapFC = () => {
       `tx/${hashB}`,
       destPublicClient.chain.blockExplorers?.default?.url,
     ).toString();
+
+    setTransactionData((prev) => {
+      if (!prev) return null;
+      const clone = cloneDeep(prev);
+      clone.actions[1].hash = hashA;
+      clone.actions[2].hash = hashB;
+      return clone;
+    });
 
     console.log("buildA:", buildA, explorerAURL);
     console.log("buildB ", buildB, explorerBURL);

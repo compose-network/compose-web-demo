@@ -9,12 +9,21 @@ export const MainPage = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const isSwap = pathname === "/";
   const isBridge = pathname === "/bridge";
+  const isAccounts = pathname === "/accounts";
   return (
     <Card className={cn("max-w-[648px] mx-auto gap-8 mt-8")}>
       <Tabs
         className="w-full"
         defaultValue="swap"
-        value={isSwap ? "swap" : isBridge ? "bridge" : "swap"}
+        value={
+          isSwap
+            ? "swap"
+            : isBridge
+              ? "bridge"
+              : isAccounts
+                ? "accounts"
+                : "swap"
+        }
         onValueChange={(value) => {
           navigate(`/${value}`);
         }}
