@@ -258,7 +258,7 @@ export const UserOperationBridge: SwapFC = () => {
           spender: kernel.kernel.data?.accounts.A.address || zeroAddress,
           amount: globals.MAX_WEI_AMOUNT,
         },
-        withTransactionModal({
+       {
           onConfirmed: (hash) => {
             setTransactionData((prev) => {
               if (!prev) return null;
@@ -276,7 +276,7 @@ export const UserOperationBridge: SwapFC = () => {
               return clone;
             });
           },
-        }),
+        },
       );
     } else {
       console.log("Kernel has enough balance of the selected token to bridge");
