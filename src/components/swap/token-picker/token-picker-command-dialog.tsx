@@ -47,7 +47,7 @@ export const TokenPickerCommandDialog: FC<TokenPickerCommandDialogProps> = ({
             className="bg-gray-200 border-none flex-1 w-full rounded-xl"
             placeholder="Search tokens..."
           />
-          <CommandList>
+          <CommandList className="max-h-max">
             <div className="flex flex-col gap-3 py-5 px-2">
               <Text variant="body-2-semibold">Network</Text>
               <div className="flex items-center gap-5 px-1">

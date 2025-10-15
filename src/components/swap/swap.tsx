@@ -1,8 +1,16 @@
-import { type FC, type ComponentPropsWithoutRef } from "react";
+import { type FC, type ComponentPropsWithoutRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { rollupB, contracts, rollupA, baseChain, arbitrumChain, optimismChain } from "@/wagmi/config";
+import {
+  rollupB,
+  contracts,
+  rollupA,
+  baseChain,
+  arbitrumChain,
+  optimismChain,
+  getChainById,
+} from "@/wagmi/config";
 import { isAddress, parseEther } from "viem";
 import { TokenInput } from "@/components/swap/token-picker/token-input";
 import { useSwapContract } from "@/lib/contract-interactions/core/create-write-hooks";
@@ -27,6 +35,13 @@ import { TokenABI } from "@/lib/abi/token";
 import { globals } from "@/config";
 import { formatCurrency } from "@/lib/utils/number";
 import type { Hash } from "viem";
+import { useLocalStorage } from "react-use";
+import { useSmartAccount } from "@/lib/smart-account/kernel";
+import {
+  createSwapUserOpsFrom_A_to_B,
+  createSwapUserOpsFrom_B_to_A,
+} from "@/components/swap/utils/generate-swap-userops";
+import { createRollupPublicClients } from "@/components/swap/utils/core";
 
 export type SwapProps = {
   // TODO: Add props or remove this type
@@ -37,14 +52,25 @@ type SwapFC = FC<
 >;
 
 const schema = z.object({
-  chainId: z.number().default(rollupB.id),
   from: z.object({
+    chainId: z
+      .number()
+      .default(rollupA.id)
+      .refine((id) => id === rollupA.id || id === rollupB.id, {
+        message: "Chain ID must be rollupA or rollupB",
+      }),
     token: z.string().refine(isAddress),
     amount: z.bigint().min(parseEther("0.000001"), {
       message: "Amount must be greater than 0.000001",
     }),
   }),
   to: z.object({
+    chainId: z
+      .number()
+      .default(rollupA.id)
+      .refine((id) => id === rollupA.id || id === rollupB.id, {
+        message: "Chain ID must be rollupA or rollupB",
+      }),
     token: z.string().refine(isAddress),
     amount: z.bigint(),
   }),
@@ -52,32 +78,64 @@ const schema = z.object({
 });
 export const Swap: SwapFC = () => {
   const { chainId, address, isConnected } = useAccount();
-  const isRollupB = chainId === rollupB.id;
   const switchChain = useSwitchChain();
   const [state, send] = useBatchTransactionMachine();
   const block = useBlockNumber({ watch: true, chainId: rollupB.id });
 
-  const form = useForm<z.infer<typeof schema>>({
-    defaultValues: {
-      chainId: rollupB.id,
+  const [prevSwapValues, setPrevSwapValues] = useLocalStorage<
+    z.infer<typeof schema>
+  >(
+    "compose/swapvalues",
+    {
       from: {
+        chainId: rollupB.id,
         token: tokens[rollupB.id][0].address,
         amount: 0n,
       },
       to: {
-        token: tokens[rollupB.id][1].address,
+        chainId: rollupB.id,
+        token: tokens[rollupB.id][0].address,
         amount: 0n,
       },
       slippage: 0.5,
     },
+    {
+      raw: false,
+      serializer: (value) => {
+        // @ts-expect-error bigint to string
+        value.from.amount = value.from.amount.toString();
+        // @ts-expect-error bigint to string
+        value.to.amount = value.to.amount.toString();
+        return JSON.stringify(value);
+      },
+      deserializer: (value) => {
+        const parsed = JSON.parse(value);
+        parsed.from.amount = 0n;
+        parsed.to.amount = 0n;
+        return parsed;
+      },
+    },
+  );
+
+  const form = useForm<z.infer<typeof schema>>({
+    defaultValues: prevSwapValues,
     resolver: zodResolver(schema),
   });
 
-  const handleChainSelect = (chainId: number) => {
-    form.setValue("chainId", chainId);
-  };
+  console.log("form.formState.isValid:", form.formState.isValid);
 
   const values = form.watch();
+
+  useEffect(() => {
+    setPrevSwapValues(values);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    values.from.token,
+    values.to.token,
+    values.from.chainId,
+    values.to.chainId,
+  ]);
+
   const { useGetSwapPrice, useSwap } = useSwapContract();
 
   const swap = useSwap({
@@ -86,6 +144,7 @@ export const Swap: SwapFC = () => {
   });
 
   const approver = useApprove();
+  const kernel = useSmartAccount();
 
   const allowance = useReadContract({
     abi: TokenABI,
@@ -109,26 +168,139 @@ export const Swap: SwapFC = () => {
     {
       placeholderData: values.from.amount ? keepPreviousData : undefined,
       chainId: rollupB.id,
+      contract: contracts[rollupB.id].swap,
       enabled: !!values.from.token && !!values.to.token,
     },
   );
 
   const isSameToken = values.from.token === values.to.token;
-  const hasAllowance = allowance.isSuccess ? allowance.data >= values.from.amount : false;
+  const hasAllowance = allowance.isSuccess
+    ? allowance.data >= values.from.amount
+    : false;
   const needsApproval = !hasAllowance && values.from.amount > 0n;
 
   const fromToken = useAsset({
     tokenAddress: values.from.token,
-    chainId: values.chainId,
+    chainId: values.from.chainId,
   });
 
   const toToken = useAsset({
     tokenAddress: values.to.token,
-    chainId: values.chainId,
+    chainId: values.to.chainId,
   });
 
+  const approve = useApprove();
+
   const submit = form.handleSubmit(async (values) => {
-    await switchChain.switchChainAsync({ chainId: values.chainId });
+    const [rollupAPublicClient, rollupBPublicClient] =
+      createRollupPublicClients(rollupA.id, rollupB.id);
+
+    if (prices.data?.[0] === 0n) {
+      return toast({
+        title: "No price found for the selected tokens",
+        variant: "destructive",
+      });
+    }
+    if (!kernel.kernel.data?.accounts.A.address) {
+      return toast({
+        title: "Kernel A account not found",
+        variant: "destructive",
+      });
+    }
+
+    // Is Swapping from A -> B
+    if (
+      values.from.chainId === rollupA.id &&
+      values.to.chainId === rollupB.id
+    ) {
+      const kernelAllowance = await rollupAPublicClient.readContract({
+        abi: TokenABI,
+        functionName: "allowance",
+        args: [address!, kernel.kernel.data?.accounts.A.address],
+        address: values.from.token,
+      });
+
+      await switchChain.switchChainAsync({ chainId: values.from.chainId });
+
+      if (kernelAllowance < values.from.amount) {
+        await approve.write(
+          {
+            address: values.from.token,
+            chainId: values.from.chainId,
+          },
+          {
+            spender: kernel.kernel.data?.accounts.A.address,
+            amount: globals.MAX_WEI_AMOUNT,
+          },
+        );
+      }
+
+      const { sendUserOps } = await createSwapUserOpsFrom_A_to_B(
+        {
+          amountIn: values.from.amount,
+          fromToken: values.from.token,
+          toToken: values.to.token,
+          eoaAddress: address!,
+          kernelA: kernel.getKernelByChainId(values.from.chainId)!,
+          kernelB: kernel.getKernelByChainId(values.to.chainId)!,
+          amountOut: prices.data?.[0] ?? 0n,
+        },
+        {
+          onBuildUserOps(_, explorerUrls) {
+            explorerUrls.forEach(console.log);
+          },
+        },
+      );
+      return sendUserOps();
+    }
+
+    // Is Swapping from B -> A
+    if (
+      values.from.chainId === rollupB.id &&
+      values.to.chainId === rollupA.id
+    ) {
+      const kernelAllowance = await rollupBPublicClient.readContract({
+        abi: TokenABI,
+        functionName: "allowance",
+        args: [address!, kernel.kernel.data?.accounts.B.address],
+        address: values.from.token,
+      });
+
+      await switchChain.switchChainAsync({ chainId: values.from.chainId });
+
+      if (kernelAllowance < values.from.amount) {
+        await approve.write(
+          {
+            address: values.from.token,
+            chainId: values.from.chainId,
+          },
+          {
+            spender: kernel.kernel.data?.accounts.A.address,
+            amount: globals.MAX_WEI_AMOUNT,
+          },
+        );
+      }
+
+      const { sendUserOps } = await createSwapUserOpsFrom_B_to_A(
+        {
+          amountIn: values.from.amount,
+          fromToken: values.from.token,
+          toToken: values.to.token,
+          eoaAddress: address!,
+          kernelA: kernel.kernel.data?.accounts.A!,
+          kernelB: kernel.kernel.data?.accounts.B!,
+          amountOut: prices.data?.[0] ?? 0n,
+        },
+        {
+          onBuildUserOps(_, explorerUrls) {
+            explorerUrls.forEach(console.log);
+          },
+        },
+      );
+      return sendUserOps();
+    }
+
+    await switchChain.switchChainAsync({ chainId: values.from.chainId });
 
     const writers = [];
 
@@ -192,7 +364,6 @@ export const Swap: SwapFC = () => {
       },
     });
 
-
     send({
       type: "write",
       writers,
@@ -213,21 +384,33 @@ export const Swap: SwapFC = () => {
         <form onSubmit={submit} className="flex flex-col gap-8">
           <div className="flex gap-4 flex-col">
             <TokenInput
-              chains={[
-                { chainId: rollupA.id, isNotSupported: true },
-                {
-                  chainId: rollupB.id,
-                  tokens: tokens[rollupB.id].map((token) => token.address),
-                },
-                { chainId: baseChain.id, isNotSupported: true },
-                { chainId: arbitrumChain.id, isNotSupported: true },
-                { chainId: optimismChain.id, isNotSupported: true },
-              ]}
-              onChainSelect={handleChainSelect}
+              chains={
+                [
+                  {
+                    chainId: rollupA.id,
+                    tokens: tokens[rollupB.id].map((token) => token.address),
+                  },
+                  {
+                    chainId: rollupB.id,
+                    tokens: tokens[rollupB.id].map((token) => token.address),
+                  },
+                  { chainId: baseChain.id, isNotSupported: true },
+                  { chainId: arbitrumChain.id, isNotSupported: true },
+                  { chainId: optimismChain.id, isNotSupported: true },
+                ] as const
+              }
               value={values.from.amount}
               tokenAddress={values.from.token}
-              chainId={values.chainId}
-              onSelectToken={(token) => form.setValue("from.token", token)}
+              chainId={values.from.chainId}
+              onSelectToken={(token) => {
+                return form.setValue("from.token", token);
+              }}
+              onChainSelect={(chainId) =>
+                form.setValue(
+                  "from.chainId",
+                  chainId as typeof rollupA.id | typeof rollupB.id,
+                )
+              }
               onChange={(amount) => {
                 form.setValue("from.amount", amount, {
                   shouldValidate: true,
@@ -274,7 +457,10 @@ export const Swap: SwapFC = () => {
             </div>
             <TokenInput
               chains={[
-                { chainId: rollupA.id, isNotSupported: true },
+                {
+                  chainId: rollupA.id,
+                  tokens: tokens[rollupB.id].map((token) => token.address),
+                },
                 {
                   chainId: rollupB.id,
                   tokens: tokens[rollupB.id].map((token) => token.address),
@@ -283,10 +469,12 @@ export const Swap: SwapFC = () => {
                 { chainId: arbitrumChain.id, isNotSupported: true },
                 { chainId: optimismChain.id, isNotSupported: true },
               ]}
-              onChainSelect={handleChainSelect}
-              value={isSameToken ? values.from.amount : prices.data?.[0] ?? 0n}
+              onChainSelect={(chainId) => form.setValue("to.chainId", chainId)}
+              value={
+                isSameToken ? values.from.amount : (prices.data?.[0] ?? 0n)
+              }
               tokenAddress={values.to.token}
-              chainId={values.chainId}
+              chainId={values.to.chainId}
               isLoading={prices.isPending}
               readOnly
               onSelectToken={(token) => form.setValue("to.token", token)}
@@ -296,8 +484,11 @@ export const Swap: SwapFC = () => {
           <Divider />
           <SwapRoute
             action="swap"
-            fromToken={{ address: values.from.token, chainId: values.chainId }}
-            toToken={{ address: values.to.token, chainId: values.chainId }}
+            fromToken={{
+              address: values.from.token,
+              chainId: values.from.chainId,
+            }}
+            toToken={{ address: values.to.token, chainId: values.to.chainId }}
           />
           {isConnected ? (
             <Button
@@ -312,9 +503,11 @@ export const Swap: SwapFC = () => {
                     ? "Processing..."
                     : undefined
               }
-              disabled={!form.formState.isValid || allowance.isLoading}
+              disabled={!form.formState.isValid}
             >
-              {!isRollupB ? "Switch to Rollup B And Swap" : "Swap"}
+              {chainId !== values.from.chainId
+                ? `Switch to ${getChainById(values.from.chainId).name} And Swap`
+                : "Swap"}
             </Button>
           ) : (
             <ConnectWalletBtn size="xl" />

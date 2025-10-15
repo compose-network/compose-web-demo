@@ -13,7 +13,7 @@ import {
   polygon as polygonChain,
   base,
   arbitrum,
-  optimism
+  optimism,
 } from "viem/chains";
 import { createConfig } from "wagmi";
 
@@ -108,7 +108,7 @@ export const rollupA = defineChain({
   id: rollupAChainId,
   name: "Rollup A",
   nativeCurrency: {
-    name: "Rollup A",
+    name: "Ethereum",
     symbol: "ETH",
     decimals: 18,
   },
@@ -132,7 +132,7 @@ export const rollupB = defineChain({
   id: rollupBChainId,
   name: "Rollup B",
   nativeCurrency: {
-    name: "Rollup B",
+    name: "Ethereum",
     symbol: "ETH",
     decimals: 18,
   },
@@ -210,10 +210,16 @@ const chainRpcKeyById = new Map<number, ChainRpcKey>([
 ]);
 
 // Chains array
-export const chains = [rollupA, rollupB, mainnet, polygon, hoodi, baseChain, arbitrumChain, optimismChain] satisfies [
-  Chain,
-  ...Chain[],
-];
+export const chains = [
+  rollupA,
+  rollupB,
+  mainnet,
+  polygon,
+  hoodi,
+  baseChain,
+  arbitrumChain,
+  optimismChain,
+] satisfies [Chain, ...Chain[]];
 export const chainsMap = {
   [rollupA.id]: rollupA,
   [rollupB.id]: rollupB,
@@ -260,12 +266,14 @@ const hoodiToRollupBBridgeAddress = parseContractAddress(
 
 export const contracts = {
   [rollupB.id]: {
-    swap: "0x52cfc57b976936ba8d6beea547900c4425836bea",
+    swap: "0x70f2e907bf467E28A96A2e314B5200c2B144b76c",
   },
   [hoodi.id]: {
     bridge: hoodiBridgeAddress,
   },
 } as const;
+
+export const rollupBSwapContract = "0x70f2e907bf467E28A96A2e314B5200c2B144b76c";
 
 export const bridgeContracts = {
   [hoodi.id]: {

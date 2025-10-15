@@ -129,9 +129,6 @@ export const useSmartAccount = () => {
     },
   });
 
-  console.log("tokensA:", tokensA.data);
-  console.log("tokensB:", tokensB.data);
-
   const balanceB = useBalance({
     address: kernel.data?.accounts?.B?.address as Address,
     chainId: rollupB.id,
