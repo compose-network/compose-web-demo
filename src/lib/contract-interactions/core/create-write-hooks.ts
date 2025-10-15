@@ -115,7 +115,10 @@ export function createContractHooks<T extends Abi>(
         const contractAddress =
           options.contract || defaultContractAddressGetter();
 
-        const blockNumber = useBlockNumber({ watch: options.watch });
+        const blockNumber = useBlockNumber({
+          watch: options.watch,
+          chainId: options.chainId,
+        });
         const args = paramsToArray({ params, abiFunction });
 
         return useReadContract({

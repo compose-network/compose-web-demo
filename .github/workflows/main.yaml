@@ -22,6 +22,9 @@ jobs:
       VITE_POLYGON_RPC_HTTP: '["https://polygon-rpc.com"]'
       VITE_ROLLUP_A_BLOCK_EXPLORER_URL: "https://rollup-a.explorer.testnet.compose.network"
       VITE_ROLLUP_B_BLOCK_EXPLORER_URL: "https://rollup-b.explorer.testnet.compose.network"
+      VITE_HOODI_BRIDGE_ADDRESS: "0x119b79f1bd3ef2e9e386bf52ca344d6aa3075c93"
+      VITE_BRIDGE_HOODI_TO_ROLLUP_A: "0x119b79f1bd3ef2e9e386bf52ca344d6aa3075c93"
+      VITE_BRIDGE_HOODI_TO_ROLLUP_B: "0xc4e5387bb31dee941db6e7d93d7ffb5b3dfe4627"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 

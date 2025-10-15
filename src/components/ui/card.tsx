@@ -6,7 +6,7 @@ import { Text, textVariants } from "@/components/ui/text";
 import { isString } from "lodash-es";
 import { Slot } from "@radix-ui/react-slot";
 
-const variants = cva("bg-gray-50 rounded-2xl mx-auto", {
+const variants = cva("bg-gray-200 rounded-2xl mx-auto", {
   variants: {
     variant: {
       default: "p-8 flex flex-col gap-6",

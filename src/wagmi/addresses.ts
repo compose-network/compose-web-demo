@@ -1,4 +1,6 @@
-export const ENTRYPOINT_V0_8 = "0x258FD3828a0aB0be5d2229017ccd815D5Bd0Fec2";
+// export const ENTRYPOINT_V0_8 = "0x0000000071727De22E5E9d8BAf0edAc6f37da032";
+export const ENTRYPOINT = "0x0000000071727De22E5E9d8BAf0edAc6f37da032";
+// export const ENTRYPOINT = "0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108";
 
 // Latest block from zerodev-examples/.env (authoritative)
 export const ROLLUP_ADDRESSES = {
@@ -21,6 +23,10 @@ export const BRIDGE_ADDRESSES = {
   77777: { BRIDGE: "0x31c57E2910496e46Bb883EDeb1eB2bee8E3Ee82C" as const },
   88888: { BRIDGE: "0x31c57E2910496e46Bb883EDeb1eB2bee8E3Ee82C" as const },
 } as const;
+
+export const getBridgeAddress = (chainId: keyof typeof BRIDGE_ADDRESSES) => {
+  return BRIDGE_ADDRESSES[chainId]?.BRIDGE;
+};
 
 export const BRIDGE_TOKEN =
   "0x4c77De11C15d8b5e2584e67e2E6E1Ec7A78B0b5b" as const;

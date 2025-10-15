@@ -14,7 +14,10 @@ import {
   rollupB,
   hoodi,
   rollupA,
-  bridgeContracts
+  bridgeContracts,
+  baseChain,
+  arbitrumChain,
+  optimismChain
 } from "@/wagmi/config";
 import type { Hex } from "viem";
 import { isAddress, parseEther, zeroAddress } from "viem";
@@ -257,6 +260,9 @@ export const TransactionBridge: SwapFC = () => {
               chains={[
                 { chainId: rollupA.id, tokens: [zeroAddress] },
                 { chainId: rollupB.id, tokens: [zeroAddress] },
+                { chainId: baseChain.id, isNotSupported: true },
+                { chainId: arbitrumChain.id, isNotSupported: true },
+                { chainId: optimismChain.id, isNotSupported: true },
               ]}
               onChainSelect={(chainId) =>
                 form.setValue("to.chainId", chainId as RollupChainId)

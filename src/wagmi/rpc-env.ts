@@ -1,3 +1,5 @@
+import { isAddress, type Address } from "viem";
+
 type RpcEnvKey = keyof Pick<
   ImportMetaEnv,
   | "VITE_HOODI_RPC_HTTP"
@@ -12,7 +14,7 @@ export type RpcDescriptor = {
   defaults: readonly string[];
 };
 
-const emitConfigWarning = (
+export const emitConfigWarning = (
   label: string,
   detail: string,
   error?: unknown,
@@ -44,7 +46,9 @@ const parseRpcUrls = (
       const parsed = JSON.parse(trimmed);
       if (
         Array.isArray(parsed) &&
-        parsed.every((value) => typeof value === "string" && value.trim().length)
+        parsed.every(
+          (value) => typeof value === "string" && value.trim().length,
+        )
       ) {
         return parsed.map((url) => url.trim());
       }
@@ -97,15 +101,13 @@ export const resolveRpcUrls = <
 
 type ChainIdEnvKey = keyof Pick<
   ImportMetaEnv,
-  | "VITE_HOODI_CHAIN_ID"
-  | "VITE_ROLLUP_A_CHAIN_ID"
-  | "VITE_ROLLUP_B_CHAIN_ID"
+  "VITE_HOODI_CHAIN_ID" | "VITE_ROLLUP_A_CHAIN_ID" | "VITE_ROLLUP_B_CHAIN_ID"
 >;
 
-export const parseChainId = (
+export const parseChainId = <T extends number>(
   envKey: ChainIdEnvKey,
-  defaultId: number,
-): number => {
+  defaultId: T,
+): T => {
   const rawValue = import.meta.env[envKey];
   if (!rawValue) return defaultId;
 
@@ -118,13 +120,12 @@ export const parseChainId = (
     return defaultId;
   }
 
-  return parsed;
+  return parsed as T;
 };
 
 type ExplorerEnvKey = keyof Pick<
   ImportMetaEnv,
-  | "VITE_ROLLUP_A_BLOCK_EXPLORER_URL"
-  | "VITE_ROLLUP_B_BLOCK_EXPLORER_URL"
+  "VITE_ROLLUP_A_BLOCK_EXPLORER_URL" | "VITE_ROLLUP_B_BLOCK_EXPLORER_URL"
 >;
 
 export const parseBlockExplorerUrl = (
@@ -154,4 +155,38 @@ export const parseBlockExplorerUrl = (
     );
     return defaultUrl;
   }
+};
+
+type ContractAddressEnvKey = keyof Pick<
+  ImportMetaEnv,
+  | "VITE_HOODI_BRIDGE_ADDRESS"
+  | "VITE_BRIDGE_HOODI_TO_ROLLUP_A"
+  | "VITE_BRIDGE_HOODI_TO_ROLLUP_B"
+>;
+
+export const parseContractAddress = (
+  envKey: ContractAddressEnvKey,
+  defaultAddress: Address,
+): Address => {
+  const rawValue = import.meta.env[envKey];
+  if (!rawValue) return defaultAddress;
+
+  const trimmed = rawValue.trim();
+  if (!trimmed) {
+    emitConfigWarning(
+      `CONTRACT_ADDRESS ${envKey}`,
+      `value was empty. Falling back to ${defaultAddress}.`,
+    );
+    return defaultAddress;
+  }
+
+  if (!isAddress(trimmed)) {
+    emitConfigWarning(
+      `CONTRACT_ADDRESS ${envKey}`,
+      `value "${rawValue}" is not a valid address. Falling back to ${defaultAddress}.`,
+    );
+    return defaultAddress;
+  }
+
+  return trimmed as Address;
 };

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils/tw";
-import { getChainById, rollupA, rollupB } from "@/wagmi/config";
+import { getChainById, rollupA, rollupB, baseChain, arbitrumChain, optimismChain } from "@/wagmi/config";
 import { Tooltip } from "@/components/ui/tooltip";
 
 const chainIconVariants = cva(
@@ -34,6 +34,9 @@ const chainIconVariants = cva(
 const chainIconMap = {
   [rollupA.id]: "/images/chain-icons/I.svg",
   [rollupB.id]: "/images/chain-icons/II.svg",
+  [baseChain.id]: "/images/network-logos/base.svg",
+  [arbitrumChain.id]: "/images/network-logos/arbitrum.svg",
+  [optimismChain.id]: "/images/network-logos/optimism.svg",
 };
 
 const getChainIcon = (chainId: number) => {
@@ -51,6 +54,9 @@ export type ChainIconProps = {
 const chainColorSchemeMap = {
   [rollupA.id]: "blue",
   [rollupB.id]: "purple",
+  [baseChain.id]: "blue", // Base uses blue branding
+  [arbitrumChain.id]: "blue", // Arbitrum uses blue branding
+  [optimismChain.id]: "default", // Optimism uses red branding, closest to default
 } as const;
 
 const getChainColorScheme = (chainId: number) => {
