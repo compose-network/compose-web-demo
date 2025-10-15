@@ -1,6 +1,10 @@
 import { useAccount } from "@/hooks/account/use-account";
 import { useEntrypointContract } from "@/lib/abi/entrypoint";
-import { ENTRYPOINT_ADDRESS, ENTRYPOINT_WITH_VERSION, ROLLUP_ADDRESSES } from "@/wagmi/addresses";
+import {
+  ENTRYPOINT_ADDRESS,
+  ENTRYPOINT_WITH_VERSION,
+  ROLLUP_ADDRESSES,
+} from "@/wagmi/addresses";
 import { rollupA, rollupB } from "@/wagmi/config";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { toMultiChainECDSAValidator } from "@zerodev/multi-chain-ecdsa-validator";
@@ -9,7 +13,6 @@ import { createKernelAccount } from "@zerodev/sdk";
 import { KERNEL_V3_1 } from "@zerodev/sdk/constants";
 import { type Address, type Client, isAddress } from "viem";
 import { useBalance, usePublicClient, useWalletClient } from "wagmi";
-import { fetchBalanceOf } from "../contract-interactions/erc-20/read/use-balance-of";
 
 export const useSmartAccount = () => {
   const account = useAccount();
@@ -87,44 +90,6 @@ export const useSmartAccount = () => {
   const balanceA = useBalance({
     address: kernel.data?.accounts?.A?.address as Address,
     chainId: rollupA.id,
-  });
-
-  const tokensA = useQuery({
-    queryKey: ["tokens-a", kernel.data?.accounts?.A?.address, rollupA.id],
-    queryFn: async () => {
-      return Promise.all([
-        {
-          weth: await fetchBalanceOf(
-            {
-              address: "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553",
-              chainId: rollupA.id,
-            },
-            {
-              account: kernel.data?.accounts?.A?.address as Address,
-            },
-          ),
-        },
-      ]);
-    },
-  });
-
-  const tokensB = useQuery({
-    queryKey: ["tokens-b", kernel.data?.accounts?.B?.address, rollupB.id],
-    queryFn: async () => {
-      return Promise.all([
-        {
-          weth: await fetchBalanceOf(
-            {
-              address: "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553",
-              chainId: rollupB.id,
-            },
-            {
-              account: kernel.data?.accounts?.B?.address as Address,
-            },
-          ),
-        },
-      ]);
-    },
   });
 
   const balanceB = useBalance({

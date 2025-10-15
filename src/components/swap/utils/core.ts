@@ -7,6 +7,13 @@ import { getPublicClient, http } from "@wagmi/core";
 import type { CreateKernelAccountReturnType } from "@zerodev/sdk";
 import { createPublicClient, rpcSchema, type Address, type Hex } from "viem";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type {
+  GetPaymasterDataParameters,
+  PaymasterActions,
+} from "viem/account-abstraction";
+import { getPaymasterDataForChain } from "@/api/paymaster.ts";
+
 const FALLBACK_CALL_GAS_LIMIT = 900_000n;
 const MIN_VERIFICATION_GAS_LIMIT = 1_200_000n;
 const PRE_VERIFICATION_GAS = 90_000n;
@@ -24,6 +31,69 @@ type CreateUserOpParams = {
   account: CreateKernelAccountReturnType<"0.7">;
   chainId: (typeof config.chains)[number]["id"];
   calls: Call[];
+};
+
+export const createUserOp = async ({
+  account,
+  chainId,
+  calls,
+}: CreateUserOpParams) => {
+  const publicClient = getPublicClient(config, { chainId });
+
+  // Estimate gas for each call
+  const callGasEstimates = await Promise.all(
+    calls.map((call) =>
+      publicClient
+        .estimateGas({
+          to: call.to,
+          data: call.data,
+          value: call.value,
+        })
+        .then(withMargin)
+        .catch((error) => {
+          console.warn(
+            `Gas estimation failed for call to ${call.to}, falling back`,
+            error,
+          );
+          return FALLBACK_CALL_GAS_LIMIT;
+        }),
+    ),
+  );
+
+  // Sum all call gas limits
+  const callGasLimit = callGasEstimates.reduce((acc, gas) => acc + gas, 0n);
+
+  // Calculate verification gas limit
+  const verificationGasLimit =
+    callGasLimit + PRE_VERIFICATION_GAS > MIN_VERIFICATION_GAS_LIMIT
+      ? callGasLimit + PRE_VERIFICATION_GAS
+      : MIN_VERIFICATION_GAS_LIMIT;
+
+  // Estimate fees per gas
+  const gasEstimate = await publicClient.estimateFeesPerGas();
+
+  const paymaster: PaymasterActions = {
+    getPaymasterData: (parameters: GetPaymasterDataParameters) => {
+      return getPaymasterDataForChain(parameters, "pm_getPaymasterData");
+    },
+    getPaymasterStubData: (parameters: GetPaymasterDataParameters) => {
+      return getPaymasterDataForChain(parameters, "pm_getPaymasterStubData");
+    },
+  };
+
+  const callData = await account.encodeCalls(calls);
+
+  return {
+    account,
+    chainId,
+    callData,
+    callGasLimit,
+    verificationGasLimit,
+    preVerificationGas: PRE_VERIFICATION_GAS,
+    maxFeePerGas: gasEstimate.maxFeePerGas!,
+    maxPriorityFeePerGas: gasEstimate.maxPriorityFeePerGas!,
+    paymaster,
+  };
 };
 
 type ComposeRpcSchema = [
@@ -66,55 +136,4 @@ export const createRollupPublicClients = (
   });
 
   return [rollupAPublicClient, rollupBPublicClient];
-};
-
-export const createUserOp = async ({
-  account,
-  chainId,
-  calls,
-}: CreateUserOpParams) => {
-  const publicClient = getPublicClient(config, { chainId });
-
-  // Estimate gas for each call
-  const callGasEstimates = await Promise.all(
-    calls.map((call) =>
-      publicClient
-        .estimateGas({
-          to: call.to,
-          data: call.data,
-          value: call.value,
-        })
-        .then(withMargin)
-        .catch((error) => {
-          console.warn(
-            `Gas estimation failed for call to ${call.to}, falling back`,
-            error,
-          );
-          return FALLBACK_CALL_GAS_LIMIT;
-        }),
-    ),
-  );
-
-  // Sum all call gas limits
-  const callGasLimit = callGasEstimates.reduce((acc, gas) => acc + gas, 0n);
-
-  // Calculate verification gas limit
-  const verificationGasLimit =
-    callGasLimit + PRE_VERIFICATION_GAS > MIN_VERIFICATION_GAS_LIMIT
-      ? callGasLimit + PRE_VERIFICATION_GAS
-      : MIN_VERIFICATION_GAS_LIMIT;
-
-  // Estimate fees per gas
-  const gasEstimate = await publicClient.estimateFeesPerGas();
-
-  return {
-    account,
-    chainId,
-    calls,
-    callGasLimit,
-    verificationGasLimit,
-    preVerificationGas: PRE_VERIFICATION_GAS,
-    maxFeePerGas: gasEstimate.maxFeePerGas!,
-    maxPriorityFeePerGas: gasEstimate.maxPriorityFeePerGas!,
-  };
 };
