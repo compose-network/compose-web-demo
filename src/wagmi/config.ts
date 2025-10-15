@@ -6,6 +6,7 @@ import {
 import type { Transport } from "@wagmi/core";
 
 import type { Chain } from "viem";
+import type { Address } from "viem";
 import { defineChain, fallback, http } from "viem";
 import {
   mainnet as mainnetChain,
@@ -19,6 +20,7 @@ import { createConfig } from "wagmi";
 import {
   parseBlockExplorerUrl,
   parseChainId,
+  parseContractAddress,
   resolveRpcUrls,
   type RpcDescriptor,
 } from "./rpc-env";
@@ -238,22 +240,40 @@ export const rollupIdMap = {
   [rollupB.id]: 2,
 } as const;
 
+const DEFAULT_HOODI_BRIDGE_ADDRESS =
+  "0x119b79f1bd3ef2e9e386bf52ca344d6aa3075c93" as Address;
+const DEFAULT_HOODI_TO_ROLLUP_B_BRIDGE_ADDRESS =
+  "0xc4e5387bb31dee941db6e7d93d7ffb5b3dfe4627" as Address;
+
+const hoodiBridgeAddress = parseContractAddress(
+  "VITE_HOODI_BRIDGE_ADDRESS",
+  DEFAULT_HOODI_BRIDGE_ADDRESS,
+);
+const hoodiToRollupABridgeAddress = parseContractAddress(
+  "VITE_BRIDGE_HOODI_TO_ROLLUP_A",
+  hoodiBridgeAddress,
+);
+const hoodiToRollupBBridgeAddress = parseContractAddress(
+  "VITE_BRIDGE_HOODI_TO_ROLLUP_B",
+  DEFAULT_HOODI_TO_ROLLUP_B_BRIDGE_ADDRESS,
+);
+
 export const contracts = {
   [rollupB.id]: {
     swap: "0x52cfc57b976936ba8d6beea547900c4425836bea",
   },
   [hoodi.id]: {
-    bridge: "0x9adb5dba4f55d7ea921f34e98dc492b3a2ced734",
+    bridge: hoodiBridgeAddress,
   },
 } as const;
 
 export const bridgeContracts = {
   [hoodi.id]: {
     [rollupA.id]: {
-      bridge: "0xe6456c49bae7ff20bee0d01948d6d0f82dd821e9",
+      bridge: hoodiToRollupABridgeAddress,
     },
     [rollupB.id]: {
-      bridge: "0x9adb5dba4f55d7ea921f34e98dc492b3a2ced734",
+      bridge: hoodiToRollupBBridgeAddress,
     },
   },
 } as const;

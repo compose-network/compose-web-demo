@@ -1,3 +1,5 @@
+import { isAddress, type Address } from "viem";
+
 type RpcEnvKey = keyof Pick<
   ImportMetaEnv,
   | "VITE_HOODI_RPC_HTTP"
@@ -12,7 +14,11 @@ export type RpcDescriptor = {
   defaults: readonly string[];
 };
 
-const emitConfigWarning = (label: string, detail: string, error?: unknown) => {
+export const emitConfigWarning = (
+  label: string,
+  detail: string,
+  error?: unknown,
+) => {
   if (!import.meta.env.DEV) return;
   if (error) {
     console.warn(`[wagmi-config] ${label}: ${detail}`, error);
@@ -149,4 +155,38 @@ export const parseBlockExplorerUrl = (
     );
     return defaultUrl;
   }
+};
+
+type ContractAddressEnvKey = keyof Pick<
+  ImportMetaEnv,
+  | "VITE_HOODI_BRIDGE_ADDRESS"
+  | "VITE_BRIDGE_HOODI_TO_ROLLUP_A"
+  | "VITE_BRIDGE_HOODI_TO_ROLLUP_B"
+>;
+
+export const parseContractAddress = (
+  envKey: ContractAddressEnvKey,
+  defaultAddress: Address,
+): Address => {
+  const rawValue = import.meta.env[envKey];
+  if (!rawValue) return defaultAddress;
+
+  const trimmed = rawValue.trim();
+  if (!trimmed) {
+    emitConfigWarning(
+      `CONTRACT_ADDRESS ${envKey}`,
+      `value was empty. Falling back to ${defaultAddress}.`,
+    );
+    return defaultAddress;
+  }
+
+  if (!isAddress(trimmed)) {
+    emitConfigWarning(
+      `CONTRACT_ADDRESS ${envKey}`,
+      `value "${rawValue}" is not a valid address. Falling back to ${defaultAddress}.`,
+    );
+    return defaultAddress;
+  }
+
+  return trimmed as Address;
 };
