@@ -13,6 +13,7 @@ import { parseEther } from "viem";
 import { useAccount } from "@/hooks/account/use-account";
 import { useSwitchChain } from "wagmi";
 import { withTransactionModal } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
+import { useLocalStorage } from "react-use";
 
 export type TokenPickerItemProps = {
   token: Address;
@@ -42,6 +43,7 @@ export const TokenPickerItem: TokenPickerItemFC = ({
   const switchChain = useSwitchChain();
 
   const mint = useMint();
+  const [advancedMode, setAdvancedMode] = useLocalStorage("advancedMode", false);
 
   return (
     <div className={cn("flex gap-4 items-center w-full", className)} {...props}>
@@ -61,23 +63,25 @@ export const TokenPickerItem: TokenPickerItemFC = ({
             <PlusIcon className="h-3 w-3" />
             Add to Wallet
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={async () => {
-              await switchChain.switchChainAsync({ chainId });
-              mint.write(
-                { address: token, chainId },
-                { to: account.address!, amount: parseEther("10") },
-                withTransactionModal(),
-              );
-            }}
-            isLoading={mint.isPending}
-            className="flex items-center gap-1.5 text-xs"
-            title="Mint token"
-          >
-            Mint
-          </Button>
+          {advancedMode && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                await switchChain.switchChainAsync({ chainId });
+                mint.write(
+                  { address: token, chainId },
+                  { to: account.address!, amount: parseEther("10") },
+                  withTransactionModal(),
+                );
+              }}
+              isLoading={mint.isPending}
+              className="flex items-center gap-1.5 text-xs"
+              title="Mint token"
+            >
+              Mint
+            </Button>
+          )}
         </>
       )}
     </div>
