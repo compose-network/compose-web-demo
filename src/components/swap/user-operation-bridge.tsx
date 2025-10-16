@@ -258,7 +258,15 @@ export const UserOperationBridge: SwapFC = () => {
           spender: kernel.kernel.data?.accounts.A.address || zeroAddress,
           amount: globals.MAX_WEI_AMOUNT,
         },
-       {
+        {
+          onError: () => {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              clone.actions[0].status = "failed";
+              return clone;
+            });
+          },
           onConfirmed: (hash) => {
             setTransactionData((prev) => {
               if (!prev) return null;
@@ -416,11 +424,11 @@ export const UserOperationBridge: SwapFC = () => {
     console.log("decoded logs for Rollup B:", decodedB);
 
     const revertedA = decodedA.find(
-      (log) => log.args && "success" in log.args && !log.args.success,
+      (log) => log?.args && "success" in log.args && !log.args.success,
     );
 
     const revertedB = decodedB.find(
-      (log) => log.args && "success" in log.args && !log.args.success,
+      (log) => log?.args && "success" in log.args && !log.args.success,
     );
 
     if (revertedA || revertedB) {

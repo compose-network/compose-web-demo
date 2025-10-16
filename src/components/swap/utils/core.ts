@@ -5,7 +5,7 @@ import type {
 import { chainsMap, config, rollupA, rollupB } from "@/wagmi/config";
 import { getPublicClient, http } from "@wagmi/core";
 import type { CreateKernelAccountReturnType } from "@zerodev/sdk";
-import { createPublicClient, rpcSchema, type Address, type Hex } from "viem";
+import { type Address, createPublicClient, type Hex, rpcSchema } from "viem";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type {
@@ -74,7 +74,7 @@ export const createUserOp = async ({
 
   const paymaster: PaymasterActions = {
     getPaymasterData: (parameters: GetPaymasterDataParameters) => {
-      return getPaymasterDataForChain(parameters, "pm_getPaymasterData");
+      return getPaymasterDataForChain(parameters, "pm_sponsorUserOperation");
     },
     getPaymasterStubData: (parameters: GetPaymasterDataParameters) => {
       return getPaymasterDataForChain(parameters, "pm_getPaymasterStubData");

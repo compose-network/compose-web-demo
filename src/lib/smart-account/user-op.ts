@@ -3,13 +3,18 @@ import { MailboxABI } from "@/lib/abi/swap/mailbox";
 import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
 import { TokenABI } from "@/lib/abi/token";
 import { tryCatch } from "@/lib/utils/tryCatch";
-import type { Address, DecodeEventLogReturnType, Hex, Log } from "viem";
 import {
+  Address,
+  concatHex,
   decodeErrorResult,
   decodeEventLog,
+  DecodeEventLogReturnType,
   erc20Abi,
+  Hex,
   isHex,
+  Log,
   toHex,
+  zeroAddress,
 } from "viem";
 import type { PrepareUserOperationReturnType } from "viem/account-abstraction";
 import { WETHAbi } from "../abi/weth";
@@ -18,26 +23,28 @@ export function toRpcUserOpCanonical(op: PrepareUserOperationReturnType) {
   const hx = (v: string | bigint) =>
     typeof v === "string" && isHex(v as `0x${string}`)
       ? (v as `0x${string}`)
-      : toHex(BigInt(v));
+      : toHex(BigInt(v || "0"));
 
-  // const initCode: `0x${string}` =
-  //   op.initCode && isHex(op.initCode) && op.initCode !== "0x"
-  //     ? op.initCode
-  //     : op.factory && op.factory !== zeroAddress && op.factoryData
-  //       ? concatHex([
-  //           (op.factory.toLowerCase().startsWith("0x")
-  //             ? op.factory
-  //             : "0x" + op.factory) as `0x${string}`,
-  //           op.factoryData as `0x${string}`,
-  //         ])
-  //       : "0x";
-  //
-  // console.log("initCode:", initCode);
+  const initCode: `0x${string}` =
+    op.initCode && isHex(op.initCode) && op.initCode !== "0x"
+      ? op.initCode
+      : op.factory && op.factory !== zeroAddress && op.factoryData
+        ? concatHex([
+            (op.factory.toLowerCase().startsWith("0x")
+              ? op.factory
+              : "0x" + op.factory) as `0x${string}`,
+            op.factoryData as `0x${string}`,
+          ])
+        : "0x";
+
+  console.log("initCode:", initCode);
 
   return {
     sender: op.sender,
     nonce: hx(op.nonce),
-    initCode: op.initCode,
+    initCode,
+    factory: op.factory,
+    factoryData: op.factoryData,
     callData: op.callData,
     callGasLimit: hx(op.callGasLimit),
     verificationGasLimit: hx(op.verificationGasLimit),
