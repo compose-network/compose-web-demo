@@ -126,7 +126,12 @@ export const UserOperationBridge: SwapFC = () => {
     }[];
   } | null>(null);
 
-  const [showDeposit] = useLocalStorage("showDeposit", true);
+  const [advancedMode, setAdvancedMode] = useLocalStorage("advancedMode", false);
+
+  // Force false on first load
+  if (advancedMode === undefined || advancedMode === null) {
+    setAdvancedMode(false);
+  }
 
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
@@ -606,7 +611,7 @@ export const UserOperationBridge: SwapFC = () => {
           )}
         </form>
       </Form>
-      {showDeposit && (
+      {advancedMode && (
         <Card className="m-0 p-0">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Kernel A Account */}
