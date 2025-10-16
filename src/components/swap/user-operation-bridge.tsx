@@ -195,7 +195,7 @@ export const UserOperationBridge: SwapFC = () => {
       id,
       actions: [
         {
-          name: `${isNative ? "Send ETH to Smart Account" : `Approve ${symbol}`}`,
+          name: `${isNative ? `Send ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${symbol}`}`,
           chainId: values.from.chainId,
           status: "pending",
           description: `${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
@@ -287,7 +287,7 @@ export const UserOperationBridge: SwapFC = () => {
       const clone = cloneDeep(prev);
       clone.actions[0].status = "success";
       clone.actions[1].status = "pending";
-      clone.actions[2].status = "pending";
+      // clone.actions[2].status = "pending";
       return clone;
     });
 
@@ -320,6 +320,17 @@ export const UserOperationBridge: SwapFC = () => {
     console.log("signedA:", signedA);
     console.log("signedB:", signedB);
 
+    // Update transactionData with userOp data
+    setTransactionData((prev) => {
+      if (!prev) return null;
+      const clone = cloneDeep(prev);
+      clone.actions[1].userOpData = [
+        { chainId: values.from.chainId, data: JSON.stringify(userOpA) },
+        { chainId: values.to.chainId, data: JSON.stringify(userOpB) },
+      ];
+      return clone;
+    });
+
     const [buildA, buildB] = await Promise.all([
       sourcePublicClient.request({
         method: "compose_buildSignedUserOpsTx",
@@ -335,7 +346,7 @@ export const UserOperationBridge: SwapFC = () => {
         if (!prev) return null;
         const clone = cloneDeep(prev);
         clone.actions[1].status = "failed";
-        clone.actions[2].status = "failed";
+        // clone.actions[2].status = "failed";
         return clone;
       });
       throw errs;
@@ -358,7 +369,7 @@ export const UserOperationBridge: SwapFC = () => {
       if (!prev) return null;
       const clone = cloneDeep(prev);
       clone.actions[1].hash = hashA;
-      clone.actions[2].hash = hashB;
+      // clone.actions[2].hash = hashB;
       return clone;
     });
 
@@ -405,7 +416,7 @@ export const UserOperationBridge: SwapFC = () => {
       if (!prev) return null;
       const clone = cloneDeep(prev);
       clone.actions[1].status = "success";
-      clone.actions[2].status = "success";
+      // clone.actions[2].status = "success";
       return clone;
     });
 
@@ -427,7 +438,7 @@ export const UserOperationBridge: SwapFC = () => {
         if (!prev) return null;
         const clone = cloneDeep(prev);
         if (revertedA) clone.actions[1].status = "failed";
-        if (revertedB) clone.actions[2].status = "failed";
+        // if (revertedB) clone.actions[2].status = "failed";
         return clone;
       });
 
