@@ -134,7 +134,10 @@ export const useWaitForTransactionReceipt = <T extends AllEvents>(
         throw new Error("Public client not found");
       }
       return client
-        ?.waitForTransactionReceipt({ hash })
+        ?.waitForTransactionReceipt({
+          hash,
+          pollingInterval: 1000,
+        })
         .then(addDecodedEventsToReceipt<T>);
     },
   });
@@ -150,7 +153,10 @@ export const useWaitForTransactionReceipt_Testnet = () => {
         throw new Error("Public client not found");
       }
       return client
-        ?.waitForTransactionReceipt({ hash })
+        ?.waitForTransactionReceipt({
+          hash,
+          pollingInterval: 1000,
+        })
         .then(addDecodedEventsToReceipt<TestnetEvent>);
     },
   });
