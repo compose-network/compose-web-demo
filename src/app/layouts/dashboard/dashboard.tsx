@@ -1,5 +1,5 @@
 import { Navbar } from "@/app/layouts/dashboard/navbar";
-import { BatchTransactionModal } from "@/components/modals/batch-transaction-modal";
+// import { BatchTransactionModal } from "@/components/modals/batch-transaction-modal";
 import { SsvLoader } from "@/components/ui/ssv-loader.tsx";
 import { TransactionModal } from "@/components/ui/transaction-modal";
 import { useAccount } from "@/hooks/account/use-account";
@@ -60,7 +60,7 @@ export const DashboardLayout: FC<ComponentPropsWithRef<"div">> = ({
           )}
         </AnimatePresence>
         <TransactionModal />
-        <BatchTransactionModal />
+        {/*<BatchTransactionModal />*/}
       </BatchTransactionProvider>
     </>
   );

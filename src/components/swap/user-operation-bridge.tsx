@@ -121,8 +121,11 @@ export const UserOperationBridge: SwapFC = () => {
       name: string;
       description?: string;
       chainId: number;
+      toChainId?: number;
       status: keyof typeof statusIcons;
       hash?: `0x${string}`;
+      userOpData?: { chainId: number, data: string }[];
+
     }[];
   } | null>(null);
 
@@ -198,13 +201,9 @@ export const UserOperationBridge: SwapFC = () => {
           description: `${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
         },
         {
-          name: `Moving ${symbol} to bridge on rollup`,
+          name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${symbol}`,
           chainId: values.from.chainId,
-          status: "idle",
-        },
-        {
-          name: `Moving ${symbol} from bridge on rollup`,
-          chainId: values.to.chainId,
+          toChainId: values.to.chainId,
           status: "idle",
         },
       ],
@@ -470,6 +469,7 @@ export const UserOperationBridge: SwapFC = () => {
   return (
     <>
       <TransactionModal
+        title={"Bridge"}
         data={transactionData}
         isOpen={!!transactionData}
         onOpenChange={(open) => {
