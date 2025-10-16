@@ -15,12 +15,19 @@ interface PaymasterResponseData {
     paymasterData: `0x${string}`;
     paymasterPostOpGasLimit: Hex;
     paymasterVerificationGasLimit: Hex;
+
+    preVerificationGas: Hex;
+    callGasLimit: Hex;
+    verificationGasLimit: Hex;
   };
 }
 
 export const getPaymasterDataForChain = async (
   params: GetPaymasterDataParameters,
-  method: "pm_getPaymasterStubData" | "pm_getPaymasterData",
+  method:
+    | "pm_getPaymasterStubData"
+    | "pm_getPaymasterData"
+    | "pm_sponsorUserOperation",
 ) => {
   console.log("calling Paymaster", params, method);
   const chainName = camelCase(
@@ -32,6 +39,7 @@ export const getPaymasterDataForChain = async (
 
   const userOpOnly = {
     callData: params.callData,
+    initCode: params.initCode,
     callGasLimit: nToHexIfIs(params.callGasLimit),
     factory: params.factory,
     factoryData: params.factoryData,
@@ -53,6 +61,12 @@ export const getPaymasterDataForChain = async (
     );
   }
 
+  const paymasterParams = [userOpOnly, params.entryPointAddress];
+
+  if (method !== "pm_sponsorUserOperation") {
+    paymasterParams.push(numberToHex(params.chainId));
+  }
+
   return api
     .post<PaymasterResponseData>(
       endpoint(import.meta.env.VITE_PAYMASTER_URL, "rpc/v1", chainName),
@@ -60,11 +74,7 @@ export const getPaymasterDataForChain = async (
         jsonrpc: "2.0",
         id: 1,
         method,
-        params: [
-          userOpOnly,
-          params.entryPointAddress,
-          numberToHex(params.chainId),
-        ],
+        params: paymasterParams,
       },
       {
         headers: {
@@ -78,11 +88,16 @@ export const getPaymasterDataForChain = async (
         ],
       },
     )
-    .then((res) => ({
-      ...res.result,
-      paymasterPostOpGasLimit: BigInt(res.result.paymasterPostOpGasLimit),
-      paymasterVerificationGasLimit: BigInt(
-        res.result.paymasterVerificationGasLimit,
-      ),
-    }));
+    .then((res) => {
+      console.log("Paymaster response", res);
+      return {
+        ...res.result,
+        paymasterPostOpGasLimit: BigInt(
+          res.result?.paymasterPostOpGasLimit || "0",
+        ),
+        paymasterVerificationGasLimit: BigInt(
+          res.result.paymasterVerificationGasLimit || "0",
+        ),
+      };
+    });
 };
