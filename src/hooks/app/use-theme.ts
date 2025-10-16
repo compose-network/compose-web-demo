@@ -2,7 +2,7 @@ import { createPersistedProxyHook } from "@/lib/utils/valtio";
 
 export const useTheme = createPersistedProxyHook(
   "ssv-web-theme",
-  { dark: true },
+  { dark: false },
   {
     onChange: (state) => {
       if (state.dark) {

@@ -5,7 +5,7 @@ import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn
 import { NetworkSwitchBtn } from "@/components/connect-wallet/network-switch-btn";
 
 import { ComposeLogo } from "@/components/ui/compose-logo.tsx";
-import { ThemeSwitcher } from "@/components/ui/theme-switcher";
+// import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 import { NavLink } from "react-router-dom";
 
 export type NavbarProps = {
@@ -36,7 +36,7 @@ export const Navbar: FCProps = ({ className, ...props }) => {
           <NetworkSwitchBtn />
           <ConnectWalletBtn />
         </div>
-        <ThemeSwitcher className="ml-3" />
+        {/*<ThemeSwitcher className="ml-3" />*/}
       </div>
     </div>
   );
