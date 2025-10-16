@@ -1,4 +1,4 @@
-import { type FC, type ComponentPropsWithoutRef, useEffect } from "react";
+import { type FC, type ComponentPropsWithoutRef, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,13 +28,13 @@ import { useAsset } from "@/hooks/use-asset";
 import { merge } from "lodash-es";
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
 import { SwapRoute } from "@/components/swap/swap-route";
-import { useBatchTransactionMachine } from "@/lib/machines/batch-transactions/context";
-import { BatchTransactionModal } from "@/components/modals/batch-transaction-modal";
+import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal";
+import type { statusIcons } from "@/components/modals/batch-transaction-modal";
 import { useApprove } from "@/lib/contract-interactions/erc-20/write/use-approve";
 import { TokenABI } from "@/lib/abi/token";
 import { globals } from "@/config";
 import { formatCurrency } from "@/lib/utils/number";
-import type { Hash } from "viem";
+import type { Hash, Hex } from "viem";
 import { useLocalStorage } from "react-use";
 import { useSmartAccount } from "@/lib/smart-account/kernel";
 import {
@@ -80,7 +80,16 @@ const schema = z.object({
 export const Swap: SwapFC = () => {
   const { chainId, address, isConnected } = useAccount();
   const switchChain = useSwitchChain();
-  const [state, send] = useBatchTransactionMachine();
+  const [transactionData, setTransactionData] = useState<{
+    id: Hex;
+    actions: {
+      name: string;
+      description?: string;
+      chainId: number;
+      status: keyof typeof statusIcons;
+      hash?: `0x${string}`;
+    }[];
+  } | null>(null);
   const block = useBlockNumber({ watch: true, chainId: rollupB.id });
 
   const [prevSwapValues, setPrevSwapValues] = useLocalStorage<
@@ -348,84 +357,136 @@ export const Swap: SwapFC = () => {
 
     await switchChain.switchChainAsync({ chainId: values.from.chainId });
 
-    const writers = [];
+    const id: Hex = `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`;
+
+    setTransactionData({
+      id,
+      actions: [
+        ...(needsApproval
+          ? [
+              {
+                name: `Approve ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
+                chainId: values.from.chainId,
+                status: "pending" as keyof typeof statusIcons,
+              },
+            ]
+          : []),
+        {
+          name: `Swap ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} for ${formatCurrency(prices.data?.[0] ?? 0n, toToken.decimals || 18)} ${toToken.symbol}`,
+          chainId: values.from.chainId,
+          status: needsApproval ? ("idle" as keyof typeof statusIcons) : ("pending" as keyof typeof statusIcons),
+        },
+      ],
+    });
 
     if (needsApproval) {
-      writers.push({
-        name: `Approve ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
-        write: async (): Promise<Hash> => {
-          return new Promise((resolve, reject) => {
-            approver.write(
-              {
-                address: values.from.token,
-                chainId: rollupB.id,
-              },
-              {
-                spender: contracts[rollupB.id].swap,
-                amount: globals.MAX_WEI_AMOUNT,
-              },
-              {
-                onConfirmed: (hash) => resolve(hash),
-                onError: (error) => reject(error),
-              },
-            );
-          });
+      await approver.write(
+        {
+          address: values.from.token,
+          chainId: rollupB.id,
         },
-      });
+        {
+          spender: contracts[rollupB.id].swap,
+          amount: globals.MAX_WEI_AMOUNT,
+        },
+        {
+          onConfirmed: (hash) => {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const updated = { ...prev };
+              updated.actions[0].hash = hash;
+              return updated;
+            });
+          },
+          onMined: () => {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const updated = { ...prev };
+              updated.actions[0].status = "success";
+              updated.actions[1].status = "pending";
+              return updated;
+            });
+          },
+          onError: (error) => {
+            toast({
+              variant: "destructive",
+              title: "Approval failed",
+              description: error.message,
+            });
+            setTransactionData(null);
+          },
+        },
+      );
     }
 
-    writers.push({
-      name: `Swap ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} for ${formatCurrency(prices.data?.[0] ?? 0n, toToken.decimals || 18)} ${toToken.symbol}`,
-      write: async (): Promise<Hash> => {
-        return new Promise((resolve, reject) => {
-          swap.write(
+    // Execute swap
+    await swap.write(
+      {
+        amountIn: values.from.amount,
+        recipient: address!,
+        tokenIn: getToken(values.from.token)?.id ?? 0,
+        tokenOut: getToken(values.to.token)?.id ?? 0,
+      },
+      {
+        onConfirmed: (hash) => {
+          const actionIndex = needsApproval ? 1 : 0;
+          setTransactionData((prev) => {
+            if (!prev) return null;
+            const updated = { ...prev };
+            updated.actions[actionIndex].hash = hash;
+            return updated;
+          });
+        },
+        onMined: () => {
+          const actionIndex = needsApproval ? 1 : 0;
+          setTransactionData((prev) => {
+            if (!prev) return null;
+            const updated = { ...prev };
+            updated.actions[actionIndex].status = "success";
+            return updated;
+          });
+
+          fromToken.refreshBalance();
+          toToken.refreshBalance();
+          form.reset(
+            merge({}, values, {
+              from: { amount: 0n },
+              to: { amount: 0n },
+            }),
             {
-              amountIn: values.from.amount,
-              recipient: address!,
-              tokenIn: getToken(values.from.token)?.id ?? 0,
-              tokenOut: getToken(values.to.token)?.id ?? 0,
-            },
-            {
-              onConfirmed: (hash) => resolve(hash),
-              onError: (error) => {
-                reject(error);
-              },
+              keepIsValid: true,
             },
           );
-        });
-      },
-      onMined: () => {
-        fromToken.refreshBalance();
-        toToken.refreshBalance();
-        form.reset(
-          merge({}, values, {
-            from: { amount: 0n },
-            to: { amount: 0n },
-          }),
-          {
-            keepIsValid: true,
-          },
-        );
-        form.clearErrors();
-      },
-    });
+          form.clearErrors();
 
-    send({
-      type: "write",
-      writers,
-      header: "Swap Tokens",
-      onDone: () => {
-        toast({
-          title: "Swap completed",
-          description: "Your tokens have been swapped successfully",
-        });
+          toast({
+            title: "Swap completed",
+            description: "Your tokens have been swapped successfully",
+          });
+        },
+        onError: (error) => {
+          toast({
+            variant: "destructive",
+            title: "Swap failed",
+            description: error.message,
+          });
+          setTransactionData(null);
+        },
       },
-    });
+    );
   });
 
   return (
     <>
-      <BatchTransactionModal />
+      <TransactionModal
+        title={"Swap"}
+        data={transactionData}
+        isOpen={!!transactionData}
+        onOpenChange={(open) => {
+          if (open) return;
+          return setTransactionData(null);
+        }}
+      />
       <Form {...form}>
         <form onSubmit={submit} className="flex flex-col gap-8">
           <div className="flex gap-4 flex-col">
@@ -541,11 +602,11 @@ export const Swap: SwapFC = () => {
               size="xl"
               className="w-full"
               type="submit"
-              isLoading={state.value !== "idle" || switchChain.isPending}
+              isLoading={!!transactionData || switchChain.isPending}
               loadingText={
                 switchChain.isPending
                   ? "Switching network..."
-                  : state.value !== "idle"
+                  : !!transactionData
                     ? "Processing..."
                     : undefined
               }
