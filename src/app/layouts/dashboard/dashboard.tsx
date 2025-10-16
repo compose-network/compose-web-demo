@@ -6,11 +6,25 @@ import { useAccount } from "@/hooks/account/use-account";
 import { useMaintenance } from "@/hooks/app/use-maintenance";
 import { useBlockNavigationOnPendingTx } from "@/hooks/use-block-navigation-on-pending-tx";
 import { BatchTransactionProvider } from "@/lib/machines/batch-transactions/context";
+import { decodeUserOperationLogs } from "@/lib/smart-account/user-op";
 import { cn } from "@/lib/utils/tw";
+import { config } from "@/wagmi/config";
 import { useIsRestoring } from "@tanstack/react-query";
+import { getPublicClient } from "@wagmi/core";
 import { AnimatePresence, motion } from "framer-motion";
 import type { ComponentPropsWithRef, FC } from "react";
 import { Navigate } from "react-router";
+
+// DO NOT REMOVE THIS FUNCTION, it is used for debugging purposes
+// @ts-expect-error - window.getLogs
+window.getLogs = async (hash: `0x${string}`, chainId = 88888) => {
+  // @ts-expect-error - chainId is not a valid chainId
+  const client = getPublicClient(config, { chainId });
+  const receipt = await client.waitForTransactionReceipt({ hash });
+  const logs = decodeUserOperationLogs(receipt.logs);
+  console.log("logs:", logs);
+  return logs;
+};
 
 export const DashboardLayout: FC<ComponentPropsWithRef<"div">> = ({
   children,
@@ -25,7 +39,7 @@ export const DashboardLayout: FC<ComponentPropsWithRef<"div">> = ({
   if (isMaintenancePage) {
     return <Navigate to="/maintenance" replace />;
   }
-  
+
   return (
     <>
       <BatchTransactionProvider>

@@ -38,6 +38,7 @@ import type { Hash } from "viem";
 import { useLocalStorage } from "react-use";
 import { useSmartAccount } from "@/lib/smart-account/kernel";
 import {
+  createSwapUserOpsFrom_A_to_A,
   createSwapUserOpsFrom_A_to_B,
   createSwapUserOpsFrom_B_to_A,
 } from "@/components/swap/utils/generate-swap-userops";
@@ -201,11 +202,56 @@ export const Swap: SwapFC = () => {
         variant: "destructive",
       });
     }
-    if (!kernel.kernel.data?.accounts.A.address) {
+    if (!kernel.kernel.data?.accounts) {
       return toast({
         title: "Kernel A account not found",
         variant: "destructive",
       });
+    }
+    // Is Swapping from A -> A
+    if (
+      values.from.chainId === rollupA.id &&
+      values.to.chainId === rollupA.id
+    ) {
+      const kernelAllowance = await rollupAPublicClient.readContract({
+        abi: TokenABI,
+        functionName: "allowance",
+        args: [address!, kernel.kernel.data?.accounts.A.address],
+        address: values.from.token,
+      });
+
+      await switchChain.switchChainAsync({ chainId: values.from.chainId });
+
+      if (kernelAllowance < values.from.amount) {
+        await approve.write(
+          {
+            address: values.from.token,
+            chainId: values.from.chainId,
+          },
+          {
+            spender: kernel.kernel.data?.accounts.A.address,
+            amount: globals.MAX_WEI_AMOUNT,
+          },
+        );
+      }
+
+      const { sendUserOps } = await createSwapUserOpsFrom_A_to_A(
+        {
+          amountIn: values.from.amount,
+          fromToken: values.from.token,
+          toToken: values.to.token,
+          eoaAddress: address!,
+          kernelA: kernel.kernel.data.accounts.A,
+          kernelB: kernel.kernel.data.accounts.B,
+          amountOut: prices.data?.[0] ?? 0n,
+        },
+        {
+          onBuildUserOps(_, explorerUrls) {
+            explorerUrls.forEach(console.log);
+          },
+        },
+      );
+      return sendUserOps();
     }
 
     // Is Swapping from A -> B
@@ -241,8 +287,8 @@ export const Swap: SwapFC = () => {
           fromToken: values.from.token,
           toToken: values.to.token,
           eoaAddress: address!,
-          kernelA: kernel.getKernelByChainId(values.from.chainId)!,
-          kernelB: kernel.getKernelByChainId(values.to.chainId)!,
+          kernelA: kernel.kernel.data.accounts.A,
+          kernelB: kernel.kernel.data.accounts.B,
           amountOut: prices.data?.[0] ?? 0n,
         },
         {
@@ -287,8 +333,8 @@ export const Swap: SwapFC = () => {
           fromToken: values.from.token,
           toToken: values.to.token,
           eoaAddress: address!,
-          kernelA: kernel.kernel.data?.accounts.A!,
-          kernelB: kernel.kernel.data?.accounts.B!,
+          kernelA: kernel.kernel.data.accounts.A,
+          kernelB: kernel.kernel.data.accounts.B,
           amountOut: prices.data?.[0] ?? 0n,
         },
         {
