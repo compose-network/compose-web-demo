@@ -47,12 +47,13 @@ export const TokenPickerCommandDialog: FC<TokenPickerCommandDialogProps> = ({
             className="bg-gray-200 border-none flex-1 w-full rounded-xl"
             placeholder="Search tokens..."
           />
-          <CommandList>
+          <CommandList className="max-h-max">
             <div className="flex flex-col gap-3 py-5 px-2">
               <Text variant="body-2-semibold">Network</Text>
               <div className="flex items-center gap-5 px-1">
                 {chains.map((chain) => (
                   <Tooltip
+                    key={chain.chainId}
                     content={`${getChainById(chain.chainId).name}${chain.isNotSupported ? " - This network is not supported yet." : ""}`}
                   >
                     <ChainIcon
@@ -68,9 +69,9 @@ export const TokenPickerCommandDialog: FC<TokenPickerCommandDialogProps> = ({
             </div>
             <CommandEmpty>No tokens found.</CommandEmpty>
             <CommandGroup heading="Available Tokens">
-              {availableTokens.map((token) => (
+              {availableTokens.map((token, i) => (
                 <CommandItem
-                  key={token}
+                  key={`${token}-${i}`}
                   onSelect={() => handleTokenSelect(token)}
                   className="cursor-pointer"
                 >

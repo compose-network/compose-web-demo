@@ -32,22 +32,16 @@ import {
 import { encodeXtMessage } from "@/lib/smart-account/xt";
 import { formatCurrency } from "@/lib/utils/number";
 import { isNativeToken } from "@/lib/utils/token";
+import { type BRIDGE_ADDRESSES, BRIDGE_TOKEN } from "@/wagmi/addresses";
 import {
-  type BRIDGE_ADDRESSES,
-  BRIDGE_TOKEN,
-  ENTRYPOINT,
-} from "@/wagmi/addresses";
-import {
+  arbitrumChain,
+  baseChain,
   chainsMap,
+  optimismChain,
   rollupA,
   rollupB,
-  baseChain,
-  arbitrumChain,
-  optimismChain,
-  config,
 } from "@/wagmi/config";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getPublicClient } from "@wagmi/core";
 import { cloneDeep } from "lodash-es";
 import { type ComponentPropsWithoutRef, type FC, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -62,7 +56,7 @@ import {
   rpcSchema,
   zeroAddress,
 } from "viem";
-import { useReadContract, useSendTransaction, useSwitchChain } from "wagmi";
+import { useSendTransaction, useSwitchChain } from "wagmi";
 import { z } from "zod";
 
 export type SwapProps = {
@@ -113,16 +107,6 @@ const schema = z.object({
   slippage: z.number(),
 });
 
-window.getLogs = async (hash: `0x${string}`, chainId = 88888) => {
-  const client = getPublicClient(config, { chainId });
-
-  const receipt = await client.waitForTransactionReceipt({ hash });
-
-  const logs = decodeUserOperationLogs(receipt.logs);
-  console.log("logs:", logs);
-  return logs;
-};
-
 export const UserOperationBridge: SwapFC = () => {
   const eoa = useAccount();
   const sendTx = useSendTransaction();
@@ -131,20 +115,26 @@ export const UserOperationBridge: SwapFC = () => {
     zeroAddress,
   );
 
-  console.log("============== TEST");
-
   const [transactionData, setTransactionData] = useState<{
     id: Hex;
     actions: {
       name: string;
       description?: string;
       chainId: number;
+      toChainId?: number;
       status: keyof typeof statusIcons;
       hash?: `0x${string}`;
+      userOpData?: { chainId: number, data: string }[];
+
     }[];
   } | null>(null);
 
-  const [showDeposit] = useLocalStorage("showDeposit", true);
+  const [advancedMode, setAdvancedMode] = useLocalStorage("advancedMode", false);
+
+  // Force false on first load
+  if (advancedMode === undefined || advancedMode === null) {
+    setAdvancedMode(false);
+  }
 
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
@@ -163,12 +153,6 @@ export const UserOperationBridge: SwapFC = () => {
 
   const values = form.watch();
 
-  const selectedToken = useAsset({
-    tokenAddress: values.token,
-    chainId: values.from.chainId,
-  });
-
-  console.log("selectedToken:", selectedToken);
   const { switchChainAsync } = useSwitchChain();
   const kernel = useSmartAccount();
 
@@ -176,16 +160,6 @@ export const UserOperationBridge: SwapFC = () => {
     tokenAddress: values.token,
     chainId: values.from.chainId,
   });
-
-  const { data: selectedTokenKernelBalance = 0n } = useBalanceOf(
-    {
-      address: values.token,
-      chainId: rollupA.id,
-    },
-    {
-      account: kernel.kernel.data?.accounts.A.address || zeroAddress,
-    },
-  );
 
   const allowance = useAllowance(
     {
@@ -202,8 +176,6 @@ export const UserOperationBridge: SwapFC = () => {
   );
 
   const approve = useApprove();
-
-  console.log("Selected token kernel balance", selectedTokenKernelBalance);
 
   const submit = form.handleSubmit(async (values) => {
     const id: Hex = `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`;
@@ -228,19 +200,15 @@ export const UserOperationBridge: SwapFC = () => {
       id,
       actions: [
         {
-          name: `${isNative ? "Send ETH to Smart Account" : `Approve ${symbol}`}`,
+          name: `${isNative ? `Send ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${symbol}`}`,
           chainId: values.from.chainId,
           status: "pending",
           description: `${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
         },
         {
-          name: `Moving ${symbol} to bridge on rollup`,
+          name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${symbol}`,
           chainId: values.from.chainId,
-          status: "idle",
-        },
-        {
-          name: `Moving ${symbol} from bridge on rollup`,
-          chainId: values.to.chainId,
+          toChainId: values.to.chainId,
           status: "idle",
         },
       ],
@@ -294,7 +262,15 @@ export const UserOperationBridge: SwapFC = () => {
           spender: kernel.kernel.data?.accounts.A.address || zeroAddress,
           amount: globals.MAX_WEI_AMOUNT,
         },
-        withTransactionModal({
+        {
+          onError: () => {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              clone.actions[0].status = "failed";
+              return clone;
+            });
+          },
           onConfirmed: (hash) => {
             setTransactionData((prev) => {
               if (!prev) return null;
@@ -312,7 +288,7 @@ export const UserOperationBridge: SwapFC = () => {
               return clone;
             });
           },
-        }),
+        },
       );
     } else {
       console.log("Kernel has enough balance of the selected token to bridge");
@@ -324,7 +300,7 @@ export const UserOperationBridge: SwapFC = () => {
       const clone = cloneDeep(prev);
       clone.actions[0].status = "success";
       clone.actions[1].status = "pending";
-      clone.actions[2].status = "pending";
+      // clone.actions[2].status = "pending";
       return clone;
     });
 
@@ -357,6 +333,17 @@ export const UserOperationBridge: SwapFC = () => {
     console.log("signedA:", signedA);
     console.log("signedB:", signedB);
 
+    // Update transactionData with userOp data
+    setTransactionData((prev) => {
+      if (!prev) return null;
+      const clone = cloneDeep(prev);
+      clone.actions[1].userOpData = [
+        { chainId: values.from.chainId, data: JSON.stringify(userOpA) },
+        { chainId: values.to.chainId, data: JSON.stringify(userOpB) },
+      ];
+      return clone;
+    });
+
     const [buildA, buildB] = await Promise.all([
       sourcePublicClient.request({
         method: "compose_buildSignedUserOpsTx",
@@ -372,7 +359,7 @@ export const UserOperationBridge: SwapFC = () => {
         if (!prev) return null;
         const clone = cloneDeep(prev);
         clone.actions[1].status = "failed";
-        clone.actions[2].status = "failed";
+        // clone.actions[2].status = "failed";
         return clone;
       });
       throw errs;
@@ -380,14 +367,6 @@ export const UserOperationBridge: SwapFC = () => {
 
     const hashA = buildA.hash;
     const hashB = buildB.hash;
-
-    setTransactionData((prev) => {
-      if (!prev) return null;
-      const clone = cloneDeep(prev);
-      clone.actions[1].hash = hashA;
-      clone.actions[2].hash = hashB;
-      return clone;
-    });
 
     const explorerAURL = new URL(
       `tx/${hashA}`,
@@ -398,6 +377,14 @@ export const UserOperationBridge: SwapFC = () => {
       `tx/${hashB}`,
       destPublicClient.chain.blockExplorers?.default?.url,
     ).toString();
+
+    setTransactionData((prev) => {
+      if (!prev) return null;
+      const clone = cloneDeep(prev);
+      clone.actions[1].hash = hashA;
+      // clone.actions[2].hash = hashB;
+      return clone;
+    });
 
     console.log("buildA:", buildA, explorerAURL);
     console.log("buildB ", buildB, explorerBURL);
@@ -442,7 +429,7 @@ export const UserOperationBridge: SwapFC = () => {
       if (!prev) return null;
       const clone = cloneDeep(prev);
       clone.actions[1].status = "success";
-      clone.actions[2].status = "success";
+      // clone.actions[2].status = "success";
       return clone;
     });
 
@@ -452,11 +439,11 @@ export const UserOperationBridge: SwapFC = () => {
     console.log("decoded logs for Rollup B:", decodedB);
 
     const revertedA = decodedA.find(
-      (log) => log.args && "success" in log.args && !log.args.success,
+      (log) => log?.args && "success" in log.args && !log.args.success,
     );
 
     const revertedB = decodedB.find(
-      (log) => log.args && "success" in log.args && !log.args.success,
+      (log) => log?.args && "success" in log.args && !log.args.success,
     );
 
     if (revertedA || revertedB) {
@@ -464,7 +451,7 @@ export const UserOperationBridge: SwapFC = () => {
         if (!prev) return null;
         const clone = cloneDeep(prev);
         if (revertedA) clone.actions[1].status = "failed";
-        if (revertedB) clone.actions[2].status = "failed";
+        // if (revertedB) clone.actions[2].status = "failed";
         return clone;
       });
 
@@ -503,17 +490,10 @@ export const UserOperationBridge: SwapFC = () => {
     },
   );
 
-  const balanceeee = useReadContract({
-    address: ENTRYPOINT,
-    functionName: "balanceOf",
-    args: [kernel.kernel.data?.accounts.A.address || zeroAddress],
-    chainId: rollupA.id,
-  });
-  console.log("balanceeee.data:", balanceeee.data);
-
   return (
     <>
       <TransactionModal
+        title={"Bridge"}
         data={transactionData}
         isOpen={!!transactionData}
         onOpenChange={(open) => {
@@ -632,7 +612,7 @@ export const UserOperationBridge: SwapFC = () => {
               size="xl"
               className="w-full"
               type="submit"
-              disabled={!form.formState.isValid}
+              disabled={!form.formState.isValid || kernel.isLoading}
               loadingText="Bridging..."
             >
               Bridge
@@ -642,7 +622,7 @@ export const UserOperationBridge: SwapFC = () => {
           )}
         </form>
       </Form>
-      {showDeposit && (
+      {advancedMode && (
         <Card className="m-0 p-0">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Kernel A Account */}
