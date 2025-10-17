@@ -1,16 +1,22 @@
-import { type FC, type ComponentPropsWithoutRef, useEffect, useState } from "react";
+import {
+  type ComponentPropsWithoutRef,
+  type FC,
+  useEffect,
+  useState,
+} from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  rollupB,
-  contracts,
-  rollupA,
-  baseChain,
   arbitrumChain,
-  optimismChain,
+  baseChain,
+  contracts,
   getChainById,
+  optimismChain,
+  rollupA,
+  rollupB,
 } from "@/wagmi/config";
+import type { Hex } from "viem";
 import { isAddress, parseEther } from "viem";
 import { TokenInput } from "@/components/swap/token-picker/token-input";
 import { useSwapContract } from "@/lib/contract-interactions/core/create-write-hooks";
@@ -21,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { FaArrowDown } from "react-icons/fa6";
 import { Text } from "@/components/ui/text";
 import { useAccount } from "@/hooks/account/use-account";
-import { useSwitchChain, useBlockNumber, useReadContract } from "wagmi";
+import { useBlockNumber, useReadContract, useSwitchChain } from "wagmi";
 import { toast } from "@/components/ui/use-toast";
 import { Form } from "@/components/ui/form";
 import { useAsset } from "@/hooks/use-asset";
@@ -34,7 +40,6 @@ import { useApprove } from "@/lib/contract-interactions/erc-20/write/use-approve
 import { TokenABI } from "@/lib/abi/token";
 import { globals } from "@/config";
 import { formatCurrency } from "@/lib/utils/number";
-import type { Hash, Hex } from "viem";
 import { useLocalStorage } from "react-use";
 import { useSmartAccount } from "@/lib/smart-account/kernel";
 import {
@@ -374,7 +379,9 @@ export const Swap: SwapFC = () => {
         {
           name: `Swap ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} for ${formatCurrency(prices.data?.[0] ?? 0n, toToken.decimals || 18)} ${toToken.symbol}`,
           chainId: values.from.chainId,
-          status: needsApproval ? ("idle" as keyof typeof statusIcons) : ("pending" as keyof typeof statusIcons),
+          status: needsApproval
+            ? ("idle" as keyof typeof statusIcons)
+            : ("pending" as keyof typeof statusIcons),
         },
       ],
     });
@@ -606,7 +613,7 @@ export const Swap: SwapFC = () => {
               loadingText={
                 switchChain.isPending
                   ? "Switching network..."
-                  : !!transactionData
+                  : transactionData
                     ? "Processing..."
                     : undefined
               }

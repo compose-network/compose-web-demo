@@ -6533,4 +6533,4 @@ export const onlyTokens: Record<string, string> = {
   WEATD:
     "https://assets.coingecko.com/coins/images/53872/thumb/d-token-200.png?1737617091",
   SLXD: "https://assets.coingecko.com/coins/images/53874/thumb/d-token-200.png?1737617906",
-};
+} as const;

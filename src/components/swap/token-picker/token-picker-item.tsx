@@ -1,4 +1,4 @@
-import type { FC, ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithoutRef, FC } from "react";
 import { cn } from "@/lib/utils/tw";
 import { AssetLogo } from "@/components/ui/asset-logo";
 import AssetName from "@/components/ui/asset-name";
@@ -43,7 +43,7 @@ export const TokenPickerItem: TokenPickerItemFC = ({
   const switchChain = useSwitchChain();
 
   const mint = useMint();
-  const [advancedMode, setAdvancedMode] = useLocalStorage("advancedMode", false);
+  const [advancedMode] = useLocalStorage("advancedMode", false);
 
   return (
     <div className={cn("flex gap-4 items-center w-full", className)} {...props}>

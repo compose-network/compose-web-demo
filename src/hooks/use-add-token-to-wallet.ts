@@ -1,9 +1,9 @@
 import { useCallback } from "react";
 import { toast } from "@/components/ui/use-toast";
 import type { Address } from "viem";
+import { erc20Abi } from "viem";
 import { readContract } from "@wagmi/core";
 import { config } from "@/wagmi/config";
-import { erc20Abi } from "viem";
 import { getAssetLogoSrc } from "@/lib/utils/token";
 
 export interface AddTokenToWalletParams {
@@ -117,6 +117,7 @@ export const useAddTokenToWallet = () => {
 // Extend the Window interface to include ethereum
 declare global {
   interface Window {
+    // @ts-expect-error it's ok
     ethereum?: {
       request: (args: { method: string; params?: any[] }) => Promise<any>;
     };
