@@ -1,4 +1,5 @@
 import { getEntryPoint } from "@zerodev/sdk/constants";
+import type { Address } from "viem";
 
 export const ENTRYPOINT_WITH_VERSION = getEntryPoint("0.7");
 export const ENTRYPOINT_ADDRESS = ENTRYPOINT_WITH_VERSION.address;
@@ -31,3 +32,12 @@ export const getBridgeAddress = (chainId: keyof typeof BRIDGE_ADDRESSES) => {
 
 export const BRIDGE_TOKEN =
   "0x4c77De11C15d8b5e2584e67e2E6E1Ec7A78B0b5b" as const;
+
+export const WETH_ADDRESS: Address =
+  "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553" as const;
+
+export const USDC_ADDRESS: Address =
+  "0xeA0DB94b4c702d9cA0Fcc65715A035B24dF3452D" as const;
+
+export const SSV_ADDRESS: Address =
+  "0x79155fb8d8dE01522bE1Cbd17e538966d78d1565" as const;

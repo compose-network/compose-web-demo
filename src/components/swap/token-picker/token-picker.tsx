@@ -1,4 +1,4 @@
-import { type FC, type ComponentPropsWithoutRef, useState } from "react";
+import { type ComponentPropsWithoutRef, type FC, useState } from "react";
 import { cn } from "@/lib/utils/tw";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,6 @@ export const TokenPicker: TokenPickerFC = ({
       <Button
         onClick={() => {
           if (readOnly) return;
-          console.log("Button clicked, setting isOpen to true");
           setIsOpen(true);
         }}
         variant="ghost"

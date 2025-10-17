@@ -82,11 +82,11 @@ export const useAsset = ({ tokenAddress, chainId, watch }: UseAssetProps) => {
     decimals,
     balance: isNative ? nativeBalance.data?.value : balance,
     isEthereum: isNative,
-    refreshBalance: () => {
-      queryClient.invalidateQueries({
+    refreshBalance: async () => {
+      await queryClient.invalidateQueries({
         queryKey: nativeBalance.queryKey,
       });
-      queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: queryKey,
       });
     },

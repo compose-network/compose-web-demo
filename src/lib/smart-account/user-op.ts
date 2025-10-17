@@ -100,12 +100,14 @@ export const decodeUserOperationLogs = (logs: Log[]) => {
       console.log("decoded.args.revertReason:", decoded.args.revertReason);
       const reason = abis.map((abi) => {
         try {
-          const data = decodeErrorResult({
+          const data = {
+            ...decodeErrorResult({
+              abi,
+              // @ts-expect-error revertReason is not always present
+              data: decoded.args.revertReason,
+            }),
             abi,
-            // @ts-expect-error revertReason is not always present
-            data: decoded.args.revertReason,
-          });
-          data.abi = abi;
+          };
           return data;
         } catch (error) {
           console.log("error:", error instanceof Error ? error.message : error);

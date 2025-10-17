@@ -3,7 +3,11 @@ import { createUserOp } from "@/components/swap/utils/core";
 import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
 import { TokenABI } from "@/lib/abi/token";
 import { WETHAbi } from "@/lib/abi/weth";
-import { type BRIDGE_ADDRESSES, getBridgeAddress } from "@/wagmi/addresses";
+import {
+  type BRIDGE_ADDRESSES,
+  getBridgeAddress,
+  WETH_ADDRESS,
+} from "@/wagmi/addresses";
 import { config } from "@/wagmi/config";
 import { getPublicClient } from "@wagmi/core";
 import { prepareAndSignUserOperations } from "@zerodev/multi-chain-ecdsa-validator";
@@ -137,15 +141,13 @@ export const createAndSignBridgeETHUserOps = async ({
   const sourceBridgeContract = getBridgeAddress(sourceChainId);
   const destBridgeContract = getBridgeAddress(destChainId);
 
-  const wethAddress = "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553";
-
   const [sourceUserOp, destUserOp] = await Promise.all([
     createUserOp({
       account: sourceKernelAccount,
       chainId: sourceChainId,
       calls: [
         {
-          to: wethAddress,
+          to: WETH_ADDRESS,
           value: amount,
           data: encodeFunctionData({
             abi: WETHAbi,
@@ -161,7 +163,7 @@ export const createAndSignBridgeETHUserOps = async ({
             functionName: "send",
             args: [
               BigInt(destChainId),
-              wethAddress,
+              WETH_ADDRESS,
               sourceKernelAccount.address,
               destKernelAccount.address,
               amount,
@@ -192,7 +194,7 @@ export const createAndSignBridgeETHUserOps = async ({
           }),
         },
         {
-          to: wethAddress,
+          to: WETH_ADDRESS,
           value: 0n,
           data: encodeFunctionData({
             abi: WETHAbi,

@@ -16,15 +16,22 @@ import type { ComponentPropsWithRef, FC } from "react";
 import { Navigate } from "react-router";
 
 // DO NOT REMOVE THIS FUNCTION, it is used for debugging purposes
-// @ts-expect-error - window.getLogs
-window.getLogs = async (hash: `0x${string}`, chainId = 88888) => {
-  // @ts-expect-error - chainId is not a valid chainId
-  const client = getPublicClient(config, { chainId });
-  const receipt = await client.waitForTransactionReceipt({ hash });
-  const logs = decodeUserOperationLogs(receipt.logs);
-  console.log("logs:", logs);
-  return logs;
-};
+((w) => {
+  w.getLogs = async (hash: `0x${string}`, chainId = 88888) => {
+    // @ts-expect-error - chainId is not a valid chainId
+    const client = getPublicClient(config, { chainId });
+    const receipt = await client.waitForTransactionReceipt({ hash });
+    const logs = decodeUserOperationLogs(receipt.logs);
+    console.log("logs:", logs);
+    return logs;
+  };
+
+  w.toggleDebug = (v: boolean = true) => {
+    window.localStorage.setItem("advancedMode", v.toString());
+  };
+
+  //eslint-disable-next-line
+})(window as any);
 
 export const DashboardLayout: FC<ComponentPropsWithRef<"div">> = ({
   children,
