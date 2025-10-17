@@ -11,6 +11,8 @@ import { Swap } from "@/components/swap/swap";
 import { MainPage } from "@/components/swap/main";
 import { Bridge } from "@/components/swap/bridge";
 import { Navigate } from "react-router";
+import { Accounts } from "@/app/routes/accounts";
+import { Container } from "@/components/ui/container";
 
 const routes = [
   {
@@ -33,6 +35,16 @@ const routes = [
         element: <Swap />,
       },
     ],
+  },
+  {
+    path: "/accounts",
+    element: (
+      <DashboardLayout>
+        <Container className="bg-gray-100 p-5 rounded-2xl">
+          <Accounts />
+        </Container>
+      </DashboardLayout>
+    ),
   },
   {
     path: "/compliance",

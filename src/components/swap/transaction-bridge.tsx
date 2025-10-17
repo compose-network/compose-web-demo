@@ -226,6 +226,7 @@ export const TransactionBridge: SwapFC = () => {
   return (
     <>
       <TransactionModal
+        title={"Bridge"}
         data={transactionData}
         isOpen={!!transactionData || bridgeETH.isPending}
         onOpenChange={(open) => {
