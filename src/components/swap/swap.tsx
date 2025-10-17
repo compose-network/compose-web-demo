@@ -7,20 +7,12 @@ import {
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  arbitrumChain,
-  baseChain,
-  contracts,
-  getChainById,
-  optimismChain,
-  rollupA,
-  rollupB,
-} from "@/wagmi/config";
+import { contracts, getChainById, rollupA, rollupB } from "@/wagmi/config";
 import type { Hex } from "viem";
 import { isAddress, parseEther } from "viem";
 import { TokenInput } from "@/components/swap/token-picker/token-input";
 import { useSwapContract } from "@/lib/contract-interactions/core/create-write-hooks";
-import { getToken, tokens } from "@/wagmi/tokens";
+import { getToken } from "@/wagmi/tokens";
 import { keepPreviousData } from "@tanstack/react-query";
 import { Divider } from "@/components/ui/divider";
 import { Button } from "@/components/ui/button";
@@ -48,6 +40,7 @@ import {
   createSwapUserOpsFrom_B_to_A,
 } from "@/components/swap/utils/generate-swap-userops";
 import { createRollupPublicClients } from "@/components/swap/utils/core";
+import { SWAP_CONFIG } from "@/wagmi/swap.ts";
 
 export type SwapProps = {
   // TODO: Add props or remove this type
@@ -104,12 +97,14 @@ export const Swap: SwapFC = () => {
     {
       from: {
         chainId: rollupB.id,
-        token: tokens[rollupB.id][0].address,
+        token: SWAP_CONFIG.find(({ chainId }) => rollupB.id === chainId)!
+          .tokens![0],
         amount: 0n,
       },
       to: {
         chainId: rollupB.id,
-        token: tokens[rollupB.id][0].address,
+        token: SWAP_CONFIG.find(({ chainId }) => rollupB.id === chainId)!
+          .tokens![1],
         amount: 0n,
       },
       slippage: 0.5,
@@ -136,8 +131,6 @@ export const Swap: SwapFC = () => {
     defaultValues: prevSwapValues,
     resolver: zodResolver(schema),
   });
-
-  console.log("form.formState.isValid:", form.formState.isValid);
 
   const values = form.watch();
 
@@ -455,6 +448,7 @@ export const Swap: SwapFC = () => {
 
           fromToken.refreshBalance();
           toToken.refreshBalance();
+
           form.reset(
             merge({}, values, {
               from: { amount: 0n },
@@ -498,21 +492,7 @@ export const Swap: SwapFC = () => {
         <form onSubmit={submit} className="flex flex-col gap-8">
           <div className="flex gap-4 flex-col">
             <TokenInput
-              chains={
-                [
-                  {
-                    chainId: rollupA.id,
-                    tokens: tokens[rollupB.id].map((token) => token.address),
-                  },
-                  {
-                    chainId: rollupB.id,
-                    tokens: tokens[rollupB.id].map((token) => token.address),
-                  },
-                  { chainId: baseChain.id, isNotSupported: true },
-                  { chainId: arbitrumChain.id, isNotSupported: true },
-                  { chainId: optimismChain.id, isNotSupported: true },
-                ] as const
-              }
+              chains={SWAP_CONFIG}
               value={values.from.amount}
               tokenAddress={values.from.token}
               chainId={values.from.chainId}
@@ -570,19 +550,7 @@ export const Swap: SwapFC = () => {
               <Divider className="flex-1" />
             </div>
             <TokenInput
-              chains={[
-                {
-                  chainId: rollupA.id,
-                  tokens: tokens[rollupB.id].map((token) => token.address),
-                },
-                {
-                  chainId: rollupB.id,
-                  tokens: tokens[rollupB.id].map((token) => token.address),
-                },
-                { chainId: baseChain.id, isNotSupported: true },
-                { chainId: arbitrumChain.id, isNotSupported: true },
-                { chainId: optimismChain.id, isNotSupported: true },
-              ]}
+              chains={SWAP_CONFIG}
               onChainSelect={(chainId) => form.setValue("to.chainId", chainId)}
               value={
                 isSameToken ? values.from.amount : (prices.data?.[0] ?? 0n)

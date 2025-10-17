@@ -14,6 +14,7 @@ import { getChainById, getExplorerHashUrl } from "@/wagmi/config";
 import { shortenAddress } from "@/lib/utils/strings.ts";
 import { TbExternalLink } from "react-icons/tb";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { Button } from "@/components/ui/button.tsx";
 
 export type TransactionModalProps = {
   title: string;
@@ -30,6 +31,7 @@ export type TransactionModalProps = {
     }[];
   } | null;
 };
+const finalizedStatuses: (keyof typeof statusIcons)[] = ["success", "failed"];
 
 type FCProps = FC<
   Omit<ComponentPropsWithoutRef<typeof Dialog>, keyof TransactionModalProps> &
@@ -146,6 +148,13 @@ export const TransactionModal: FCProps = ({ data, title, ...props }) => {
             </div>
           ))}
         </div>
+        {data?.actions.every((a) => finalizedStatuses.includes(a.status)) && (
+          <DialogClose>
+            <Button width="full" size="xl">
+              Close
+            </Button>
+          </DialogClose>
+        )}
       </DialogContent>
     </Dialog>
   );

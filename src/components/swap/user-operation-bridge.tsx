@@ -33,14 +33,7 @@ import { encodeXtMessage } from "@/lib/smart-account/xt";
 import { formatCurrency } from "@/lib/utils/number";
 import { isNativeToken } from "@/lib/utils/token";
 import { type BRIDGE_ADDRESSES, BRIDGE_TOKEN } from "@/wagmi/addresses";
-import {
-  arbitrumChain,
-  baseChain,
-  chainsMap,
-  optimismChain,
-  rollupA,
-  rollupB,
-} from "@/wagmi/config";
+import { chainsMap, rollupA, rollupB } from "@/wagmi/config";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cloneDeep } from "lodash-es";
 import { type ComponentPropsWithoutRef, type FC, useState } from "react";
@@ -58,6 +51,8 @@ import {
 } from "viem";
 import { useSendTransaction, useSwitchChain } from "wagmi";
 import { z } from "zod";
+import { useQueryClient } from "@tanstack/react-query";
+import { BRIDGE_CONFIG } from "@/wagmi/bridge.ts";
 
 export type SwapProps = {
   // TODO: Add props or remove this type
@@ -115,6 +110,8 @@ export const UserOperationBridge: SwapFC = () => {
     zeroAddress,
   );
 
+  const queryClient = useQueryClient();
+
   const [transactionData, setTransactionData] = useState<{
     id: Hex;
     actions: {
@@ -124,12 +121,14 @@ export const UserOperationBridge: SwapFC = () => {
       toChainId?: number;
       status: keyof typeof statusIcons;
       hash?: `0x${string}`;
-      userOpData?: { chainId: number, data: string }[];
-
+      userOpData?: { chainId: number; data: string }[];
     }[];
   } | null>(null);
 
-  const [advancedMode, setAdvancedMode] = useLocalStorage("advancedMode", false);
+  const [advancedMode, setAdvancedMode] = useLocalStorage(
+    "advancedMode",
+    false,
+  );
 
   // Force false on first load
   if (advancedMode === undefined || advancedMode === null) {
@@ -305,6 +304,7 @@ export const UserOperationBridge: SwapFC = () => {
     });
 
     const sourceKernel = kernel.getKernelByChainId(values.from.chainId);
+
     const destKernel = kernel.getKernelByChainId(values.to.chainId);
 
     const sessionId = BigInt(Math.floor(Math.random() * 1000000));
@@ -425,11 +425,13 @@ export const UserOperationBridge: SwapFC = () => {
       }),
     ]);
 
+    // TODO(kjesien) find a better way to refresh balances
+    await queryClient.invalidateQueries();
+
     setTransactionData((prev) => {
       if (!prev) return null;
       const clone = cloneDeep(prev);
       clone.actions[1].status = "success";
-      // clone.actions[2].status = "success";
       return clone;
     });
 
@@ -450,8 +452,7 @@ export const UserOperationBridge: SwapFC = () => {
       setTransactionData((prev) => {
         if (!prev) return null;
         const clone = cloneDeep(prev);
-        if (revertedA) clone.actions[1].status = "failed";
-        // if (revertedB) clone.actions[2].status = "failed";
+        clone.actions[1].status = "failed";
         return clone;
       });
 
@@ -505,29 +506,9 @@ export const UserOperationBridge: SwapFC = () => {
         <form onSubmit={submit} className="flex flex-col gap-8">
           <div className="flex gap-4 flex-col">
             <TokenInput
-              chains={[
-                {
-                  chainId: rollupA.id,
-                  tokens: [
-                    zeroAddress,
-                    "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553",
-                    "0xeA0DB94b4c702d9cA0Fcc65715A035B24dF3452D",
-                    "0x79155fb8d8dE01522bE1Cbd17e538966d78d1565",
-                  ],
-                },
-                {
-                  chainId: rollupB.id,
-                  tokens: [
-                    zeroAddress,
-                    "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553",
-                    "0xeA0DB94b4c702d9cA0Fcc65715A035B24dF3452D",
-                    "0x79155fb8d8dE01522bE1Cbd17e538966d78d1565",
-                  ],
-                },
-                { chainId: baseChain.id, isNotSupported: true },
-                { chainId: arbitrumChain.id, isNotSupported: true },
-                { chainId: optimismChain.id, isNotSupported: true },
-              ]}
+              chains={BRIDGE_CONFIG.filter(
+                ({ chainId }) => chainId !== values.to.chainId,
+              )}
               onChainSelect={(chainId) =>
                 form.setValue(
                   "from.chainId",
@@ -555,29 +536,9 @@ export const UserOperationBridge: SwapFC = () => {
             )}
 
             <TokenInput
-              chains={[
-                {
-                  chainId: rollupA.id,
-                  tokens: [
-                    zeroAddress,
-                    "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553",
-                    "0xeA0DB94b4c702d9cA0Fcc65715A035B24dF3452D",
-                    "0x79155fb8d8dE01522bE1Cbd17e538966d78d1565",
-                  ],
-                },
-                {
-                  chainId: rollupB.id,
-                  tokens: [
-                    zeroAddress,
-                    "0x356dA0CBA100a69B3FD3F2Ce4871B7e3921E7553",
-                    "0xeA0DB94b4c702d9cA0Fcc65715A035B24dF3452D",
-                    "0x79155fb8d8dE01522bE1Cbd17e538966d78d1565",
-                  ],
-                },
-                { chainId: baseChain.id, isNotSupported: true },
-                { chainId: arbitrumChain.id, isNotSupported: true },
-                { chainId: optimismChain.id, isNotSupported: true },
-              ]}
+              chains={BRIDGE_CONFIG.filter(
+                ({ chainId }) => chainId !== values.from.chainId,
+              )}
               onChainSelect={(chainId) =>
                 form.setValue(
                   "to.chainId",
