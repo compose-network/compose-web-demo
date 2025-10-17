@@ -13,7 +13,7 @@ import { ChainIcon } from "@/components/ui/chain-icon";
 import { getChainById, getExplorerHashUrl } from "@/wagmi/config";
 import { shortenAddress } from "@/lib/utils/strings.ts";
 import { TbExternalLink } from "react-icons/tb";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 
 export type TransactionModalProps = {
@@ -43,10 +43,15 @@ export const TransactionModal: FCProps = ({ data, title, ...props }) => {
   const onOpenDataHandler = () => setOpenData(!openData);
   return (
     <Dialog {...props}>
-      <DialogContent className="flex flex-col gap-5 min-w-[646px] max-h-[841px]">
+      <DialogContent
+        className="flex flex-col gap-5 min-w-[646px] max-h-[841px]"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <div className="flex justify-between items-center">
           <DialogTitle>{title}</DialogTitle>
-          <DialogClose />
+          <DialogClose>
+            <X className="size-6" />
+          </DialogClose>
         </div>
         <div className="flex gap-2 flex-col">
           {data?.actions.map((action, i) => (
