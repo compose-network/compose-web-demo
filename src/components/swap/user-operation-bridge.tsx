@@ -506,9 +506,7 @@ export const UserOperationBridge: SwapFC = () => {
         <form onSubmit={submit} className="flex flex-col gap-8">
           <div className="flex gap-4 flex-col">
             <TokenInput
-              chains={BRIDGE_CONFIG.filter(
-                ({ chainId }) => chainId !== values.to.chainId,
-              )}
+              chains={BRIDGE_CONFIG}
               onChainSelect={(chainId) =>
                 form.setValue(
                   "from.chainId",
