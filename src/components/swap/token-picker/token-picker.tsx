@@ -16,6 +16,7 @@ export type TokenPickerProps = {
   onChainSelect: (chainId: number) => void;
   readOnly?: boolean;
   canPickToken?: boolean;
+  disabledTokens?: Address[];
 };
 
 type TokenPickerFC = FC<
@@ -31,6 +32,7 @@ export const TokenPicker: TokenPickerFC = ({
   onSelectToken,
   onChainSelect,
   readOnly,
+  disabledTokens,
   ...props
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -43,6 +45,7 @@ export const TokenPicker: TokenPickerFC = ({
         chainId={chainId}
         onTokenSelect={onSelectToken}
         onChainSelect={onChainSelect}
+        disabledTokens={disabledTokens}
       />
       <Button
         onClick={() => {

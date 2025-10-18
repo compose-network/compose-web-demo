@@ -22,6 +22,7 @@ export type TokenInputProps = {
   readOnly?: boolean;
   isLoading?: boolean;
   canPickToken?: boolean;
+  disabledTokens?: Address[];
 };
 
 type TokenInputFC = FC<
@@ -35,6 +36,7 @@ export const TokenInput: TokenInputFC = ({
   readOnly,
   isLoading,
   canPickToken = true,
+  disabledTokens,
   onChainSelect,
   onSelectToken,
   ...props
@@ -66,6 +68,7 @@ export const TokenInput: TokenInputFC = ({
           chainId={chainId}
           onSelectToken={onSelectToken}
           readOnly={!canPickToken}
+          disabledTokens={disabledTokens}
         />
       </div>
       <Divider />
