@@ -21,6 +21,7 @@ export type TokenPickerCommandDialogProps = {
   chains: { chainId: number; isNotSupported?: boolean; tokens?: Address[] }[];
   onTokenSelect: (token: Address) => void;
   onChainSelect: (chainId: number) => void;
+  disabledTokens?: Address[];
 } & DialogProps;
 
 export const TokenPickerCommandDialog: FC<TokenPickerCommandDialogProps> = ({
@@ -29,6 +30,7 @@ export const TokenPickerCommandDialog: FC<TokenPickerCommandDialogProps> = ({
   onTokenSelect,
   onOpenChange,
   onChainSelect,
+  disabledTokens = [],
   ...dialogProps
 }) => {
   const availableTokens =
@@ -69,15 +71,19 @@ export const TokenPickerCommandDialog: FC<TokenPickerCommandDialogProps> = ({
             </div>
             <CommandEmpty>No tokens found.</CommandEmpty>
             <CommandGroup heading="Available Tokens">
-              {availableTokens.map((token, i) => (
-                <CommandItem
-                  key={`${token}-${i}`}
-                  onSelect={() => handleTokenSelect(token)}
-                  className="cursor-pointer"
-                >
-                  <TokenPickerItem token={token} chainId={chainId} />
-                </CommandItem>
-              ))}
+              {availableTokens.map((token, i) => {
+                const isDisabled = disabledTokens.includes(token);
+                return (
+                  <CommandItem
+                    key={`${token}-${i}`}
+                    onSelect={() => !isDisabled && handleTokenSelect(token)}
+                    className={`cursor-pointer ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={isDisabled}
+                  >
+                    <TokenPickerItem token={token} chainId={chainId} />
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

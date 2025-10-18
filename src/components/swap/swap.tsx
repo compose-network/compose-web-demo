@@ -363,7 +363,7 @@ export const Swap: SwapFC = () => {
         ...(needsApproval
           ? [
               {
-                name: `Approve ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
+                name: `Approve ${fromToken.symbol}`,
                 chainId: values.from.chainId,
                 status: "pending" as keyof typeof statusIcons,
               },
@@ -561,6 +561,7 @@ export const Swap: SwapFC = () => {
               readOnly
               onSelectToken={(token) => form.setValue("to.token", token)}
               onChange={(amount) => form.setValue("to.amount", amount)}
+              disabledTokens={[values.from.token]}
             />
           </div>
           <Divider />

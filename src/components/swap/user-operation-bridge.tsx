@@ -507,12 +507,16 @@ export const UserOperationBridge: SwapFC = () => {
           <div className="flex gap-4 flex-col">
             <TokenInput
               chains={BRIDGE_CONFIG}
-              onChainSelect={(chainId) =>
+              onChainSelect={(chainId) => {
                 form.setValue(
                   "from.chainId",
                   chainId as typeof rollupA.id | typeof rollupB.id,
-                )
-              }
+                );
+                if (chainId === values.to.chainId) {
+                  const newToChainId = chainId === rollupA.id ? rollupB.id : rollupA.id;
+                  form.setValue("to.chainId", newToChainId);
+                }
+              }}
               value={values.from.amount}
               tokenAddress={values.token}
               chainId={values.from.chainId}
@@ -534,15 +538,17 @@ export const UserOperationBridge: SwapFC = () => {
             )}
 
             <TokenInput
-              chains={BRIDGE_CONFIG.filter(
-                ({ chainId }) => chainId !== values.from.chainId,
-              )}
-              onChainSelect={(chainId) =>
+              chains={BRIDGE_CONFIG}
+              onChainSelect={(chainId) => {
                 form.setValue(
                   "to.chainId",
                   chainId as typeof rollupA.id | typeof rollupB.id,
-                )
-              }
+                );
+                if (chainId === values.from.chainId) {
+                  const newFromChainId = chainId === rollupA.id ? rollupB.id : rollupA.id;
+                  form.setValue("from.chainId", newFromChainId);
+                }
+              }}
               value={values.from.amount}
               tokenAddress={values.token}
               chainId={values.to.chainId}
