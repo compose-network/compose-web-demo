@@ -108,10 +108,15 @@ export const createAndSignBridgeERC20UserOps = async ({
     }),
   ]);
 
-  return prepareAndSignUserOperations(
-    [sourcePublicClient as any, destPublicClient as any],
-    [sourceUserOp, destUserOp],
-  );
+  return {
+    createOps: async() =>  prepareAndSignUserOperations(
+      [sourcePublicClient as any, destPublicClient as any],
+      [sourceUserOp, destUserOp],
+    ),
+    sourceUserOp, destUserOp,
+  }
+
+
 };
 
 export type GenerateETHBridgeUserOpsParams = {
@@ -211,8 +216,12 @@ export const createAndSignBridgeETHUserOps = async ({
     }),
   ]);
 
-  return prepareAndSignUserOperations(
-    [sourcePublicClient as any, destPublicClient as any],
-    [sourceUserOp, destUserOp],
-  );
+  return {
+    createOps: async() =>  prepareAndSignUserOperations(
+      [sourcePublicClient as any, destPublicClient as any],
+      [sourceUserOp, destUserOp],
+    ),
+    sourceUserOp, destUserOp,
+  }
+
 };

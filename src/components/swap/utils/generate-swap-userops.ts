@@ -33,6 +33,7 @@ export type GenerateERC20BridgeUserOpsParams = {
   toToken: Address;
   amountIn: bigint;
   amountOut: bigint;
+  updateTxData: (sourceUserOp: any, destUserOp: any) => void;
 };
 export const createSwapUserOpsFrom_A_to_B = async (
   {
@@ -43,6 +44,7 @@ export const createSwapUserOpsFrom_A_to_B = async (
     toToken,
     amountIn,
     amountOut,
+    updateTxData,
   }: GenerateERC20BridgeUserOpsParams,
   options: UserOpSwapOptions = {},
 ) => {
@@ -147,6 +149,9 @@ export const createSwapUserOpsFrom_A_to_B = async (
     }),
   ]);
 
+  // Update transaction data with sourceUserOp and destUserOp before signing
+  updateTxData(sourceUserOp, destUserOp);
+
   const [signedA, signedB] = await prepareAndSignUserOperations(
     [sourcePublicClient as any, destPublicClient as any],
     [sourceUserOp, destUserOp],
@@ -197,6 +202,8 @@ export const createSwapUserOpsFrom_A_to_B = async (
     build: [buildA, buildB],
     payload,
     explorerUrls,
+    sourceUserOp,
+    destUserOp,
     sendUserOps: () =>
       sourcePublicClient.request({
         method: "eth_sendXTransaction",
@@ -214,6 +221,7 @@ export const createSwapUserOpsFrom_B_to_A = async (
     toToken,
     amountIn,
     amountOut,
+    updateTxData,
   }: GenerateERC20BridgeUserOpsParams,
   options: UserOpSwapOptions = {},
 ) => {
@@ -320,6 +328,9 @@ export const createSwapUserOpsFrom_B_to_A = async (
   console.log("sourceUserOp:", sourceUserOp);
   console.log("destUserOp:", destUserOp);
 
+  // Update transaction data with sourceUserOp and destUserOp before signing
+  updateTxData(sourceUserOp, destUserOp);
+
   const [signedA, signedB] = await prepareAndSignUserOperations(
     [sourcePublicClient as any, destPublicClient as any],
     [sourceUserOp, destUserOp],
@@ -372,6 +383,8 @@ export const createSwapUserOpsFrom_B_to_A = async (
     build: [buildA, buildB],
     payload,
     explorerUrls,
+    sourceUserOp,
+    destUserOp,
     sendUserOps: () =>
       sourcePublicClient.request({
         method: "eth_sendXTransaction",
@@ -389,6 +402,7 @@ export const createSwapUserOpsFrom_A_to_A = async (
     toToken,
     amountIn,
     amountOut,
+    updateTxData,
   }: GenerateERC20BridgeUserOpsParams,
   options: UserOpSwapOptions = {},
 ) => {
@@ -532,6 +546,9 @@ export const createSwapUserOpsFrom_A_to_A = async (
     }),
   ]);
 
+  // Update transaction data with sourceUserOp and destUserOp before signing
+  updateTxData(op1, op3);
+
   const [signedA, signedB, signedC] = await prepareAndSignUserOperations(
     [
       rollupAPublicClient as any,
@@ -597,6 +614,8 @@ export const createSwapUserOpsFrom_A_to_A = async (
     build: [buildRollupA, buildRollupB, buildRollupC],
     payload,
     explorerUrls,
+    sourceUserOp: op1,
+    destUserOp: op3,
     sendUserOps: () =>
       rollupAPublicClient.request({
         method: "eth_sendXTransaction",

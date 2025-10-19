@@ -53,6 +53,7 @@ import { useSendTransaction, useSwitchChain } from "wagmi";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { BRIDGE_CONFIG } from "@/wagmi/bridge.ts";
+import { stringifyBigints } from "@/lib/utils/bigint.ts";
 
 export type SwapProps = {
   // TODO: Add props or remove this type
@@ -309,40 +310,50 @@ export const UserOperationBridge: SwapFC = () => {
 
     const sessionId = BigInt(Math.floor(Math.random() * 1000000));
 
-    const createOps = isNative
-      ? createAndSignBridgeETHUserOps
-      : createAndSignBridgeERC20UserOps;
-
     // Create and sign user operations for bridge
-    const [signedA, signedB] = await createOps({
-      eoaAddress: eoa.address!,
-      sourceKernelAccount: sourceKernel!,
-      destKernelAccount: destKernel!,
-      tokenAddress: values.token,
-      amount: values.from.amount,
-      sessionId,
-      sourceChainId: values.from.chainId as keyof typeof BRIDGE_ADDRESSES,
-      destChainId: values.to.chainId as keyof typeof BRIDGE_ADDRESSES,
+    const bridgeResult = isNative
+      ? await createAndSignBridgeETHUserOps({
+          eoaAddress: eoa.address!,
+          sourceKernelAccount: sourceKernel!,
+          destKernelAccount: destKernel!,
+          amount: values.from.amount,
+          sessionId,
+          sourceChainId: values.from.chainId as keyof typeof BRIDGE_ADDRESSES,
+          destChainId: values.to.chainId as keyof typeof BRIDGE_ADDRESSES,
+        })
+      : await createAndSignBridgeERC20UserOps({
+          eoaAddress: eoa.address!,
+          sourceKernelAccount: sourceKernel!,
+          destKernelAccount: destKernel!,
+          tokenAddress: values.token,
+          amount: values.from.amount,
+          sessionId,
+          sourceChainId: values.from.chainId as keyof typeof BRIDGE_ADDRESSES,
+          destChainId: values.to.chainId as keyof typeof BRIDGE_ADDRESSES,
+        });
+    console.log(bridgeResult);
+
+    setTransactionData((prev) => {
+      if (!prev) return null;
+      const clone = cloneDeep(prev);
+      clone.actions[1].userOpData = [
+        { chainId: values.from.chainId, data: JSON.stringify(stringifyBigints(bridgeResult.sourceUserOp)) },
+        { chainId: values.to.chainId, data: JSON.stringify(stringifyBigints(bridgeResult.destUserOp)) },
+      ];
+      return clone;
     });
+    const [signedA, signedB] = await bridgeResult.createOps();
 
     const userOpA = toRpcUserOpCanonical(signedA);
     console.log("userOpA:", userOpA);
     const userOpB = toRpcUserOpCanonical(signedB);
     console.log("userOpB:", userOpB);
-
-    console.log("signedA:", signedA);
-    console.log("signedB:", signedB);
+    //
+    // console.log("signedA:", signedA);
+    // console.log("signedB:", signedB);
 
     // Update transactionData with userOp data
-    setTransactionData((prev) => {
-      if (!prev) return null;
-      const clone = cloneDeep(prev);
-      clone.actions[1].userOpData = [
-        { chainId: values.from.chainId, data: JSON.stringify(userOpA) },
-        { chainId: values.to.chainId, data: JSON.stringify(userOpB) },
-      ];
-      return clone;
-    });
+
 
     const [buildA, buildB] = await Promise.all([
       sourcePublicClient.request({
@@ -490,7 +501,6 @@ export const UserOperationBridge: SwapFC = () => {
       account: kernel.kernel.data?.accounts.B.address || zeroAddress,
     },
   );
-
   return (
     <>
       <TransactionModal

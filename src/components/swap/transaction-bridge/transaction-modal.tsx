@@ -39,7 +39,7 @@ type FCProps = FC<
 >;
 
 export const TransactionModal: FCProps = ({ data, title, ...props }) => {
-  const [openData, setOpenData] = useState(false);
+  const [openData, setOpenData] = useState(true);
   const onOpenDataHandler = () => setOpenData(!openData);
   return (
     <Dialog {...props}>

@@ -23,7 +23,7 @@ import { useBlockNumber, useReadContract, useSwitchChain } from "wagmi";
 import { toast } from "@/components/ui/use-toast";
 import { Form } from "@/components/ui/form";
 import { useAsset } from "@/hooks/use-asset";
-import { merge } from "lodash-es";
+import { merge, cloneDeep } from "lodash-es";
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
 import { SwapRoute } from "@/components/swap/swap-route";
 import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal";
@@ -41,6 +41,7 @@ import {
 } from "@/components/swap/utils/generate-swap-userops";
 import { createRollupPublicClients } from "@/components/swap/utils/core";
 import { SWAP_CONFIG } from "@/wagmi/swap.ts";
+import { stringifyBigints } from "@/lib/utils/bigint.ts";
 
 export type SwapProps = {
   // TODO: Add props or remove this type
@@ -86,6 +87,7 @@ export const Swap: SwapFC = () => {
       chainId: number;
       status: keyof typeof statusIcons;
       hash?: `0x${string}`;
+      userOpData?: { chainId: number; data: string }[];
     }[];
   } | null>(null);
   const block = useBlockNumber({ watch: true, chainId: rollupB.id });
@@ -220,6 +222,17 @@ export const Swap: SwapFC = () => {
       values.from.chainId === rollupA.id &&
       values.to.chainId === rollupA.id
     ) {
+      // Create transaction modal immediately when user clicks swap
+      const id: Hex = `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`;
+      setTransactionData({
+        id,
+        actions: [{
+          name: `Swap ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} for ${formatCurrency(prices.data?.[0] ?? 0n, toToken.decimals || 18)} ${toToken.symbol}`,
+          chainId: values.from.chainId,
+          status: "pending" as keyof typeof statusIcons,
+        }],
+      });
+
       const kernelAllowance = await rollupAPublicClient.readContract({
         abi: TokenABI,
         functionName: "allowance",
@@ -251,9 +264,24 @@ export const Swap: SwapFC = () => {
           kernelA: kernel.kernel.data.accounts.A,
           kernelB: kernel.kernel.data.accounts.B,
           amountOut: prices.data?.[0] ?? 0n,
+          updateTxData: (sourceUserOp, destUserOp) => {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              const swapActionIndex = clone.actions.findIndex(action => action.name.includes('Swap'));
+              if (swapActionIndex !== -1) {
+                clone.actions[swapActionIndex].userOpData = [
+                  { chainId: values.from.chainId, data: JSON.stringify(stringifyBigints(sourceUserOp)) },
+                  { chainId: values.to.chainId, data: JSON.stringify(stringifyBigints(destUserOp)) },
+                ];
+              }
+              return clone;
+            });
+          },
         },
         {
           onBuildUserOps(_, explorerUrls) {
+            console.log('<<<<<<<<<<<<<<<<<<<<SUPERTEST>>>>>>>>>>>>>>>>>>>>');
             explorerUrls.forEach(console.log);
           },
         },
@@ -266,6 +294,17 @@ export const Swap: SwapFC = () => {
       values.from.chainId === rollupA.id &&
       values.to.chainId === rollupB.id
     ) {
+      // Create transaction modal immediately when user clicks swap
+      const id: Hex = `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`;
+      setTransactionData({
+        id,
+        actions: [{
+          name: `Swap ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} for ${formatCurrency(prices.data?.[0] ?? 0n, toToken.decimals || 18)} ${toToken.symbol}`,
+          chainId: values.from.chainId,
+          status: "pending" as keyof typeof statusIcons,
+        }],
+      });
+
       const kernelAllowance = await rollupAPublicClient.readContract({
         abi: TokenABI,
         functionName: "allowance",
@@ -297,10 +336,25 @@ export const Swap: SwapFC = () => {
           kernelA: kernel.kernel.data.accounts.A,
           kernelB: kernel.kernel.data.accounts.B,
           amountOut: prices.data?.[0] ?? 0n,
+          updateTxData: (sourceUserOp, destUserOp) => {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              const swapActionIndex = clone.actions.findIndex(action => action.name.includes('Swap'));
+              if (swapActionIndex !== -1) {
+                clone.actions[swapActionIndex].userOpData = [
+                  { chainId: values.from.chainId, data: JSON.stringify(stringifyBigints(sourceUserOp)) },
+                  { chainId: values.to.chainId, data: JSON.stringify(stringifyBigints(destUserOp)) },
+                ];
+              }
+              return clone;
+            });
+          },
         },
         {
           onBuildUserOps(_, explorerUrls) {
             explorerUrls.forEach(console.log);
+
           },
         },
       );
@@ -312,6 +366,17 @@ export const Swap: SwapFC = () => {
       values.from.chainId === rollupB.id &&
       values.to.chainId === rollupA.id
     ) {
+      // Create transaction modal immediately when user clicks swap
+      const id: Hex = `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`;
+      setTransactionData({
+        id,
+        actions: [{
+          name: `Swap ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} for ${formatCurrency(prices.data?.[0] ?? 0n, toToken.decimals || 18)} ${toToken.symbol}`,
+          chainId: values.from.chainId,
+          status: "pending" as keyof typeof statusIcons,
+        }],
+      });
+
       const kernelAllowance = await rollupBPublicClient.readContract({
         abi: TokenABI,
         functionName: "allowance",
@@ -343,10 +408,25 @@ export const Swap: SwapFC = () => {
           kernelA: kernel.kernel.data.accounts.A,
           kernelB: kernel.kernel.data.accounts.B,
           amountOut: prices.data?.[0] ?? 0n,
+          updateTxData: (sourceUserOp, destUserOp) => {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              const swapActionIndex = clone.actions.findIndex(action => action.name.includes('Swap'));
+              if (swapActionIndex !== -1) {
+                clone.actions[swapActionIndex].userOpData = [
+                  { chainId: values.from.chainId, data: JSON.stringify(stringifyBigints(sourceUserOp)) },
+                  { chainId: values.to.chainId, data: JSON.stringify(stringifyBigints(destUserOp)) },
+                ];
+              }
+              return clone;
+            });
+          },
         },
         {
           onBuildUserOps(_, explorerUrls) {
             explorerUrls.forEach(console.log);
+
           },
         },
       );

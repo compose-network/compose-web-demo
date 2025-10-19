@@ -66,8 +66,7 @@ const schema = z.object({
   slippage: z.number(),
 });
 export const TransactionBridge: SwapFC = () => {
-  const { chainId, isConnected } = useAccount();
-  const isHoodi = chainId === hoodi.id;
+  const {  isConnected } = useAccount();
   const switchChain = useSwitchChain();
 
   const form = useForm<z.infer<typeof schema>>({
@@ -291,7 +290,7 @@ export const TransactionBridge: SwapFC = () => {
               isLoading={bridgeETH.isPending}
               loadingText="Bridging..."
             >
-              {!isHoodi ? "Switch to Hoodi And Bridge" : "Bridge"}
+              Bridge
             </Button>
           ) : (
             <ConnectWalletBtn size="xl" />
