@@ -102,9 +102,8 @@ export const Swap: SwapFC = () => {
   >(
     "compose/swapvalues",
     {
-      fromChainId: rollupB.id,
-      fromToken: SWAP_CONFIG.find(({ chainId }) => rollupB.id === chainId)!
-        .tokens![0],
+      fromChainId: rollupA.id,
+      fromToken: zeroAddress,
       fromAmount: 0n,
       toChainId: rollupB.id,
       toToken: SWAP_CONFIG.find(({ chainId }) => rollupB.id === chainId)!
