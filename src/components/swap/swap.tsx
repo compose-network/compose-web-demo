@@ -512,6 +512,7 @@ export const Swap: SwapFC = () => {
                   shouldTouch: true,
                 });
               }}
+              disabledTokens={[values.to.token]}
             />
             {form.formState.errors.from?.amount && (
               <Text variant="body-3-medium" className="text-error-500">
