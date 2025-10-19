@@ -16,6 +16,7 @@ import { getPublicClient } from "@wagmi/core";
 import { AnimatePresence, motion } from "framer-motion";
 import type { ComponentPropsWithRef, FC } from "react";
 import { Navigate } from "react-router";
+import Faq from "@/components/faq/faq.tsx";
 
 // DO NOT REMOVE THIS FUNCTION, it is used for debugging purposes
 ((w) => {
@@ -79,6 +80,9 @@ export const DashboardLayout: FC<ComponentPropsWithRef<"div">> = ({
               <Navbar className="px-5" />
               <main className={cn(className, "flex-1 overflow-auto")}>
                 {children}
+                <div className="flex justify-center">
+                  <Faq />
+                </div>
               </main>
             </motion.div>
           )}

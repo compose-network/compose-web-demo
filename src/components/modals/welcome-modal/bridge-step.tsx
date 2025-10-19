@@ -27,7 +27,7 @@ export const BridgeStep: FCProps = ({ onComplete, onBack }) => {
         />
       </div>
 
-      <Text className="text-gray-600 w-full font-bold">
+      <Text className="text-black w-full font-bold">
         Bridge Tokens Instantly
       </Text>
       <Text className="text-gray-600 w-full">

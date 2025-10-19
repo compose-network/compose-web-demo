@@ -27,8 +27,8 @@ export const OnboardingStep: FCProps = ({ onNext, onBack }) => {
         />
       </div>
 
-      <Text className="text-gray-600 w-full">
-        <span className="font-bold">ETH & rollups indications + [Bridge ETH from Hoodi] text</span> (for now)
+      <Text className="text-black w-full">
+        <span className="font-bold">Bridge ETH from Hoodi</span>
       </Text>
       <Text className="text-gray-600 w-full">
         Start by bridging some ETH from  <span className="font-bold">Ethereum’s
