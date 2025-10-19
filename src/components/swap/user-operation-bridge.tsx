@@ -109,7 +109,7 @@ export const UserOperationBridge: SwapFC = () => {
     "lastSelectedToken",
     zeroAddress,
   );
-  console.log('ops');
+  console.log("ops");
   const queryClient = useQueryClient();
 
   const [transactionData, setTransactionData] = useState<{
@@ -508,13 +508,14 @@ export const UserOperationBridge: SwapFC = () => {
             <TokenInput
               chains={BRIDGE_CONFIG}
               onChainSelect={(chainId) => {
-                 switchChainAsync({ chainId:chainId });
+                switchChainAsync({ chainId: chainId });
                 form.setValue(
                   "from.chainId",
                   chainId as typeof rollupA.id | typeof rollupB.id,
                 );
                 if (chainId === values.to.chainId) {
-                  const newToChainId = chainId === rollupA.id ? rollupB.id : rollupA.id;
+                  const newToChainId =
+                    chainId === rollupA.id ? rollupB.id : rollupA.id;
                   form.setValue("to.chainId", newToChainId);
                 }
               }}
@@ -539,14 +540,17 @@ export const UserOperationBridge: SwapFC = () => {
             )}
 
             <TokenInput
-              chains={BRIDGE_CONFIG.filter(chain => chain.chainId !== hoodi.id)}
+              chains={BRIDGE_CONFIG.filter(
+                (chain) => chain.chainId !== hoodi.id,
+              )}
               onChainSelect={(chainId) => {
                 form.setValue(
                   "to.chainId",
                   chainId as typeof rollupA.id | typeof rollupB.id,
                 );
                 if (chainId === values.from.chainId) {
-                  const newFromChainId = chainId === rollupA.id ? rollupB.id : rollupA.id;
+                  const newFromChainId =
+                    chainId === rollupA.id ? rollupB.id : rollupA.id;
                   form.setValue("from.chainId", newFromChainId);
                 }
               }}
@@ -563,7 +567,7 @@ export const UserOperationBridge: SwapFC = () => {
           </div>
           <Divider />
           <SwapRoute
-            action="swap"
+            action="bridge"
             fromToken={{
               address: values.token,
               chainId: values.from.chainId,

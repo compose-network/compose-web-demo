@@ -25,7 +25,6 @@ export const useAsset = ({ tokenAddress, chainId, watch }: UseAssetProps) => {
       enabled: watch,
     },
   });
-  console.log('blockNumber:', blockNumber.data)
 
   const queryOptions = {
     staleTime: Infinity,

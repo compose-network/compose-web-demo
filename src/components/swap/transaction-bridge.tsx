@@ -281,7 +281,7 @@ export const TransactionBridge: SwapFC = () => {
           </div>
           <Divider />
           <SwapRoute
-            action="swap"
+            action="bridge"
             fromToken={{ address: values.from.token, chainId: hoodi.id }}
             toToken={{ address: values.from.token, chainId: values.to.chainId }}
           />

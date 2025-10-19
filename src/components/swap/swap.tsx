@@ -30,7 +30,6 @@ import {
   arbitrumChain,
   baseChain,
   contracts,
-  getChainById,
   optimismChain,
   rollupA,
   rollupB,
@@ -103,7 +102,7 @@ export const Swap: SwapFC = () => {
     }[];
   } | null>(null);
 
-  const [prevSwapValues, setPrevSwapValues] = useLocalStorage<
+  const [prevSwapValues, persistPrevSwapValues] = useLocalStorage<
     z.infer<typeof schema>
   >(
     "compose/swapvalues",
@@ -148,7 +147,7 @@ export const Swap: SwapFC = () => {
   const values = form.watch();
 
   useEffect(() => {
-    setPrevSwapValues(values);
+    persistPrevSwapValues(values);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     values.from.token,
@@ -578,22 +577,14 @@ export const Swap: SwapFC = () => {
                   boxShadow: "0px 4px 8px -3px rgba(11, 42, 60, 0.08)",
                 }}
                 onClick={() => {
-                  form.setValue(
-                    "from",
-                    {
+                  console.log("values:", values);
+                  form.reset({
+                    from: {
                       ...values.to,
                       amount: prices.data?.[0] ?? 0n,
                     },
-                    {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                      shouldTouch: true,
-                    },
-                  );
-                  form.setValue("to", values.from, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                    shouldTouch: true,
+                    to: values.from,
+                    slippage: values.slippage,
                   });
                 }}
               >
@@ -675,9 +666,7 @@ export const Swap: SwapFC = () => {
               }
               disabled={!form.formState.isValid}
             >
-              {chainId !== values.from.chainId
-                ? `Switch to ${getChainById(values.from.chainId).name} And Swap`
-                : "Swap"}
+              Swap
             </Button>
           ) : (
             <ConnectWalletBtn size="xl" />
