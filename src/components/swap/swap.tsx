@@ -436,6 +436,13 @@ export const Swap: SwapFC = () => {
               clone.actions[userOpIndex].status = "success";
               return clone;
             });
+            form.reset(
+              merge({}, values, {
+                from: { amount: 0n },
+                to: { amount: 0n },
+              }),
+            );
+            form.clearErrors();
           },
         },
       );
