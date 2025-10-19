@@ -38,7 +38,7 @@ import { SWAP_CONFIG } from "@/wagmi/swap.ts";
 import { getToken, isAddressEqual } from "@/wagmi/tokens";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { keepPreviousData } from "@tanstack/react-query";
-import { cloneDeep, merge } from "lodash-es";
+import { cloneDeep } from "lodash-es";
 import {
   type ComponentPropsWithoutRef,
   type FC,
@@ -62,32 +62,27 @@ type SwapFC = FC<
 >;
 
 const schema = z.object({
-  from: z.object({
-    chainId: z
-      .number()
-      .default(rollupA.id)
-      .refine((id) => id === rollupA.id || id === rollupB.id, {
-        message: "Chain ID must be rollupA or rollupB",
-      }),
-    token: z.string().refine(isAddress),
-    amount: z.bigint().min(parseEther("0.000001"), {
-      message: "Amount must be greater than 0.000001",
+  fromChainId: z
+    .number()
+    .default(rollupA.id)
+    .refine((id) => id === rollupA.id || id === rollupB.id, {
+      message: "Chain ID must be rollupA or rollupB",
     }),
+  fromToken: z.string().refine(isAddress),
+  fromAmount: z.bigint().min(parseEther("0.000001"), {
+    message: "Amount must be greater than 0.000001",
   }),
-  to: z.object({
-    chainId: z
-      .number()
-      .default(rollupA.id)
-      .refine((id) => id === rollupA.id || id === rollupB.id, {
-        message: "Chain ID must be rollupA or rollupB",
-      }),
-    token: z.string().refine(isAddress),
-    amount: z.bigint(),
-  }),
+  toChainId: z
+    .number()
+    .default(rollupA.id)
+    .refine((id) => id === rollupA.id || id === rollupB.id, {
+      message: "Chain ID must be rollupA or rollupB",
+    }),
+  toToken: z.string().refine(isAddress),
   slippage: z.number(),
 });
 export const Swap: SwapFC = () => {
-  const { chainId, address, isConnected } = useAccount();
+  const { address, isConnected } = useAccount();
   const switchChain = useSwitchChain();
   const [transactionData, setTransactionData] = useState<{
     id: Hex;
@@ -107,33 +102,39 @@ export const Swap: SwapFC = () => {
   >(
     "compose/swapvalues",
     {
-      from: {
-        chainId: rollupB.id,
-        token: SWAP_CONFIG.find(({ chainId }) => rollupB.id === chainId)!
-          .tokens![0],
-        amount: 0n,
-      },
-      to: {
-        chainId: rollupB.id,
-        token: SWAP_CONFIG.find(({ chainId }) => rollupB.id === chainId)!
-          .tokens![1],
-        amount: 0n,
-      },
+      fromChainId: rollupB.id,
+      fromToken: SWAP_CONFIG.find(({ chainId }) => rollupB.id === chainId)!
+        .tokens![0],
+      fromAmount: 0n,
+      toChainId: rollupB.id,
+      toToken: SWAP_CONFIG.find(({ chainId }) => rollupB.id === chainId)!
+        .tokens![1],
       slippage: 0.5,
     },
     {
       raw: false,
       serializer: (value) => {
-        // @ts-expect-error bigint to string
-        value.from.amount = value.from.amount.toString();
-        // @ts-expect-error bigint to string
-        value.to.amount = value.to.amount.toString();
-        return JSON.stringify(value);
+        return JSON.stringify(stringifyBigints(value));
       },
       deserializer: (value) => {
         const parsed = JSON.parse(value);
-        parsed.from.amount = 0n;
-        parsed.to.amount = 0n;
+        parsed.fromAmount = BigInt(parsed.fromAmount);
+        const isValidSchema = schema.safeParse({
+          ...parsed,
+          fromAmount: parseEther("1"),
+        });
+        if (!isValidSchema.success) {
+          return {
+            fromChainId: rollupA.id,
+            fromToken: zeroAddress,
+            fromAmount: 0n,
+            toChainId: rollupB.id,
+            toToken: SWAP_CONFIG.find(({ chainId }) => rollupB.id === chainId)!
+              .tokens![1],
+            slippage: 0.5,
+          };
+        }
+        parsed.fromAmount = 0n;
         return parsed;
       },
     },
@@ -144,17 +145,19 @@ export const Swap: SwapFC = () => {
     resolver: zodResolver(schema),
   });
 
+  // console.log("form.formState.isValid:", form.formState.isValid);
+  // console.log(
+  //   "form.formState.isValid:",
+  //   stringifyBigints(form.formState.errors),
+  // );
+
   const values = form.watch();
+  // console.table(values);
 
   useEffect(() => {
     persistPrevSwapValues(values);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    values.from.token,
-    values.to.token,
-    values.from.chainId,
-    values.to.chainId,
-  ]);
+  }, [values.fromToken, values.toToken, values.fromChainId, values.toChainId]);
 
   const { useGetSwapPrice, useSwap } = useSwapContract();
 
@@ -167,28 +170,28 @@ export const Swap: SwapFC = () => {
 
   const prices = useGetSwapPrice(
     {
-      tokenIn: getToken(values.from.token)?.id ?? 0,
-      tokenOut: getToken(values.to.token)?.id ?? 0,
-      amountIn: values.from.amount,
+      tokenIn: getToken(values.fromToken)?.id ?? 0,
+      tokenOut: getToken(values.toToken)?.id ?? 0,
+      amountIn: values.fromAmount,
     },
     {
-      placeholderData: values.from.amount ? keepPreviousData : undefined,
+      placeholderData: values.fromAmount ? keepPreviousData : undefined,
       chainId: rollupB.id,
       contract: contracts[rollupB.id].swap,
-      enabled: !!values.from.token && !!values.to.token,
+      enabled: !!values.fromToken && !!values.toToken,
     },
   );
 
-  const isSameToken = values.from.token === values.to.token;
+  const isSameToken = values.fromToken === values.toToken;
 
   const fromToken = useAsset({
-    tokenAddress: values.from.token,
-    chainId: values.from.chainId,
+    tokenAddress: values.fromToken,
+    chainId: values.fromChainId,
   });
 
   const toToken = useAsset({
-    tokenAddress: values.to.token,
-    chainId: values.to.chainId,
+    tokenAddress: values.toToken,
+    chainId: values.toChainId,
   });
 
   const approve = useApprove();
@@ -198,10 +201,7 @@ export const Swap: SwapFC = () => {
     const [rollupAPublicClient, rollupBPublicClient] =
       createRollupPublicClients(rollupA.id, rollupB.id);
 
-    const is_eth_to_erc20 = isAddressEqual(values.from.token, zeroAddress);
-    const is_erc20_to_eth = isAddressEqual(values.to.token, zeroAddress);
-    const is_erc20_to_erc20 = !is_eth_to_erc20 && !is_erc20_to_eth;
-    console.log("is_erc20_to_erc20:", is_erc20_to_erc20);
+    const is_eth_to_erc20 = isAddressEqual(values.fromToken, zeroAddress);
 
     if (prices.data?.[0] === 0n) {
       return toast({
@@ -220,18 +220,18 @@ export const Swap: SwapFC = () => {
     const kernelAllowance = is_eth_to_erc20
       ? globals.MAX_WEI_AMOUNT
       : await (
-          values.from.chainId === rollupA.id
+          values.fromChainId === rollupA.id
             ? rollupAPublicClient
             : rollupBPublicClient
         ).readContract({
           abi: TokenABI,
           functionName: "allowance",
           args: [address!, kernel.kernel.data?.accounts.A.address],
-          address: values.from.token,
+          address: values.fromToken,
         });
 
     const needsApproval =
-      !is_eth_to_erc20 && kernelAllowance < values.from.amount;
+      !is_eth_to_erc20 && kernelAllowance < values.fromAmount;
 
     const userOpIndex = needsApproval || is_eth_to_erc20 ? 1 : 0;
 
@@ -241,28 +241,28 @@ export const Swap: SwapFC = () => {
         ...(needsApproval || is_eth_to_erc20
           ? [
               {
-                name: `${is_eth_to_erc20 ? `Send ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${fromToken.symbol}`} `,
-                chainId: values.from.chainId,
+                name: `${is_eth_to_erc20 ? `Send ${formatCurrency(values.fromAmount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${fromToken.symbol}`} `,
+                chainId: values.fromChainId,
                 status: "pending" as const,
               },
             ]
           : []),
         {
-          name: `Swap ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} for ${formatCurrency(prices.data?.[0] ?? 0n, toToken.decimals || 18)} ${toToken.symbol}`,
-          chainId: values.from.chainId,
-          toChainId: values.to.chainId,
+          name: `Swap ${formatCurrency(values.fromAmount, fromToken.decimals || 18)} ${fromToken.symbol} for ${formatCurrency(prices.data?.[0] ?? 0n, toToken.decimals || 18)} ${toToken.symbol}`,
+          chainId: values.fromChainId,
+          toChainId: values.toChainId,
           status: needsApproval || is_eth_to_erc20 ? "idle" : "pending",
         },
       ],
     });
 
-    await switchChain.switchChainAsync({ chainId: values.from.chainId });
+    await switchChain.switchChainAsync({ chainId: values.fromChainId });
 
     if (needsApproval) {
       await approve.write(
         {
-          address: values.from.token,
-          chainId: values.from.chainId,
+          address: values.fromToken,
+          chainId: values.fromChainId,
         },
         {
           spender: kernel.kernel.data?.accounts.A.address,
@@ -304,9 +304,9 @@ export const Swap: SwapFC = () => {
     if (is_eth_to_erc20) {
       const hash = await sendTx.sendTransactionAsync(
         {
-          to: kernel.getKernelByChainId(values.from.chainId)!.address,
-          value: values.from.amount,
-          chainId: values.from.chainId,
+          to: kernel.getKernelByChainId(values.fromChainId)!.address,
+          value: values.fromAmount,
+          chainId: values.fromChainId,
         },
         {
           onError: (error) => {
@@ -332,7 +332,7 @@ export const Swap: SwapFC = () => {
       });
 
       await (
-        values.from.chainId === rollupA.id
+        values.fromChainId === rollupA.id
           ? rollupAPublicClient
           : rollupBPublicClient
       ).waitForTransactionReceipt({ hash });
@@ -346,14 +346,14 @@ export const Swap: SwapFC = () => {
 
     // Is Swapping from A -> A
     // if (
-    //   values.from.chainId === rollupA.id &&
-    //   values.to.chainId === rollupA.id
+    //   values.fromChainId === rollupA.id &&
+    //   values.toChainId === rollupA.id
     // ) {
     //   const { sendUserOps } = await createSwapUserOpsFrom_A_to_A(
     //     {
-    //       amountIn: values.from.amount,
-    //       fromToken: values.from.token,
-    //       toToken: values.to.token,
+    //       amountIn: values.fromAmount,
+    //       fromToken: values.fromToken,
+    //       toToken: values.toToken,
     //       eoaAddress: address!,
     //       kernelA: kernel.kernel.data.accounts.A,
     //       kernelB: kernel.kernel.data.accounts.B,
@@ -368,10 +368,10 @@ export const Swap: SwapFC = () => {
     //   return sendUserOps();
     // }
     const is_from_A_to_B =
-      values.from.chainId === rollupA.id && values.to.chainId === rollupB.id;
+      values.fromChainId === rollupA.id && values.toChainId === rollupB.id;
 
     const is_from_B_to_A =
-      values.from.chainId === rollupB.id && values.to.chainId === rollupA.id;
+      values.fromChainId === rollupB.id && values.toChainId === rollupA.id;
 
     setTransactionData((prev) => {
       if (!prev) return null;
@@ -392,9 +392,9 @@ export const Swap: SwapFC = () => {
 
       const { sendUserOps } = await createSwapUserOps(
         {
-          amountIn: values.from.amount,
-          fromToken: values.from.token,
-          toToken: values.to.token,
+          amountIn: values.fromAmount,
+          fromToken: values.fromToken,
+          toToken: values.toToken,
           eoaAddress: address!,
           kernelA: kernel.kernel.data.accounts.A,
           kernelB: kernel.kernel.data.accounts.B,
@@ -407,11 +407,11 @@ export const Swap: SwapFC = () => {
               const clone = cloneDeep(prev);
               clone.actions[userOpIndex].userOpData = [
                 {
-                  chainId: values.from.chainId,
+                  chainId: values.fromChainId,
                   data: JSON.stringify(stringifyBigints(userOps[0])),
                 },
                 {
-                  chainId: values.to.chainId,
+                  chainId: values.toChainId,
                   data: JSON.stringify(stringifyBigints(userOps[1])),
                 },
               ];
@@ -435,26 +435,35 @@ export const Swap: SwapFC = () => {
               clone.actions[userOpIndex].status = "success";
               return clone;
             });
-            form.reset(
-              merge({}, values, {
-                from: { amount: 0n },
-                to: { amount: 0n },
-              }),
-            );
+            form.reset({
+              fromChainId: values.fromChainId,
+              fromToken: values.fromToken,
+              fromAmount: 0n,
+              toChainId: values.toChainId,
+              toToken: values.toToken,
+              slippage: values.slippage,
+            });
             form.clearErrors();
           },
         },
       );
-      return sendUserOps();
+      return sendUserOps().catch((error) => {
+        toast({
+          variant: "destructive",
+          title: "Swap failed",
+          description: error.message,
+        });
+        setTransactionData(null);
+      });
     }
 
     // Execute swap
     await swap.write(
       {
-        amountIn: values.from.amount,
+        amountIn: values.fromAmount,
         recipient: address!,
-        tokenIn: getToken(values.from.token)?.id ?? 0,
-        tokenOut: getToken(values.to.token)?.id ?? 0,
+        tokenIn: getToken(values.fromToken)?.id ?? 0,
+        tokenOut: getToken(values.toToken)?.id ?? 0,
       },
       {
         onConfirmed: (hash) => {
@@ -476,12 +485,14 @@ export const Swap: SwapFC = () => {
           fromToken.refreshBalance();
           toToken.refreshBalance();
 
-          form.reset(
-            merge({}, values, {
-              from: { amount: 0n },
-              to: { amount: 0n },
-            }),
-          );
+          form.reset({
+            fromChainId: values.fromChainId,
+            fromToken: values.fromToken,
+            fromAmount: 0n,
+            toChainId: values.toChainId,
+            toToken: values.toToken,
+            slippage: values.slippage,
+          });
           form.clearErrors();
 
           toast({
@@ -520,7 +531,7 @@ export const Swap: SwapFC = () => {
                 {
                   chainId: rollupA.id,
                   tokens: [zeroAddress, USDC_ADDRESS, SSV_ADDRESS],
-                  isNotSupported: values.to.chainId === rollupA.id,
+                  isNotSupported: values.toChainId === rollupA.id,
                   notSupportedReason:
                     " - Swapping from Rollup A to Rollup A is not supported",
                 },
@@ -532,39 +543,30 @@ export const Swap: SwapFC = () => {
                 { chainId: arbitrumChain.id, isNotSupported: true },
                 { chainId: optimismChain.id, isNotSupported: true },
               ]}
-              value={values.from.amount}
-              tokenAddress={values.from.token}
-              chainId={values.from.chainId}
+              value={values.fromAmount}
+              tokenAddress={values.fromToken}
+              chainId={values.fromChainId}
               onSelectToken={(token) => {
-                return form.setValue("from.token", token, {
+                return form.setValue("fromToken", token, {
                   shouldValidate: true,
-                  shouldDirty: true,
-                  shouldTouch: true,
                 });
               }}
               onChainSelect={(chainId) =>
                 form.setValue(
-                  "from.chainId",
+                  "fromChainId",
                   chainId as typeof rollupA.id | typeof rollupB.id,
-                  {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                    shouldTouch: true,
-                  },
                 )
               }
               onChange={(amount) => {
-                form.setValue("from.amount", amount, {
+                form.setValue("fromAmount", amount, {
                   shouldValidate: true,
-                  shouldDirty: true,
-                  shouldTouch: true,
                 });
               }}
-              disabledTokens={[values.to.token]}
+              disabledTokens={[values.toToken]}
             />
-            {form.formState.errors.from?.amount && (
+            {form.formState.errors.fromAmount && (
               <Text variant="body-3-medium" className="text-error-500">
-                {form.formState.errors.from.amount?.message}
+                {form.formState.errors.fromAmount?.message}
               </Text>
             )}
             <div className="flex items-center gap-3">
@@ -577,13 +579,12 @@ export const Swap: SwapFC = () => {
                   boxShadow: "0px 4px 8px -3px rgba(11, 42, 60, 0.08)",
                 }}
                 onClick={() => {
-                  console.log("values:", values);
                   form.reset({
-                    from: {
-                      ...values.to,
-                      amount: prices.data?.[0] ?? 0n,
-                    },
-                    to: values.from,
+                    fromChainId: values.toChainId,
+                    fromToken: values.toToken,
+                    fromAmount: prices.data?.[0] ?? 0n,
+                    toChainId: values.fromChainId,
+                    toToken: values.fromToken,
                     slippage: values.slippage,
                   });
                 }}
@@ -597,7 +598,7 @@ export const Swap: SwapFC = () => {
                 {
                   chainId: rollupA.id,
                   tokens: [zeroAddress, USDC_ADDRESS, SSV_ADDRESS],
-                  isNotSupported: values.from.chainId === rollupA.id,
+                  isNotSupported: values.fromChainId === rollupA.id,
                 },
                 {
                   chainId: rollupB.id,
@@ -609,47 +610,34 @@ export const Swap: SwapFC = () => {
               ]}
               onChainSelect={(chainId) =>
                 form.setValue(
-                  "to.chainId",
+                  "toChainId",
                   chainId as typeof rollupA.id | typeof rollupB.id,
-                  {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                    shouldTouch: true,
-                  },
                 )
               }
-              value={
-                isSameToken ? values.from.amount : (prices.data?.[0] ?? 0n)
-              }
-              tokenAddress={values.to.token}
-              chainId={values.to.chainId}
+              value={isSameToken ? values.fromAmount : (prices.data?.[0] ?? 0n)}
+              tokenAddress={values.toToken}
+              chainId={values.toChainId}
               isLoading={prices.isPending}
               readOnly
               onSelectToken={(token) =>
-                form.setValue("to.token", token, {
+                form.setValue("toToken", token, {
                   shouldValidate: true,
-                  shouldDirty: true,
-                  shouldTouch: true,
                 })
               }
-              onChange={(amount) =>
-                form.setValue("to.amount", amount, {
-                  shouldValidate: true,
-                  shouldDirty: true,
-                  shouldTouch: true,
-                })
-              }
-              disabledTokens={[values.from.token]}
+              onChange={() => {
+                return;
+              }}
+              disabledTokens={[values.fromToken]}
             />
           </div>
           <Divider />
           <SwapRoute
             action="swap"
             fromToken={{
-              address: values.from.token,
-              chainId: values.from.chainId,
+              address: values.fromToken,
+              chainId: values.fromChainId,
             }}
-            toToken={{ address: values.to.token, chainId: values.to.chainId }}
+            toToken={{ address: values.toToken, chainId: values.toChainId }}
           />
           {isConnected ? (
             <Button
