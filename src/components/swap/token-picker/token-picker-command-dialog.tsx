@@ -18,7 +18,12 @@ import { getChainById } from "@/wagmi/config";
 
 export type TokenPickerCommandDialogProps = {
   chainId: number;
-  chains: { chainId: number; isNotSupported?: boolean; tokens?: Address[] }[];
+  chains: {
+    chainId: number;
+    isNotSupported?: boolean;
+    notSupportedReason?: string;
+    tokens?: Address[];
+  }[];
   onTokenSelect: (token: Address) => void;
   onChainSelect: (chainId: number) => void;
   disabledTokens?: Address[];
@@ -56,7 +61,17 @@ export const TokenPickerCommandDialog: FC<TokenPickerCommandDialogProps> = ({
                 {chains.map((chain) => (
                   <Tooltip
                     key={chain.chainId}
-                    content={`${getChainById(chain.chainId).name}${chain.isNotSupported ? " - This network is not supported yet." : ""}`}
+                    content={
+                      <div className="flex flex-col">
+                        <Text>{getChainById(chain.chainId).name}</Text>
+                        {chain.isNotSupported && (
+                          <Text className="text-gray-400 text-sm">
+                            {chain.notSupportedReason ??
+                              "This network is not supported yet."}
+                          </Text>
+                        )}
+                      </div>
+                    }
                   >
                     <ChainIcon
                       disabled={chain.isNotSupported}
@@ -77,7 +92,7 @@ export const TokenPickerCommandDialog: FC<TokenPickerCommandDialogProps> = ({
                   <CommandItem
                     key={`${token}-${i}`}
                     onSelect={() => !isDisabled && handleTokenSelect(token)}
-                    className={`cursor-pointer ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`cursor-pointer ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
                     disabled={isDisabled}
                   >
                     <TokenPickerItem token={token} chainId={chainId} />
