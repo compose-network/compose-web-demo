@@ -11,7 +11,7 @@ export const MainPage = ({ children }: { children: React.ReactNode }) => {
   const isBridge = pathname === "/bridge";
   const isAccounts = pathname === "/accounts";
   return (
-    <Card className={cn("max-w-[648px] mx-auto gap-8 mt-8")}>
+    <Card className={cn("max-w-[648px] mx-auto gap-8 mt-8 rounded-[40px]")}>
       <Tabs
         className="w-full"
         defaultValue="swap"
