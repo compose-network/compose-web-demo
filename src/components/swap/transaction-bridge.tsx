@@ -70,7 +70,7 @@ export const TransactionBridge: SwapFC = () => {
   const { chainId, isConnected } = useAccount();
   const isHoodi = chainId === hoodi.id;
   const switchChain = useSwitchChain();
-
+  console.log('tx');
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
       from: {
