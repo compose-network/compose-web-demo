@@ -1,0 +1,61 @@
+<svg id="eCw2GNDEztR1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160"
+     shape-rendering="geometricPrecision" text-rendering="geometricPrecision">
+    <defs>
+        <clipPath id="eCw2GNDEztR6"><rect width="84" height="84" transform="translate(38 38)" fill="#fff"/></clipPath>
+        <clipPath id="eCw2GNDEztR12"><rect width="84" height="84" transform="translate(38 38)" fill="#fff"/></clipPath>
+        <clipPath id="eCw2GNDEztR16"><rect width="84" height="84" transform="translate(38 38)" fill="#fff"/></clipPath>
+        <clipPath id="eCw2GNDEztR20"><rect width="84" height="84" transform="translate(38 38)" fill="#fff"/></clipPath>
+    </defs>
+
+    <!-- Top-left tile -->
+    <g transform="translate(.06684 -.368509)">
+        <g clip-path="url(#eCw2GNDEztR6)">
+            <path id="eCw2GNDEztR5" fill="#062031"
+                  d="M57.5967,106.625c3.658-.866,7.7362,1.797,8.4147,5.494l1.2738,6.942c.2807,1.53-.8939,2.94-2.4493,2.94h-24.3458c-1.3752,0-2.4901-1.115-2.4901-2.49v-6.277c0-.56.1892-1.105.537-1.544.3478-.44.8338-.75,1.3794-.879l17.6803-4.186Z">
+                <animateTransform id="anim1" attributeName="transform" type="translate"
+                                  values="0,0; 5.9,-5.68; 0,0"
+                                  keyTimes="0;0.5;1" calcMode="spline"
+                                  keySplines="0.445 0.05 0.55 0.95;0.445 0.05 0.55 0.95"
+                                  dur="0.6s" begin="0s;anim4.end"/>
+            </path>
+        </g>
+    </g>
+
+    <!-- Right tile -->
+    <g transform="translate(.06684 -.368509)">
+        <g clip-path="url(#eCw2GNDEztR12)">
+            <path id="eCw2GNDEztR11" fill="#062031"
+                  d="M122,119.511c0,1.375-1.115,2.49-2.49,2.49h-25.3702c-1.2019,0-2.2323-.859-2.4493-2.041L85.8964,88.3845c-.5052-2.7524,1.0826-5.184,3.8056-5.8287l29.234-6.9213c1.564-.3703,3.064.816,3.064,2.4232v41.4533Z">
+                <animateTransform id="anim2" attributeName="transform" type="translate"
+                                  values="0,0; -4.24,-1.33; 0,0"
+                                  keyTimes="0;0.5;1" calcMode="spline"
+                                  keySplines="0.445 0.05 0.55 0.95;0.445 0.05 0.55 0.95"
+                                  dur="0.6s" begin="anim1.end"/>
+            </path>
+        </g>
+    </g>
+
+    <!-- Left vertical tile -->
+    <g transform="translate(.06684 -.368509)">
+        <path id="eCw2GNDEztR23" fill="#062031"
+              d="M75.1333,73.0436c.5052,2.7522-1.0826,5.1838-3.8056,5.8287L41.0638,86.0372C39.4998,86.4075,38,85.2211,38,83.6139v-43.1238C38,39.1149,39.1149,38,40.4901,38h26.138c1.2019,0,2.2323.8585,2.4491,2.0407l6.0561,33.0029Z">
+            <animateTransform id="anim3" attributeName="transform" type="translate"
+                              values="0,0; 3,4; 0,0"
+                              keyTimes="0;0.5;1" calcMode="spline"
+                              keySplines="0.445 0.05 0.55 0.95;0.445 0.05 0.55 0.95"
+                              dur="0.6s" begin="anim2.end"/>
+        </path>
+    </g>
+
+    <!-- Top-right tile -->
+    <g transform="translate(.06684 -.368509)">
+        <path id="eCw2GNDEztR25" fill="#062031"
+              d="M122,64.7323c0,.5607-.189,1.105-.537,1.5447-.348.4398-.834.7492-1.38.8783L90.8492,74.0768c-3.658.8659-7.7362-1.7968-8.4147-5.4942l-5.0726-27.643C77.0812,39.4098,78.2558,38,79.8112,38h39.6988c1.375,0,2.49,1.1149,2.49,2.4901v24.2422Z">
+            <animateTransform id="anim4" attributeName="transform" type="translate"
+                              values="0,0; -4,4; 0,0"
+                              keyTimes="0;0.5;1" calcMode="spline"
+                              keySplines="0.445 0.05 0.55 0.95;0.445 0.05 0.55 0.95"
+                              dur="0.6s" begin="anim3.end"/>
+        </path>
+    </g>
+</svg>
