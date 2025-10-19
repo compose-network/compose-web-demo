@@ -331,6 +331,14 @@ export const UserOperationBridge: SwapFC = () => {
       sessionId,
       sourceChainId: values.from.chainId as keyof typeof BRIDGE_ADDRESSES,
       destChainId: values.to.chainId as keyof typeof BRIDGE_ADDRESSES,
+    }).catch((errs) => {
+      setTransactionData((prev) => {
+        if (!prev) return null;
+        const clone = cloneDeep(prev);
+        clone.actions[userOpIndex].status = "failed";
+        return clone;
+      });
+      throw errs;
     });
 
     const userOpA = toRpcUserOpCanonical(signedA);
@@ -783,4 +791,4 @@ export const UserOperationBridge: SwapFC = () => {
   );
 };
 
-UserOperationBridge.displayName = "Swap";
+UserOperationBridge.displayName = "UserOperationBridge";
