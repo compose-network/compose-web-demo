@@ -15,6 +15,6 @@ export const Loading: React.FC<ComponentPropsWithoutRef<"div">> = ({
     exit={{ opacity: 0, scale: 0.9 }}
     transition={{ duration: 0.2 }}
   >
-    <img src="/images/ssv-loader.svg" className="size-20" />
+    <img src="/images/compose-loader.svg" className="size-20" />
   </motion.div>
 );

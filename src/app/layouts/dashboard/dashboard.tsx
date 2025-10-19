@@ -1,7 +1,7 @@
 import { Navbar } from "@/app/layouts/dashboard/navbar";
 // import { BatchTransactionModal } from "@/components/modals/batch-transaction-modal";
 import { WelcomeModal } from "@/components/modals/welcome-modal";
-import { SsvLoader } from "@/components/ui/ssv-loader.tsx";
+import { ComposeLoader } from "@/components/ui/compose-loader.tsx";
 import { TransactionModal } from "@/components/ui/transaction-modal";
 import { useAccount } from "@/hooks/account/use-account";
 import { useMaintenance } from "@/hooks/app/use-maintenance";
@@ -64,7 +64,7 @@ export const DashboardLayout: FC<ComponentPropsWithRef<"div">> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <SsvLoader className={"size-[160px]"} />
+              <ComposeLoader className={"size-[160px]"} />
             </motion.div>
           ) : (
             <motion.div
