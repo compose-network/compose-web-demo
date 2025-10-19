@@ -38,6 +38,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { cloneDeep } from "lodash-es";
 import { type ComponentPropsWithoutRef, type FC, useState } from "react";
 import { useForm } from "react-hook-form";
+import { FaArrowDown } from "react-icons/fa6";
 import { useLocalStorage } from "react-use";
 import type { Address } from "viem";
 import {
@@ -120,7 +121,7 @@ export const UserOperationBridge: SwapFC = () => {
       chainId: number;
       toChainId?: number;
       status: keyof typeof statusIcons;
-      hash?: `0x${string}`;
+      hash?: `0x${string}` | `0x${string}`[];
       userOpData?: { chainId: number; data: string }[];
     }[];
   } | null>(null);
@@ -195,15 +196,24 @@ export const UserOperationBridge: SwapFC = () => {
     const symbol = values.token === zeroAddress ? "ETH" : fromToken.symbol;
     const isNative = isNativeToken(values.token);
 
+    const needsApprove =
+      !isNative && (allowance.data ?? 0n) < values.from.amount;
+
+    const userOpIndex = needsApprove || isNative ? 1 : 0;
+
     setTransactionData({
       id,
       actions: [
-        {
-          name: `${isNative ? `Send ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${symbol}`}`,
-          chainId: values.from.chainId,
-          status: "pending",
-          description: `${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
-        },
+        ...(needsApprove || isNative
+          ? [
+              {
+                name: `${isNative ? `Send ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${symbol}`}`,
+                chainId: values.from.chainId,
+                status: "pending" as const,
+                description: `${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
+              },
+            ]
+          : []),
         {
           name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${symbol}`,
           chainId: values.from.chainId,
@@ -251,7 +261,7 @@ export const UserOperationBridge: SwapFC = () => {
         clone.actions[0].name = `${clone.actions[0].name} - ${isNative ? "sent" : "approved"}`;
         return clone;
       });
-    } else if ((allowance.data ?? 0n) < values.from.amount) {
+    } else if (needsApprove) {
       await approve.write(
         {
           address: values.token,
@@ -297,9 +307,7 @@ export const UserOperationBridge: SwapFC = () => {
     setTransactionData((prev) => {
       if (!prev) return null;
       const clone = cloneDeep(prev);
-      clone.actions[0].status = "success";
-      clone.actions[1].status = "pending";
-      // clone.actions[2].status = "pending";
+      clone.actions[userOpIndex].status = "pending";
       return clone;
     });
 
@@ -326,9 +334,7 @@ export const UserOperationBridge: SwapFC = () => {
     });
 
     const userOpA = toRpcUserOpCanonical(signedA);
-    console.log("userOpA:", userOpA);
     const userOpB = toRpcUserOpCanonical(signedB);
-    console.log("userOpB:", userOpB);
 
     console.log("signedA:", signedA);
     console.log("signedB:", signedB);
@@ -337,7 +343,7 @@ export const UserOperationBridge: SwapFC = () => {
     setTransactionData((prev) => {
       if (!prev) return null;
       const clone = cloneDeep(prev);
-      clone.actions[1].userOpData = [
+      clone.actions[userOpIndex].userOpData = [
         { chainId: values.from.chainId, data: JSON.stringify(userOpA) },
         { chainId: values.to.chainId, data: JSON.stringify(userOpB) },
       ];
@@ -358,11 +364,18 @@ export const UserOperationBridge: SwapFC = () => {
       setTransactionData((prev) => {
         if (!prev) return null;
         const clone = cloneDeep(prev);
-        clone.actions[1].status = "failed";
+        clone.actions[userOpIndex].status = "failed";
         // clone.actions[2].status = "failed";
         return clone;
       });
       throw errs;
+    });
+
+    setTransactionData((prev) => {
+      if (!prev) return null;
+      const clone = cloneDeep(prev);
+      clone.actions[userOpIndex].hash = [buildA.hash, buildB.hash];
+      return clone;
     });
 
     const hashA = buildA.hash;
@@ -381,7 +394,7 @@ export const UserOperationBridge: SwapFC = () => {
     setTransactionData((prev) => {
       if (!prev) return null;
       const clone = cloneDeep(prev);
-      clone.actions[1].hash = hashA;
+      clone.actions[userOpIndex].hash = [hashA, hashB];
       // clone.actions[2].hash = hashB;
       return clone;
     });
@@ -431,7 +444,7 @@ export const UserOperationBridge: SwapFC = () => {
     setTransactionData((prev) => {
       if (!prev) return null;
       const clone = cloneDeep(prev);
-      clone.actions[1].status = "success";
+      clone.actions[userOpIndex].status = "success";
       return clone;
     });
 
@@ -452,7 +465,7 @@ export const UserOperationBridge: SwapFC = () => {
       setTransactionData((prev) => {
         if (!prev) return null;
         const clone = cloneDeep(prev);
-        clone.actions[1].status = "failed";
+        clone.actions[userOpIndex].status = "failed";
         return clone;
       });
 
@@ -538,7 +551,33 @@ export const UserOperationBridge: SwapFC = () => {
                 {form.formState.errors.from.amount?.message}
               </Text>
             )}
-
+            <div className="flex items-center gap-3">
+              <Divider className="flex-1" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-12 rounded-xl"
+                style={{
+                  boxShadow: "0px 4px 8px -3px rgba(11, 42, 60, 0.08)",
+                }}
+                onClick={() => {
+                  form.reset({
+                    token: values.token,
+                    from: {
+                      chainId: values.to.chainId,
+                      amount: values.from.amount,
+                    },
+                    to: {
+                      chainId: values.from.chainId,
+                    },
+                    slippage: values.slippage,
+                  });
+                }}
+              >
+                <FaArrowDown className="text-primary-500" />
+              </Button>
+              <Divider className="flex-1" />
+            </div>
             <TokenInput
               chains={BRIDGE_CONFIG.filter(
                 (chain) => chain.chainId !== hoodi.id,
