@@ -402,6 +402,23 @@ export const Swap: SwapFC = () => {
           amountOut: prices.data?.[0] ?? 0n,
         },
         {
+          onSignedUserOps(userOps) {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              clone.actions[userOpIndex].userOpData = [
+                {
+                  chainId: values.from.chainId,
+                  data: JSON.stringify(stringifyBigints(userOps[0])),
+                },
+                {
+                  chainId: values.to.chainId,
+                  data: JSON.stringify(stringifyBigints(userOps[1])),
+                },
+              ];
+              return clone;
+            });
+          },
           onBuildUserOps(builds) {
             setTransactionData((prev) => {
               if (!prev) return null;
@@ -409,10 +426,6 @@ export const Swap: SwapFC = () => {
               clone.actions[userOpIndex].hash = builds.map((build) => {
                 return build.hash;
               });
-              clone.actions[userOpIndex].userOpData = builds.map((b) => ({
-                chainId: b.chainId,
-                data: JSON.stringify(stringifyBigints(b.raw)),
-              }));
               return clone;
             });
           },
