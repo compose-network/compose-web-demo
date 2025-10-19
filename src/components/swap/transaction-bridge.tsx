@@ -38,6 +38,7 @@ import { l2StandardBridgeABI } from "@/lib/abi/swap/bridge";
 import { formatCurrency } from "@/lib/utils/number";
 import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal";
 import type { statusIcons } from "@/components/modals/batch-transaction-modal";
+import { BRIDGE_CONFIG } from "@/wagmi/bridge.ts";
 
 export type SwapProps = {
   // TODO: Add props or remove this type
@@ -85,7 +86,8 @@ export const TransactionBridge: SwapFC = () => {
     resolver: zodResolver(schema),
   });
 
-  const handleChainSelect = (chainId: number) => {
+  const handleChainSelect = async  (chainId: number) => {
+    await switchChain.switchChainAsync({ chainId });
     form.setValue("from.chainId", chainId);
   };
 
@@ -238,17 +240,18 @@ export const TransactionBridge: SwapFC = () => {
         <form onSubmit={submit} className="flex flex-col gap-8">
           <div className="flex gap-4 flex-col">
             <TokenInput
-              chains={[{ chainId: hoodi.id, tokens: [zeroAddress] }]}
+              chains={BRIDGE_CONFIG}
               onChainSelect={handleChainSelect}
               value={values.from.amount}
               tokenAddress={values.from.token}
               chainId={values.from.chainId}
               onSelectToken={(token) => form.setValue("from.token", token)}
-              onChange={(amount) =>
+              onChange={(amount) => {
                 form.setValue("from.amount", amount, {
                   shouldValidate: true,
-                  shouldDirty: true,
-                })
+                  shouldDirty: true
+                });
+              }
               }
             />
             {form.formState.errors.from?.amount && (

@@ -33,7 +33,7 @@ import { encodeXtMessage } from "@/lib/smart-account/xt";
 import { formatCurrency } from "@/lib/utils/number";
 import { isNativeToken } from "@/lib/utils/token";
 import { type BRIDGE_ADDRESSES, BRIDGE_TOKEN } from "@/wagmi/addresses";
-import { chainsMap, rollupA, rollupB } from "@/wagmi/config";
+import { arbitrumChain, baseChain, chainsMap, optimismChain, rollupA, rollupB } from "@/wagmi/config";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cloneDeep } from "lodash-es";
 import { type ComponentPropsWithoutRef, type FC, useState } from "react";
@@ -508,6 +508,7 @@ export const UserOperationBridge: SwapFC = () => {
             <TokenInput
               chains={BRIDGE_CONFIG}
               onChainSelect={(chainId) => {
+                 switchChainAsync({ chainId:chainId });
                 form.setValue(
                   "from.chainId",
                   chainId as typeof rollupA.id | typeof rollupB.id,
@@ -538,7 +539,13 @@ export const UserOperationBridge: SwapFC = () => {
             )}
 
             <TokenInput
-              chains={BRIDGE_CONFIG}
+              chains={[
+                { chainId: rollupA.id, tokens: [zeroAddress] },
+                { chainId: rollupB.id, tokens: [zeroAddress] },
+                { chainId: baseChain.id, isNotSupported: true },
+                { chainId: arbitrumChain.id, isNotSupported: true },
+                { chainId: optimismChain.id, isNotSupported: true },
+              ]}
               onChainSelect={(chainId) => {
                 form.setValue(
                   "to.chainId",
