@@ -508,6 +508,7 @@ export const UserOperationBridge: SwapFC = () => {
             <TokenInput
               chains={BRIDGE_CONFIG}
               onChainSelect={(chainId) => {
+                 switchChainAsync({ chainId:chainId });
                 form.setValue(
                   "from.chainId",
                   chainId as typeof rollupA.id | typeof rollupB.id,

@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils/tw";
 import type { ComponentPropsWithoutRef, FC } from "react";
 
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
-import { NetworkSwitchBtn } from "@/components/connect-wallet/network-switch-btn";
+// import { NetworkSwitchBtn } from "@/components/connect-wallet/network-switch-btn";
 
 import { ComposeLogo } from "@/components/ui/compose-logo.tsx";
 // import { ThemeSwitcher } from "@/components/ui/theme-switcher";
@@ -33,7 +33,7 @@ export const Navbar: FCProps = ({ className, ...props }) => {
         </div>
 
         <div className="flex items-center gap-3">
-          <NetworkSwitchBtn />
+          {/*<NetworkSwitchBtn />*/}
           <ConnectWalletBtn />
         </div>
         {/*<ThemeSwitcher className="ml-3" />*/}
