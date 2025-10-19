@@ -280,13 +280,64 @@ export const Swap: SwapFC = () => {
           },
         },
         {
-          onBuildUserOps(_, explorerUrls) {
+          onBuildUserOps(buildUserOps, explorerUrls) {
             console.log('<<<<<<<<<<<<<<<<<<<<SUPERTEST>>>>>>>>>>>>>>>>>>>>');
             explorerUrls.forEach(console.log);
+            // Update with transaction hash
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              const swapActionIndex = clone.actions.findIndex(action => action.name.includes('Swap'));
+              if (swapActionIndex !== -1) {
+                const hash = buildUserOps[0]?.hash;
+                if (hash) {
+                  clone.actions[swapActionIndex].hash = hash;
+                  clone.actions[swapActionIndex].status = "pending";
+                }
+              }
+              return clone;
+            });
+          },
+          onError: (error) => {
+            console.log("Swap error:", error);
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              const swapActionIndex = clone.actions.findIndex(action => action.name.includes('Swap'));
+              if (swapActionIndex !== -1) {
+                clone.actions[swapActionIndex].status = "failed";
+              }
+              return clone;
+            });
           },
         },
       );
-      return sendUserOps();
+
+      try {
+        const result = await sendUserOps();
+
+        // Don't immediately mark as success - wait for transaction confirmation
+        // The status should remain "pending" until we get receipt
+
+        // TODO: Add proper transaction monitoring here
+        // For now, simulate waiting for confirmation
+        setTimeout(() => {
+          setTransactionData((prev) => {
+            if (!prev) return null;
+            const clone = cloneDeep(prev);
+            const swapActionIndex = clone.actions.findIndex(action => action.name.includes('Swap'));
+            if (swapActionIndex !== -1) {
+              clone.actions[swapActionIndex].status = "success";
+            }
+            return clone;
+          });
+        }, 3000); // Simulate 3 second confirmation delay
+
+        return result;
+      } catch (error) {
+        // Error is already handled in onError callback
+        throw error;
+      }
     }
 
     // Is Swapping from A -> B
@@ -352,13 +403,63 @@ export const Swap: SwapFC = () => {
           },
         },
         {
-          onBuildUserOps(_, explorerUrls) {
+          onBuildUserOps(buildUserOps, explorerUrls) {
             explorerUrls.forEach(console.log);
-
+            // Update with transaction hash
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              const swapActionIndex = clone.actions.findIndex(action => action.name.includes('Swap'));
+              if (swapActionIndex !== -1) {
+                const hash = buildUserOps[0]?.hash;
+                if (hash) {
+                  clone.actions[swapActionIndex].hash = hash;
+                  clone.actions[swapActionIndex].status = "pending";
+                }
+              }
+              return clone;
+            });
+          },
+          onError: (error) => {
+            console.log("Swap error:", error);
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              const swapActionIndex = clone.actions.findIndex(action => action.name.includes('Swap'));
+              if (swapActionIndex !== -1) {
+                clone.actions[swapActionIndex].status = "failed";
+              }
+              return clone;
+            });
           },
         },
       );
-      return sendUserOps();
+
+      try {
+        const result = await sendUserOps();
+
+        // Don't immediately mark as success - wait for transaction confirmation
+        // The status should remain "pending" until we get receipt
+
+        // TODO: Add proper transaction monitoring here
+        // For now, simulate waiting for confirmation
+        setTimeout(() => {
+          setTransactionData((prev) => {
+            if (!prev) return null;
+            const clone = cloneDeep(prev);
+            const swapActionIndex = clone.actions.findIndex(action => action.name.includes('Swap'));
+            if (swapActionIndex !== -1) {
+              clone.actions[swapActionIndex].status = "success";
+            }
+            return clone;
+          });
+        }, 3000); // Simulate 3 second confirmation delay
+
+        return result;
+      } catch (error) {
+        // Error is already handled in onError callback
+        throw error;
+      }
     }
 
     // Is Swapping from B -> A
@@ -424,13 +525,63 @@ export const Swap: SwapFC = () => {
           },
         },
         {
-          onBuildUserOps(_, explorerUrls) {
+          onBuildUserOps(buildUserOps, explorerUrls) {
             explorerUrls.forEach(console.log);
-
+            // Update with transaction hash
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              const swapActionIndex = clone.actions.findIndex(action => action.name.includes('Swap'));
+              if (swapActionIndex !== -1) {
+                const hash = buildUserOps[0]?.hash;
+                if (hash) {
+                  clone.actions[swapActionIndex].hash = hash;
+                  clone.actions[swapActionIndex].status = "pending";
+                }
+              }
+              return clone;
+            });
+          },
+          onError: (error) => {
+            console.log("Swap error:", error);
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              const swapActionIndex = clone.actions.findIndex(action => action.name.includes('Swap'));
+              if (swapActionIndex !== -1) {
+                clone.actions[swapActionIndex].status = "failed";
+              }
+              return clone;
+            });
           },
         },
       );
-      return sendUserOps();
+
+      try {
+        const result = await sendUserOps();
+
+        // Don't immediately mark as success - wait for transaction confirmation
+        // The status should remain "pending" until we get receipt
+
+        // TODO: Add proper transaction monitoring here
+        // For now, simulate waiting for confirmation
+        setTimeout(() => {
+          setTransactionData((prev) => {
+            if (!prev) return null;
+            const clone = cloneDeep(prev);
+            const swapActionIndex = clone.actions.findIndex(action => action.name.includes('Swap'));
+            if (swapActionIndex !== -1) {
+              clone.actions[swapActionIndex].status = "success";
+            }
+            return clone;
+          });
+        }, 3000); // Simulate 3 second confirmation delay
+
+        return result;
+      } catch (error) {
+        // Error is already handled in onError callback
+        throw error;
+      }
     }
 
     await switchChain.switchChainAsync({ chainId: values.from.chainId });

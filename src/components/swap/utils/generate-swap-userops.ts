@@ -24,6 +24,7 @@ type UserOpSwapOptions = {
   ) => void;
   onSendUserOps?: (sendUserOps: PrepareUserOperationReturnType[]) => void;
   onPayloadEncoded?: (payload: Hex) => void;
+  onError?: (error: any) => void;
 };
 export type GenerateERC20BridgeUserOpsParams = {
   eoaAddress: Address;
@@ -152,26 +153,38 @@ export const createSwapUserOpsFrom_A_to_B = async (
   // Update transaction data with sourceUserOp and destUserOp before signing
   updateTxData(sourceUserOp, destUserOp);
 
-  const [signedA, signedB] = await prepareAndSignUserOperations(
-    [sourcePublicClient as any, destPublicClient as any],
-    [sourceUserOp, destUserOp],
-  );
+  let signedA, signedB;
+  try {
+    [signedA, signedB] = await prepareAndSignUserOperations(
+      [sourcePublicClient as any, destPublicClient as any],
+      [sourceUserOp, destUserOp],
+    );
+  } catch (error) {
+    options.onError?.(error);
+    throw error;
+  }
 
   options.onSignedUserOps?.([signedA, signedB]);
 
   const userOpA = toRpcUserOpCanonical(signedA);
   const userOpB = toRpcUserOpCanonical(signedB);
 
-  const [buildA, buildB] = await Promise.all([
-    sourcePublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpA], { chainId: sourceChainId }],
-    }),
-    destPublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpB], { chainId: destChainId }],
-    }),
-  ]);
+  let buildA, buildB;
+  try {
+    [buildA, buildB] = await Promise.all([
+      sourcePublicClient.request({
+        method: "compose_buildSignedUserOpsTx",
+        params: [[userOpA], { chainId: sourceChainId }],
+      }),
+      destPublicClient.request({
+        method: "compose_buildSignedUserOpsTx",
+        params: [[userOpB], { chainId: destChainId }],
+      }),
+    ]);
+  } catch (error) {
+    options.onError?.(error);
+    throw error;
+  }
 
   const explorerUrls = [
     new URL(
@@ -331,10 +344,16 @@ export const createSwapUserOpsFrom_B_to_A = async (
   // Update transaction data with sourceUserOp and destUserOp before signing
   updateTxData(sourceUserOp, destUserOp);
 
-  const [signedA, signedB] = await prepareAndSignUserOperations(
-    [sourcePublicClient as any, destPublicClient as any],
-    [sourceUserOp, destUserOp],
-  );
+  let signedA, signedB;
+  try {
+    [signedA, signedB] = await prepareAndSignUserOperations(
+      [sourcePublicClient as any, destPublicClient as any],
+      [sourceUserOp, destUserOp],
+    );
+  } catch (error) {
+    options.onError?.(error);
+    throw error;
+  }
   console.log("signedA:", signedA);
   console.log("signedB:", signedB);
 
@@ -343,16 +362,22 @@ export const createSwapUserOpsFrom_B_to_A = async (
   const userOpA = toRpcUserOpCanonical(signedA);
   const userOpB = toRpcUserOpCanonical(signedB);
 
-  const [buildA, buildB] = await Promise.all([
-    sourcePublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpA], { chainId: sourceChainId }],
-    }),
-    destPublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpB], { chainId: destChainId }],
-    }),
-  ]);
+  let buildA, buildB;
+  try {
+    [buildA, buildB] = await Promise.all([
+      sourcePublicClient.request({
+        method: "compose_buildSignedUserOpsTx",
+        params: [[userOpA], { chainId: sourceChainId }],
+      }),
+      destPublicClient.request({
+        method: "compose_buildSignedUserOpsTx",
+        params: [[userOpB], { chainId: destChainId }],
+      }),
+    ]);
+  } catch (error) {
+    options.onError?.(error);
+    throw error;
+  }
 
   const explorerUrls = [
     new URL(
@@ -549,14 +574,20 @@ export const createSwapUserOpsFrom_A_to_A = async (
   // Update transaction data with sourceUserOp and destUserOp before signing
   updateTxData(op1, op3);
 
-  const [signedA, signedB, signedC] = await prepareAndSignUserOperations(
-    [
-      rollupAPublicClient as any,
-      rollupBPublicClient as any,
-      rollupAPublicClient as any,
-    ],
-    [op1, op2, op3],
-  );
+  let signedA, signedB, signedC;
+  try {
+    [signedA, signedB, signedC] = await prepareAndSignUserOperations(
+      [
+        rollupAPublicClient as any,
+        rollupBPublicClient as any,
+        rollupAPublicClient as any,
+      ],
+      [op1, op2, op3],
+    );
+  } catch (error) {
+    options.onError?.(error);
+    throw error;
+  }
 
   options.onSignedUserOps?.([signedA, signedB, signedC]);
 
@@ -564,21 +595,27 @@ export const createSwapUserOpsFrom_A_to_A = async (
   const userOpB = toRpcUserOpCanonical(signedB);
   const userOpC = toRpcUserOpCanonical(signedC);
 
-  const [buildRollupA, buildRollupB, buildRollupC] = await Promise.all([
-    rollupAPublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpA], { chainId: rollupAChainId }],
-    }),
-    rollupBPublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpB], { chainId: rollupBChainId }],
-    }),
+  let buildRollupA, buildRollupB, buildRollupC;
+  try {
+    [buildRollupA, buildRollupB, buildRollupC] = await Promise.all([
+      rollupAPublicClient.request({
+        method: "compose_buildSignedUserOpsTx",
+        params: [[userOpA], { chainId: rollupAChainId }],
+      }),
+      rollupBPublicClient.request({
+        method: "compose_buildSignedUserOpsTx",
+        params: [[userOpB], { chainId: rollupBChainId }],
+      }),
 
-    rollupAPublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpC], { chainId: rollupAChainId }],
-    }),
-  ]);
+      rollupAPublicClient.request({
+        method: "compose_buildSignedUserOpsTx",
+        params: [[userOpC], { chainId: rollupAChainId }],
+      }),
+    ]);
+  } catch (error) {
+    options.onError?.(error);
+    throw error;
+  }
 
   const explorerUrls = [
     new URL(
