@@ -33,7 +33,7 @@ import { encodeXtMessage } from "@/lib/smart-account/xt";
 import { formatCurrency } from "@/lib/utils/number";
 import { isNativeToken } from "@/lib/utils/token";
 import { type BRIDGE_ADDRESSES, BRIDGE_TOKEN } from "@/wagmi/addresses";
-import { arbitrumChain, baseChain, chainsMap, optimismChain, rollupA, rollupB } from "@/wagmi/config";
+import { chainsMap, hoodi, rollupA, rollupB } from "@/wagmi/config";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cloneDeep } from "lodash-es";
 import { type ComponentPropsWithoutRef, type FC, useState } from "react";
@@ -109,7 +109,7 @@ export const UserOperationBridge: SwapFC = () => {
     "lastSelectedToken",
     zeroAddress,
   );
-
+  console.log('ops');
   const queryClient = useQueryClient();
 
   const [transactionData, setTransactionData] = useState<{
@@ -539,13 +539,7 @@ export const UserOperationBridge: SwapFC = () => {
             )}
 
             <TokenInput
-              chains={[
-                { chainId: rollupA.id, tokens: [zeroAddress] },
-                { chainId: rollupB.id, tokens: [zeroAddress] },
-                { chainId: baseChain.id, isNotSupported: true },
-                { chainId: arbitrumChain.id, isNotSupported: true },
-                { chainId: optimismChain.id, isNotSupported: true },
-              ]}
+              chains={BRIDGE_CONFIG.filter(chain => chain.chainId !== hoodi.id)}
               onChainSelect={(chainId) => {
                 form.setValue(
                   "to.chainId",
