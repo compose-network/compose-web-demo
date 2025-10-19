@@ -445,15 +445,17 @@ export const Swap: SwapFC = () => {
             form.clearErrors();
           },
         },
-      );
-      return sendUserOps().catch((error) => {
+      ).catch((error) => {
+        console.log("error:", error);
         toast({
           variant: "destructive",
           title: "Swap failed",
           description: error.message,
         });
         setTransactionData(null);
+        throw error;
       });
+      return sendUserOps();
     }
 
     // Execute swap

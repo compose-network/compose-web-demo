@@ -395,8 +395,7 @@ export const createSwapUserOpsFrom_B_to_A = async (
     [sourcePublicClient as any, destPublicClient as any],
     [sourceUserOp, destUserOp],
   );
-  console.log("signedA:", signedA);
-  console.log("signedB:", signedB);
+
   options.onSignedUserOps?.([signedA, signedB]);
 
   const userOpA = toRpcUserOpCanonical(signedA);
