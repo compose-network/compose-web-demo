@@ -60,7 +60,7 @@ const Faq = () => {
               className="w-full p-4 text-left flex justify-between items-center hover:bg-gray-50 transition-colors"
             >
               <Text className="font-semibold text-gray-800">{item.question}</Text>
-              <div className="text-[#14B5C0]">
+              <div>
                 {item.isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
               </div>
             </button>
