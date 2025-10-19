@@ -4,7 +4,7 @@ import { useDecimals } from "@/lib/contract-interactions/erc-20/read/use-decimal
 import { useName } from "@/lib/contract-interactions/erc-20/read/use-name";
 import { useSymbol } from "@/lib/contract-interactions/erc-20/read/use-symbol";
 import { getNativeCurrency, isNativeToken } from "@/lib/utils/token";
-import { useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { useBalance, useBlockNumber, useReadContract } from "wagmi";
 
 type UseAssetProps = {
@@ -20,10 +20,12 @@ export const useAsset = ({ tokenAddress, chainId, watch }: UseAssetProps) => {
 
   const blockNumber = useBlockNumber({
     chainId,
+    watch,
     query: {
       enabled: watch,
     },
   });
+  console.log('blockNumber:', blockNumber.data)
 
   const queryOptions = {
     staleTime: Infinity,
@@ -51,9 +53,11 @@ export const useAsset = ({ tokenAddress, chainId, watch }: UseAssetProps) => {
     functionName: "balanceOf",
     chainId,
     args: [address!],
+    scopeKey: watch ? blockNumber.data?.toString() : undefined,
     blockNumber: watch ? blockNumber.data : undefined,
     query: {
       enabled: !isNative && !!tokenAddress && !!address,
+      placeholderData: keepPreviousData,
     },
   });
   // const { data: balance = 0n, queryKey } = useBalanceOf(
@@ -68,9 +72,11 @@ export const useAsset = ({ tokenAddress, chainId, watch }: UseAssetProps) => {
   const nativeBalance = useBalance({
     address: address!,
     chainId,
+    scopeKey: watch ? blockNumber.data?.toString() : undefined,
     blockNumber: watch ? blockNumber.data : undefined,
     query: {
       enabled: isNative,
+      placeholderData: keepPreviousData,
     },
   });
 

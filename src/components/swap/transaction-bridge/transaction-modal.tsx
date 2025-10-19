@@ -26,7 +26,7 @@ export type TransactionModalProps = {
       chainId: number;
       toChainId?: number;
       status: keyof typeof statusIcons;
-      hash?: `0x${string}`;
+      hash?: `0x${string}` | `0x${string}`[];
       userOpData?: { chainId: number; data: string }[];
     }[];
   } | null;
@@ -107,23 +107,34 @@ export const TransactionModal: FCProps = ({ data, title, ...props }) => {
                 </div>
                 {(action.status === "pending" ||
                   action.status === "success") && (
-                  <a
-                    target="_blank"
-                    href={
-                      action.hash
-                        ? getExplorerHashUrl(
-                            action.chainId,
-                            action.hash || "0x",
-                          )
-                        : undefined
-                    }
-                    className="flex items-center gap-1 text-[12px] text-gray-700 rounded-[100px] bg-gray-300 px-2 py-1 cursor-pointer font-mono"
-                  >
-                    {action.hash
-                      ? shortenAddress(action.hash || "0x")
-                      : "Waiting..."}
-                    {action.hash && <TbExternalLink className="size-3" />}
-                  </a>
+                  <div className="flex flex-col  rounded-[16px] bg-gray-300">
+                    {(Array.isArray(action.hash)
+                      ? action.hash
+                      : [action.hash]
+                    ).map((hash, i) => {
+                      const isFirst = i === 0;
+                      return (
+                        <a
+                          key={hash}
+                          target="_blank"
+                          href={
+                            hash
+                              ? getExplorerHashUrl(
+                                  isFirst
+                                    ? action.chainId
+                                    : (action.toChainId ?? 0),
+                                  hash || "0x",
+                                )
+                              : undefined
+                          }
+                          className="flex items-center gap-1 text-[12px] text-gray-700 px-2 py-1 cursor-pointer font-mono"
+                        >
+                          {hash ? shortenAddress(hash || "0x") : "Waiting..."}
+                          {hash && <TbExternalLink className="size-3" />}
+                        </a>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
               {openData &&
