@@ -14,13 +14,12 @@ export const WelcomeStep: FCProps = ({ onNext }) => {
   return (
     <>
       {/* Welcome Icon */}
-      <div className="w-[600px] h-[240px] flex items-center justify-center">
-        <img
-          src="/images/welcome-modal/welcome.svg"
-          alt="Welcome"
-          className="w-full h-full object-contain"
-        />
-      </div>
+      <div
+        className="w-[600px] h-[240px] rounded-[20px] bg-cover bg-center bg-no-repeat flex justify-center items-center text"
+        style={{ backgroundImage: 'url(/images/welcome-modal/welcome.png)' }}
+      ><Text variant={"headline1"} className="text-white">
+        Welcome To Compose
+      </Text></div>
 
       <Text className="text-gray-600">
         Compose Network unites Ethereum rollups to enable <span className="font-bold">instant, atomic, and composable transactions</span>.

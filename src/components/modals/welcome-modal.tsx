@@ -26,7 +26,6 @@ export const WelcomeModal: FCProps = ({ isOpen, step, onClose, onNext, onBack })
       {/* Overlay */}
       <div
         className="fixed inset-0 bg-gray-modal backdrop-blur-[10px]"
-        onClick={onClose}
       />
 
       {/* Modal Content */}
@@ -40,7 +39,7 @@ export const WelcomeModal: FCProps = ({ isOpen, step, onClose, onNext, onBack })
           <span className="sr-only">Close</span>
         </button>
 
-        <div className="flex flex-col items-center gap-6 pt-4">
+        <div className="flex flex-col items-center gap-6">
           {step === 1 && <WelcomeStep onNext={onNext} />}
           {step === 2 && <OnboardingStep onNext={onNext} onBack={onBack} />}
           {step === 3 && <BridgeStep onComplete={onNext} onBack={onBack} />}

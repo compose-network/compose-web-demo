@@ -19,13 +19,16 @@ export const OnboardingStep: FCProps = ({ onNext, onBack }) => {
   return (
     <>
       {/* Onboarding Icon */}
-      <div className="w-[600px] h-[240px] flex items-center justify-center">
-        <img
-          src="/images/welcome-modal/onboarding.svg"
-          alt="Onboarding"
-          className="w-full h-full object-contain"
-        />
-      </div>
+      <div
+        className="w-[600px] h-[240px] rounded-[20px] bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center gap-4 text"
+        style={{ backgroundImage: 'url(/images/welcome-modal/onboarding.png)' }}
+      >
+        <Text variant={"body-1-semibold"} className="text-white">
+          Step 1
+        </Text>
+        <Text variant={"headline1"} className="text-white">
+        Welcome To Compose
+      </Text></div>
 
       <Text className="text-black w-full">
         <span className="font-bold">Bridge ETH from Hoodi</span>

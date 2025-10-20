@@ -20,13 +20,16 @@ export const FinalStep: FCProps = ({ onComplete, onBack }) => {
   return (
     <>
       {/* Final Step Icon */}
-      <div className="w-[600px] h-[240px] flex items-center justify-center">
-        <img
-          src="/images/welcome-modal/final.svg"
-          alt="Final Step"
-          className="w-full h-full object-contain"
-        />
-      </div>
+      <div
+        className="w-[600px] h-[240px] rounded-[20px] bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center gap-4 text"
+        style={{ backgroundImage: "url(/images/welcome-modal/final.png)" }}
+      >
+        <Text variant={"body-1-semibold"} className="text-white">
+          Step 3
+        </Text>
+        <Text variant={"headline1"} className="text-white">
+          Try a Cross-Rollup Swap
+        </Text></div>
 
       <Text className="text-black w-full font-bold">
         Cross-Swap ETH to USDC
@@ -40,7 +43,7 @@ export const FinalStep: FCProps = ({ onComplete, onBack }) => {
 
       <div className="w-full">
         <SwapRoute
-          action="bridge"
+          action="swap"
           fromToken={{
             address: zeroAddress,
             chainId: rollupA.id
@@ -61,7 +64,7 @@ export const FinalStep: FCProps = ({ onComplete, onBack }) => {
           onClick={onComplete}
           className="h-[60px] w-[160px] rounded-[20px] border border-[#14B5C0] bg-gradient-to-r from-[rgba(20,181,192,0.08)] via-[rgba(36,185,121,0.08)] to-[rgba(230,135,19,0.08)] text-[#14B5C0] font-semibold hover:bg-gradient-to-r hover:from-[rgba(20,181,192,0.12)] hover:via-[rgba(36,185,121,0.12)] hover:to-[rgba(230,135,19,0.12)] transition-all duration-200 cursor-pointer"
         >
-          Next
+          Close
         </button>
       </div>
     </>
