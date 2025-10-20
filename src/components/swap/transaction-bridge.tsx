@@ -163,7 +163,7 @@ export const TransactionBridge: SwapFC = () => {
       {
         onInitiated: () => {
           toast({
-            title: "Swap initiated",
+            title: "Bridge initiated",
             description: "Check your wallet to confirm the transaction",
           });
 
