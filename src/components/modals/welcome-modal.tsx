@@ -1,6 +1,5 @@
 import { FaXmark } from "react-icons/fa6";
 import type { ComponentPropsWithoutRef, FC } from "react";
-import { useEffect } from "react";
 import { WelcomeStep } from "./welcome-modal/welcome-step";
 import { OnboardingStep } from "./welcome-modal/onboarding-step";
 import { BridgeStep } from "./welcome-modal/bridge-step";
@@ -20,22 +19,6 @@ type FCProps = FC<
 >;
 
 export const WelcomeModal: FCProps = ({ isOpen, step, onClose, onNext, onBack }) => {
-  useEffect(() => {
-    if (isOpen) {
-      const imagesToPreload = [
-        '/images/welcome-modal/welcome.png',
-        '/images/welcome-modal/onboarding.png',
-        '/images/welcome-modal/bridge.png',
-        '/images/welcome-modal/final.png'
-      ];
-
-      imagesToPreload.forEach((src) => {
-        const img = new Image();
-        img.src = src;
-      });
-    }
-  }, [isOpen]);
-
   if (!isOpen) return null;
 
   return (

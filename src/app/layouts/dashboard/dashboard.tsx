@@ -15,6 +15,7 @@ import { useIsRestoring } from "@tanstack/react-query";
 import { getPublicClient } from "@wagmi/core";
 import { AnimatePresence, motion } from "framer-motion";
 import type { ComponentPropsWithRef, FC } from "react";
+import { useEffect } from "react";
 import { Navigate } from "react-router";
 import Faq from "@/components/faq/faq.tsx";
 
@@ -41,6 +42,21 @@ export const DashboardLayout: FC<ComponentPropsWithRef<"div">> = ({
   className,
 }) => {
   useBlockNavigationOnPendingTx();
+
+  // Preload welcome modal images globally on app start
+  useEffect(() => {
+    const imagesToPreload = [
+      '/images/welcome-modal/welcome.png',
+      '/images/welcome-modal/onboarding.png',
+      '/images/welcome-modal/bridge.png',
+      '/images/welcome-modal/final.png'
+    ];
+
+    imagesToPreload.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, []);
 
   const isRestoring = useIsRestoring();
   const account = useAccount();
@@ -70,7 +86,7 @@ export const DashboardLayout: FC<ComponentPropsWithRef<"div">> = ({
           ) : (
             <motion.div
               className={cn(
-                "text-gray-800 bg-white flex flex-col h-screen max-h-screen overflow-hidden",
+                "text-gray-800 bg-gray-200 flex flex-col h-screen max-h-screen overflow-hidden",
               )}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
