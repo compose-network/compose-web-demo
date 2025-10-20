@@ -190,9 +190,6 @@ export const TransactionBridge: SwapFC = () => {
           });
         },
         onMined: () => {
-          toast({
-            title: "Swap mined",
-          });
           setTransactionData((prev) => {
             if (!prev) return null;
             const clone = cloneDeep(prev);

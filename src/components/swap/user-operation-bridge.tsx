@@ -242,11 +242,21 @@ export const UserOperationBridge: SwapFC = () => {
     });
 
     if (isNative) {
-      const hash = await sendTx.sendTransactionAsync({
-        to: kernel.getKernelByChainId(values.from.chainId)!.address,
-        value: values.from.amount,
-        chainId: values.from.chainId,
-      });
+      const hash = await sendTx
+        .sendTransactionAsync({
+          to: kernel.getKernelByChainId(values.from.chainId)!.address,
+          value: values.from.amount,
+          chainId: values.from.chainId,
+        })
+        .catch((err) => {
+          setTransactionData((prev) => {
+            if (!prev) return null;
+            const clone = cloneDeep(prev);
+            clone.actions[0].status = "failed";
+            return clone;
+          });
+          throw err;
+        });
       setTransactionData((prev) => {
         if (!prev) return null;
         const clone = cloneDeep(prev);
@@ -257,8 +267,7 @@ export const UserOperationBridge: SwapFC = () => {
       setTransactionData((prev) => {
         if (!prev) return null;
         const clone = cloneDeep(prev);
-        clone.actions[0].hash = hash;
-        clone.actions[0].name = `${clone.actions[0].name} - ${isNative ? "sent" : "approved"}`;
+        clone.actions[0].status = "success";
         return clone;
       });
     } else if (needsApprove) {
@@ -285,7 +294,6 @@ export const UserOperationBridge: SwapFC = () => {
               if (!prev) return null;
               const clone = cloneDeep(prev);
               clone.actions[0].hash = hash;
-              clone.actions[0].name = `${clone.actions[0].name}`;
               return clone;
             });
           },
