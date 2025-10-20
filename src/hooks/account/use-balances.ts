@@ -13,7 +13,7 @@ type Balance = {
   token: Address;
 };
 
-export const useBalances = (assets: Address[]) => {
+export const useBalances = (assets: Address[], chainId: number) => {
   const account = useAccount();
   const ethBalance = useBalance({ address: account.address! });
 
@@ -27,10 +27,13 @@ export const useBalances = (assets: Address[]) => {
         queryKey: ["token-balance", tokenAddress, account.address],
         queryFn: async () => {
           return {
-            balance: await fetchBalanceOf(tokenAddress, {
-              account: account.address!,
-            }),
-            decimals: await fetchDecimals(tokenAddress),
+            balance: await fetchBalanceOf(
+              { address: tokenAddress, chainId },
+              {
+                account: account.address!,
+              },
+            ),
+            decimals: await fetchDecimals({ address: tokenAddress, chainId }),
             token: tokenAddress,
           };
         },

@@ -8,8 +8,7 @@ import {
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type {
-  RollupChainId} from "@/wagmi/config";
+import type { RollupChainId } from "@/wagmi/config";
 import {
   rollupB,
   hoodi,
@@ -17,7 +16,7 @@ import {
   bridgeContracts,
   baseChain,
   arbitrumChain,
-  optimismChain
+  optimismChain,
 } from "@/wagmi/config";
 import type { Hex } from "viem";
 import { isAddress, parseEther, zeroAddress } from "viem";
@@ -36,8 +35,9 @@ import { SwapRoute } from "@/components/swap/swap-route";
 import { useBridgeContract } from "@/lib/contract-interactions/core/create-write-hooks";
 import { l2StandardBridgeABI } from "@/lib/abi/swap/bridge";
 import { formatCurrency } from "@/lib/utils/number";
+import type { TransactionModalProps } from "@/components/swap/transaction-bridge/transaction-modal";
 import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal";
-import type { statusIcons } from "@/components/modals/batch-transaction-modal";
+import { BRIDGE_CONFIG } from "@/wagmi/bridge.ts";
 
 export type SwapProps = {
   // TODO: Add props or remove this type
@@ -69,7 +69,7 @@ export const TransactionBridge: SwapFC = () => {
   const { chainId, isConnected } = useAccount();
   const isHoodi = chainId === hoodi.id;
   const switchChain = useSwitchChain();
-
+  console.log("tx");
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
       from: {
@@ -85,7 +85,8 @@ export const TransactionBridge: SwapFC = () => {
     resolver: zodResolver(schema),
   });
 
-  const handleChainSelect = (chainId: number) => {
+  const handleChainSelect = async (chainId: number) => {
+    await switchChain.switchChainAsync({ chainId });
     form.setValue("from.chainId", chainId);
   };
 
@@ -104,15 +105,9 @@ export const TransactionBridge: SwapFC = () => {
     contract: bridgeContracts[hoodi.id][values.to.chainId].bridge,
   });
 
-  const [transactionData, setTransactionData] = useState<{
-    id: Hex;
-    actions: {
-      name: string;
-      description?: string;
-      chainId: number;
-      status: keyof typeof statusIcons;
-    }[];
-  } | null>(null);
+  const [transactionData, setTransactionData] = useState<
+    TransactionModalProps["data"] | null
+  >(null);
 
   console.log("transactionData:", transactionData);
 
@@ -124,7 +119,7 @@ export const TransactionBridge: SwapFC = () => {
   });
 
   useEffect(() => {
-    if (!transactionData?.id) return;
+    if (!transactionData?.id || transactionData.actions[1].status === "success") return;
     const endTransaction = transactionData.actions.at(-1);
     console.log("endTransaction:", endTransaction);
     const client =
@@ -135,11 +130,13 @@ export const TransactionBridge: SwapFC = () => {
       abi: l2StandardBridgeABI,
       eventName: "ETHBridgeFinalized",
       onLogs: (logs) => {
-        if (logs.find((l) => l.args.extraData === transactionData.id)) {
+        const log = logs.find((l) => l.args.extraData === transactionData.id);
+        if (log) {
           setTransactionData((prev) => {
             if (!prev) return null;
             const clone = cloneDeep(prev);
             clone.actions[1].status = "success";
+            clone.actions[1].hash = log.transactionHash;
             return clone;
           });
         }
@@ -166,7 +163,7 @@ export const TransactionBridge: SwapFC = () => {
       {
         onInitiated: () => {
           toast({
-            title: "Swap initiated",
+            title: "Bridge initiated",
             description: "Check your wallet to confirm the transaction",
           });
 
@@ -181,21 +178,42 @@ export const TransactionBridge: SwapFC = () => {
               {
                 name: `Get ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
                 chainId: values.to.chainId,
-                description: "(in ~2 minutes)",
                 status: "idle",
               },
             ],
           });
         },
-        onMined: () => {
-          toast({
-            title: "Swap mined",
+        onConfirmed: (hash) => {
+          setTransactionData((prev) => {
+            if (!prev) return null;
+            const clone = cloneDeep(prev);
+            clone.actions[0].hash = hash;
+            return clone;
           });
+        },
+        onMined: (receipt) => {
+          console.log("receipt:", receipt);
+          if (receipt.status !== "success") {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              clone.actions[0].status = "failed";
+              return clone;
+            });
+            toast({
+              variant: "destructive",
+              title: "Bridge failed",
+              description: "Transaction was reverted by the contract.",
+            });
+
+            throw new Error("Bridge failed");
+          }
           setTransactionData((prev) => {
             if (!prev) return null;
             const clone = cloneDeep(prev);
             clone.actions[0].status = "success";
             clone.actions[1].status = "pending";
+            clone.actions[1].name = `${clone.actions[1].name} (in ~2 minutes)`;
             return clone;
           });
           fromToken.refreshBalance();
@@ -213,11 +231,16 @@ export const TransactionBridge: SwapFC = () => {
         onError: (error) => {
           toast({
             variant: "destructive",
-            title: "Swap failed",
+            title: "Bridge failed",
             description: error.message,
           });
 
-          setTransactionData(null);
+          setTransactionData((prev) => {
+            if (!prev) return null;
+            const clone = cloneDeep(prev);
+            clone.actions[0].status = "failed";
+            return clone;
+          });
         },
       },
     );
@@ -238,18 +261,18 @@ export const TransactionBridge: SwapFC = () => {
         <form onSubmit={submit} className="flex flex-col gap-8">
           <div className="flex gap-4 flex-col">
             <TokenInput
-              chains={[{ chainId: hoodi.id, tokens: [zeroAddress] }]}
+              chains={BRIDGE_CONFIG}
               onChainSelect={handleChainSelect}
               value={values.from.amount}
               tokenAddress={values.from.token}
               chainId={values.from.chainId}
               onSelectToken={(token) => form.setValue("from.token", token)}
-              onChange={(amount) =>
+              onChange={(amount) => {
                 form.setValue("from.amount", amount, {
                   shouldValidate: true,
                   shouldDirty: true,
-                })
-              }
+                });
+              }}
             />
             {form.formState.errors.from?.amount && (
               <Text variant="body-3-medium" className="text-error-500">
@@ -278,7 +301,7 @@ export const TransactionBridge: SwapFC = () => {
           </div>
           <Divider />
           <SwapRoute
-            action="swap"
+            action="bridge"
             fromToken={{ address: values.from.token, chainId: hoodi.id }}
             toToken={{ address: values.from.token, chainId: values.to.chainId }}
           />

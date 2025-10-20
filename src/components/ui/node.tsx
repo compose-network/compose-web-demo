@@ -1,9 +1,9 @@
 import { cn } from "@/lib/utils/tw";
 import {
-  type FC,
-  type ComponentPropsWithoutRef,
-  isValidElement,
   cloneElement,
+  type ComponentPropsWithoutRef,
+  type FC,
+  isValidElement,
 } from "react";
 
 export type NodeProps = {
@@ -22,7 +22,6 @@ export const Node: FCProps = ({ as: Cmp, children, className, ...props }) => {
   if (isValidElement(children)) {
     return cloneElement(children, {
       ...props,
-      // @ts-expect-error className is not a valid prop
       className: cn(className, children.props.className),
     });
   }

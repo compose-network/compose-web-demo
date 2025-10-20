@@ -6,6 +6,7 @@ import type { GetPaymasterDataParameters } from "viem/account-abstraction";
 import type { Hex } from "viem";
 import { numberToHex } from "viem";
 import { api } from "@/lib/api-client.ts";
+import { safeStringify } from "@/lib/utils/bigint.ts";
 
 interface PaymasterResponseData {
   id: 1;
@@ -80,12 +81,7 @@ export const getPaymasterDataForChain = async (
         headers: {
           "Content-Type": "application/json",
         },
-        transformRequest: [
-          (data) =>
-            JSON.stringify(data, (_k, v) =>
-              typeof v === "bigint" ? v.toString() : v,
-            ),
-        ],
+        transformRequest: [safeStringify],
       },
     )
     .then((res) => {
