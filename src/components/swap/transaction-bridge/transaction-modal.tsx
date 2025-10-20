@@ -107,28 +107,27 @@ export const TransactionModal: FCProps = ({ data, title, ...props }) => {
                 </div>
                 {(action.status === "pending" ||
                   action.status === "success") && (
-                  <div className="flex flex-col  rounded-[16px] bg-gray-300">
+                  <div className="flex flex-col  rounded-[16px] bg-gray-300 p-0.5">
                     {(Array.isArray(action.hash)
                       ? action.hash
                       : [action.hash]
                     ).map((hash, i) => {
                       const isFirst = i === 0;
+                      const chainId = isFirst
+                        ? action.chainId
+                        : (action.toChainId ?? 0);
                       return (
                         <a
                           key={hash}
                           target="_blank"
                           href={
                             hash
-                              ? getExplorerHashUrl(
-                                  isFirst
-                                    ? action.chainId
-                                    : (action.toChainId ?? 0),
-                                  hash || "0x",
-                                )
+                              ? getExplorerHashUrl(chainId, hash || "0x")
                               : undefined
                           }
                           className="flex items-center gap-1 text-[12px] text-gray-700 px-2 py-1 cursor-pointer font-mono"
                         >
+                          {hash && <ChainIcon size="sm" chainId={chainId} className="mr-0.5" />}
                           {hash ? shortenAddress(hash || "0x") : "Waiting..."}
                           {hash && <TbExternalLink className="size-3" />}
                         </a>

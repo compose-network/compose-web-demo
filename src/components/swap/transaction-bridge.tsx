@@ -119,7 +119,7 @@ export const TransactionBridge: SwapFC = () => {
   });
 
   useEffect(() => {
-    if (!transactionData?.id) return;
+    if (!transactionData?.id || transactionData.actions[1].status === "success") return;
     const endTransaction = transactionData.actions.at(-1);
     console.log("endTransaction:", endTransaction);
     const client =
@@ -130,11 +130,13 @@ export const TransactionBridge: SwapFC = () => {
       abi: l2StandardBridgeABI,
       eventName: "ETHBridgeFinalized",
       onLogs: (logs) => {
-        if (logs.find((l) => l.args.extraData === transactionData.id)) {
+        const log = logs.find((l) => l.args.extraData === transactionData.id);
+        if (log) {
           setTransactionData((prev) => {
             if (!prev) return null;
             const clone = cloneDeep(prev);
             clone.actions[1].status = "success";
+            clone.actions[1].hash = log.transactionHash;
             return clone;
           });
         }
@@ -201,7 +203,7 @@ export const TransactionBridge: SwapFC = () => {
             toast({
               variant: "destructive",
               title: "Bridge failed",
-              description: "Transaction was reverted by the contract."
+              description: "Transaction was reverted by the contract.",
             });
 
             throw new Error("Bridge failed");
