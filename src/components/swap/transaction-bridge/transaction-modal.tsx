@@ -105,8 +105,7 @@ export const TransactionModal: FCProps = ({ data, title, ...props }) => {
                     </div>
                   </div>
                 </div>
-                {(action.status === "pending" ||
-                  action.status === "success") && (
+                {["pending", "success", "failed"].includes(action.status) && (
                   <div className="flex flex-col  rounded-[16px] bg-gray-300 p-0.5">
                     {(Array.isArray(action.hash)
                       ? action.hash
@@ -127,7 +126,13 @@ export const TransactionModal: FCProps = ({ data, title, ...props }) => {
                           }
                           className="flex items-center gap-1 text-[12px] text-gray-700 px-2 py-1 cursor-pointer font-mono"
                         >
-                          {hash && <ChainIcon size="sm" chainId={chainId} className="mr-0.5" />}
+                          {hash && (
+                            <ChainIcon
+                              size="xs"
+                              chainId={chainId}
+                              className="mr-0.5"
+                            />
+                          )}
                           {hash ? shortenAddress(hash || "0x") : "Waiting..."}
                           {hash && <TbExternalLink className="size-3" />}
                         </a>
