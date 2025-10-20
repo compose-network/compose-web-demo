@@ -570,7 +570,7 @@ export const UserOperationBridge: SwapFC = () => {
             <div className="flex items-center gap-3">
               <Divider className="flex-1" />
               <Button
-                variant="ghost"
+                variant="white"
                 size="icon"
                 className="size-12 rounded-xl"
                 style={{
@@ -590,7 +590,7 @@ export const UserOperationBridge: SwapFC = () => {
                   });
                 }}
               >
-                <FaArrowDown className="text-primary-500" />
+                <FaArrowDown className="text-[#18B5B8]" />
               </Button>
               <Divider className="flex-1" />
             </div>

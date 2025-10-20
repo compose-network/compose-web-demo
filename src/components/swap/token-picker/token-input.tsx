@@ -49,7 +49,8 @@ export const TokenInput: TokenInputFC = ({
   });
 
   return (
-    <div className="flex flex-col p-3 pl-8 border border-gray-300 rounded-xl gap-3 bg-gray-100">
+    <div className="p-[1px] rounded-[20px] bg-gradient-to-r from-[#14B5C0]/60 via-[#2ABEC9]/60 via-[#24B979]/60 to-[#F29422]/60 to-[#E68713]/60">
+      <div className="flex flex-col p-3 pl-8 rounded-[20px] gap-3 bg-gray-100">
       <div className="flex items-center">
         <BigNumberInput
           {...props}
@@ -109,6 +110,7 @@ export const TokenInput: TokenInputFC = ({
           </Button>
         )}
       </div>
+    </div>
     </div>
   );
 };
