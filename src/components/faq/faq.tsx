@@ -49,7 +49,7 @@ const Faq = () => {
   };
 
   return (
-    <div className="mt-6 p-8 w-[648px] bg-gray-200 rounded-[40px] mb-8">
+    <div className="mt-6 p-8 w-[648px] bg-white rounded-[40px] mb-8">
       <Text className="text-gray-500 mb-6" variant={'headline4'}>FAQ</Text>
 
       <div className="space-y-4">

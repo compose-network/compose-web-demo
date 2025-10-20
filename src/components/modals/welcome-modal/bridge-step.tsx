@@ -27,11 +27,11 @@ export const BridgeStep: FCProps = ({ onComplete, onBack }) => {
           Step 2
         </Text>
         <Text variant={"headline1"} className="text-white">
-         Bridge ETH Between Rollups
+       Bridge Instantly
         </Text></div>
 
       <Text className="text-black w-full font-bold">
-        Bridge Instantly
+        Bridge ETH Between Rollups
       </Text>
       <Text className="text-gray-600 w-full">
         Next, bridge your ETH between rollups — instantly and atomically.
