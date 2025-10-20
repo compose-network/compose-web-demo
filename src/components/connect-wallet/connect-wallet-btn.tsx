@@ -75,9 +75,10 @@ export const ConnectWalletBtn: FC<ButtonProps> = (props) => {
           <Button
             data-cy="wallet-button"
             size="wallet"
+            variant="white"
             className={textVariants({
               variant: "body-3-medium",
-              className: "flex items-center gap-3 h-12 pl-4 pr-3 rounded-xl",
+              className: "flex items-center gap-3 h-12 pl-4 pr-3 rounded-xl bg-white",
             })}
             colorScheme="wallet"
             onClick={openAccountModal}

@@ -100,6 +100,12 @@ export const hoodi = defineChain({
       http: rpcHttp.hoodi,
     },
   },
+  blockExplorers: {
+    default: {
+      name: "Etherscan",
+      url: "https://hoodi.etherscan.io",
+    },
+  },
   iconBackground: "none",
   iconUrl: "/images/networks/light.svg",
   testnet: true,

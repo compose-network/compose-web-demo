@@ -1,13 +1,6 @@
-import { isAddress, type Address } from "viem";
+import { type Address, isAddress } from "viem";
 
-type RpcEnvKey = keyof Pick<
-  ImportMetaEnv,
-  | "VITE_HOODI_RPC_HTTP"
-  | "VITE_ROLLUP_A_RPC_HTTP"
-  | "VITE_ROLLUP_B_RPC_HTTP"
-  | "VITE_MAINNET_RPC_HTTP"
-  | "VITE_POLYGON_RPC_HTTP"
->;
+type RpcEnvKey = keyof ImportMetaEnv;
 
 export type RpcDescriptor = {
   envKey: RpcEnvKey;
@@ -31,7 +24,7 @@ const parseRpcUrls = (
   envKey: RpcEnvKey,
   defaults: readonly string[],
 ): string[] => {
-  const rawValue = import.meta.env[envKey];
+  const rawValue: string = import.meta.env[envKey];
   if (!rawValue) {
     return [...defaults];
   }

@@ -1,0 +1,24 @@
+import type { TokenPickerCommandDialogProps } from "@/components/swap/token-picker/token-picker-command-dialog.tsx";
+import {
+  arbitrumChain,
+  baseChain,
+  optimismChain,
+  rollupA,
+  rollupB,
+} from "@/wagmi/config.ts";
+import { zeroAddress } from "viem";
+import { SSV_ADDRESS, USDC_ADDRESS } from "@/wagmi/addresses.ts";
+
+export const SWAP_CONFIG: TokenPickerCommandDialogProps["chains"] = [
+  {
+    chainId: rollupA.id,
+    tokens: [zeroAddress, USDC_ADDRESS, SSV_ADDRESS],
+  },
+  {
+    chainId: rollupB.id,
+    tokens: [zeroAddress, USDC_ADDRESS, SSV_ADDRESS],
+  },
+  { chainId: baseChain.id, isNotSupported: true },
+  { chainId: arbitrumChain.id, isNotSupported: true },
+  { chainId: optimismChain.id, isNotSupported: true },
+] as const;

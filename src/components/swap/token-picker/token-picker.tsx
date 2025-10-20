@@ -1,4 +1,4 @@
-import { type FC, type ComponentPropsWithoutRef, useState } from "react";
+import { type ComponentPropsWithoutRef, type FC, useState } from "react";
 import { cn } from "@/lib/utils/tw";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ export type TokenPickerProps = {
   onChainSelect: (chainId: number) => void;
   readOnly?: boolean;
   canPickToken?: boolean;
+  disabledTokens?: Address[];
 };
 
 type TokenPickerFC = FC<
@@ -31,6 +32,7 @@ export const TokenPicker: TokenPickerFC = ({
   onSelectToken,
   onChainSelect,
   readOnly,
+  disabledTokens,
   ...props
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -43,21 +45,22 @@ export const TokenPicker: TokenPickerFC = ({
         chainId={chainId}
         onTokenSelect={onSelectToken}
         onChainSelect={onChainSelect}
+        disabledTokens={disabledTokens}
       />
-      <Button
-        onClick={() => {
-          if (readOnly) return;
-          console.log("Button clicked, setting isOpen to true");
-          setIsOpen(true);
-        }}
-        variant="ghost"
-        className={cn(
-          "p-4 pr-6 pl-4 rounded-[100px] border border-gray-300 bg-gray-50 flex gap-3 items-center min-w-[188px] h-auto",
-          { "pointer-events-none": readOnly },
-          className,
-        )}
-        {...props}
-      >
+      <div className="p-[1px] rounded-[12px] bg-gradient-to-r from-[#14B5C0]/60 via-[#2ABEC9]/60 via-[#24B979]/60 to-[#F29422]/60 to-[#E68713]/60">
+        <Button
+          onClick={() => {
+            if (readOnly) return;
+            setIsOpen(true);
+          }}
+          variant="ghost"
+          className={cn(
+            "p-4 pr-6 pl-4 rounded-[12px] bg-gray-50 flex gap-3 items-center min-w-[188px] h-auto",
+            { "pointer-events-none": readOnly },
+            className,
+          )}
+          {...props}
+        >
         <div className="flex gap-3 items-center flex-1">
           <AssetLogo
             tokenAddress={selectedToken}
@@ -72,7 +75,8 @@ export const TokenPicker: TokenPickerFC = ({
           />
         </div>
         {!readOnly && <ChevronDown className="size-4 justify-end" />}
-      </Button>
+        </Button>
+      </div>
     </>
   );
 };

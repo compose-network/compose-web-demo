@@ -145,11 +145,11 @@ export const Accounts: FC = () => {
   const kernel = useSmartAccount();
   const { switchChainAsync } = useSwitchChain();
 
-  const rollupBTokens = tokens[rollupB.id] || [];
+  const rollupTokens = tokens || [];
 
   // Fetch token balances for Kernel A (on RollupA)
   const kernelATokenBalancesQuery = useReadContracts({
-    contracts: rollupBTokens.map((token) => ({
+    contracts: rollupTokens.map((token) => ({
       address: token.address,
       abi: TokenABI,
       functionName: "balanceOf",
@@ -163,7 +163,7 @@ export const Accounts: FC = () => {
 
   // Fetch token balances for Kernel B (on RollupB)
   const kernelBTokenBalancesQuery = useReadContracts({
-    contracts: rollupBTokens.map((token) => ({
+    contracts: rollupTokens.map((token) => ({
       address: token.address,
       abi: TokenABI,
       functionName: "balanceOf",
@@ -176,15 +176,19 @@ export const Accounts: FC = () => {
   });
 
   // Map the results to the expected format
-  const kernelATokenBalances = rollupBTokens.map((token, index) => ({
+  const kernelATokenBalances = rollupTokens.map((token, index) => ({
     symbol: token.symbol,
-    balance: kernelATokenBalancesQuery.data?.[index]?.result as bigint | undefined,
+    balance: kernelATokenBalancesQuery.data?.[index]?.result as
+      | bigint
+      | undefined,
     decimals: token.decimals,
   }));
 
-  const kernelBTokenBalances = rollupBTokens.map((token, index) => ({
+  const kernelBTokenBalances = rollupTokens.map((token, index) => ({
     symbol: token.symbol,
-    balance: kernelBTokenBalancesQuery.data?.[index]?.result as bigint | undefined,
+    balance: kernelBTokenBalancesQuery.data?.[index]?.result as
+      | bigint
+      | undefined,
     decimals: token.decimals,
   }));
 
@@ -242,4 +246,3 @@ export const Accounts: FC = () => {
 };
 
 Accounts.displayName = "Accounts";
-
