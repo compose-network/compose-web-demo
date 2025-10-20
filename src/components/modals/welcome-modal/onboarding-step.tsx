@@ -27,7 +27,7 @@ export const OnboardingStep: FCProps = ({ onNext, onBack }) => {
           Step 1
         </Text>
         <Text variant={"headline1"} className="text-white">
-        Welcome To Compose
+        Onboarding to Compose
       </Text></div>
 
       <Text className="text-black w-full">

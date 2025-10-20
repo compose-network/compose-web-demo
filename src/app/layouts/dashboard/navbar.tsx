@@ -21,7 +21,7 @@ export const Navbar: FCProps = ({ className, ...props }) => {
     <div
       className={cn(
         className,
-        "flex justify-center w-full",
+        "flex justify-center w-full bg-gray-200",
       )}
       {...props}
     >
