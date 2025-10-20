@@ -31,7 +31,7 @@ export const BridgeStep: FCProps = ({ onComplete, onBack }) => {
         </Text></div>
 
       <Text className="text-black w-full font-bold">
-        Bridge Tokens Instantly
+        Bridge Instantly
       </Text>
       <Text className="text-gray-600 w-full">
         Next, bridge your ETH between rollups — instantly and atomically.
