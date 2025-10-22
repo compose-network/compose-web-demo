@@ -1,9 +1,10 @@
 import { Text } from "@/components/ui/text";
 import type { ComponentPropsWithoutRef, FC } from "react";
 import { SwapRoute } from "@/components/swap/swap-route.tsx";
-import { hoodi, rollupA } from "@/wagmi/config.ts";
+import { hoodi } from ", rollupB@/wagmi/config.ts";
 import { zeroAddress } from "viem";
 import { ProgressIndicator } from "./progress-indicator";
+import { rollupB } from "@/wagmi/config";
 
 export type OnboardingStepProps = {
   onNext: () => void;
@@ -45,7 +46,7 @@ export const OnboardingStep: FCProps = ({ onNext, onBack }) => {
             address: zeroAddress,
             chainId: hoodi.id,
           }}
-          toToken={{ address: zeroAddress, chainId: rollupA.id }}
+          toToken={{ address: zeroAddress, chainId: rollupB.id }}
         />
       </div>
       {/* Action Buttons */}
