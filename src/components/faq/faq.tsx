@@ -1,6 +1,7 @@
 import { Text } from "@/components/ui/text";
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { Collapse } from "react-collapse";
 
 interface FaqItem {
   question: string;
@@ -54,10 +55,10 @@ const Faq = () => {
 
       <div className="space-y-4">
         {faqItems.map((item, index) => (
-          <div key={index} className="bg-white rounded-[20px] overflow-hidden">
+          <div key={index} className="bg-gray-100 rounded-[20px] overflow-hidden">
             <button
               onClick={() => toggleFaq(index)}
-              className="w-full p-4 text-left flex justify-between items-center hover:bg-gray-50 transition-colors"
+              className="w-full p-4 text-left flex justify-between items-center hover:bg-gray-200 transition-colors"
             >
               <Text className="font-semibold text-gray-800">{item.question}</Text>
               <div>
@@ -65,13 +66,13 @@ const Faq = () => {
               </div>
             </button>
 
-            {item.isOpen && (
+            <Collapse isOpened={item.isOpen}>
               <div className="px-4 pb-4">
                 <Text className="text-gray-600 text-sm leading-relaxed">
                   {item.answer}
                 </Text>
               </div>
-            )}
+            </Collapse>
           </div>
         ))}
       </div>

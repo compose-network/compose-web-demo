@@ -1,34 +1,28 @@
 import type { FC } from "react";
-import { cn } from "@/lib/utils/tw";
-import type { SwitchProps } from "@/components/ui/switch";
-import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/hooks/app/use-theme";
-export const ThemeSwitcher: FC<SwitchProps> = ({ className, ...props }) => {
+import type { ButtonProps } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils/tw";
+import { MdWbSunny } from "react-icons/md";
+import { HiMiniMoon } from "react-icons/hi2";
+
+export const ThemeSwitcher: FC<ButtonProps> = ({ className, ...props }) => {
   const theme = useTheme();
   return (
-    <Switch
-      noThumb
-      className={cn(
-        className,
-        "data-[state=checked]:bg-primary-300 data-[state=unchecked]:bg-[#033A5D]",
-      )}
-      style={{
-        backgroundImage: `url(/images/toggle/${theme.dark ? "dark" : "light"}.svg)`,
-        backgroundSize: "44px",
-        backgroundPosition: "center",
-      }}
+    <Button
+      variant="white"
+      className={cn(className, "size-12 rounded-xl p-0")}
       {...props}
-      checked={!theme.dark}
-      onCheckedChange={() => {
+      onClick={() => {
         useTheme.state.dark = !useTheme.state.dark;
       }}
     >
-      {/* {theme.dark ? (
-        <BsFillMoonStarsFill className="size-4 text-yellow-500" />
+      {theme.dark ? (
+        <HiMiniMoon className="size-6 text-gray-800" />
       ) : (
-        <MdSunny />
-      )} */}
-    </Switch>
+        <MdWbSunny className="size-6 text-gray-800" />
+      )}
+    </Button>
   );
 };
 

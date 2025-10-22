@@ -11,7 +11,7 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        white: 'bg-white text-black [background:linear-gradient(white,white)_padding-box,linear-gradient(92deg,#14B5C099_8.16%,#2ABEC999_18.67%,#24B97999_51.94%,#F2942299_85.22%,#E6871399_95.72%)_border-box] border-[1px] border-transparent rounded-[100px]',
+        white: 'bg-white text-black [background:linear-gradient(hsl(var(--white)),hsl(var(--white)))_padding-box,linear-gradient(92deg,#14B5C099_8.16%,#2ABEC999_18.67%,#24B97999_51.94%,#F2942299_85.22%,#E6871399_95.72%)_border-box] border-[1px] border-transparent rounded-[100px]',
         default:
           "text-white bg-gradient-to-r from-[#14B5C0] via-[#2ABEC9] via-[#24B979] to-[#F29422] to-[#E68713]",
         destructive:
@@ -30,7 +30,7 @@ export const buttonVariants = cva(
       },
       colorScheme: {
         wallet:
-          "bg-[#F9FBFC] hover:bg-[#F2F6FA] text-gray-900 dark:bg-[#062031] dark:hover:bg-[#011627]",
+          "",
         error: "",
       },
       size: {

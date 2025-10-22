@@ -7,6 +7,7 @@ import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn
 import { ComposeLogo } from "@/components/ui/compose-logo.tsx";
 // import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 import { NavLink } from "react-router-dom";
+import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 
 export type NavbarProps = {
   // TODO: Add props or remove this type
@@ -19,10 +20,7 @@ type FCProps = FC<
 export const Navbar: FCProps = ({ className, ...props }) => {
   return (
     <div
-      className={cn(
-        className,
-        "flex justify-center w-full bg-gray-200",
-      )}
+      className={cn(className, "flex justify-center w-full bg-gray-200")}
       {...props}
     >
       <div className="w-[1320px] flex items-center gap-3 h-20 whitespace-nowrap ">
@@ -35,8 +33,8 @@ export const Navbar: FCProps = ({ className, ...props }) => {
         <div className="flex items-center gap-3">
           {/*<NetworkSwitchBtn />*/}
           <ConnectWalletBtn />
+          <ThemeSwitcher />
         </div>
-        {/*<ThemeSwitcher className="ml-3" />*/}
       </div>
     </div>
   );
