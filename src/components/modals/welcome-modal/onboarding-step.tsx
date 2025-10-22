@@ -1,10 +1,10 @@
 import { Text } from "@/components/ui/text";
 import type { ComponentPropsWithoutRef, FC } from "react";
 import { SwapRoute } from "@/components/swap/swap-route.tsx";
-import { hoodi } from ", rollupB@/wagmi/config.ts";
 import { zeroAddress } from "viem";
 import { ProgressIndicator } from "./progress-indicator";
 import { rollupB } from "@/wagmi/config";
+import { hoodi } from "viem/chains";
 
 export type OnboardingStepProps = {
   onNext: () => void;
