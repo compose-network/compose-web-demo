@@ -7,6 +7,7 @@ import { createRollupPublicClients } from "@/components/swap/utils/core";
 import {
   createSwapETHForERC20UserOps_A_to_B,
   createSwapETHForERC20UserOps_B_to_A,
+  createSwapUserOpsFrom_A_to_A,
   createSwapUserOpsFrom_A_to_B,
   createSwapUserOpsFrom_B_to_A,
 } from "@/components/swap/utils/generate-swap-userops";
@@ -365,6 +366,9 @@ export const Swap: SwapFC = () => {
     const is_from_B_to_A =
       values.fromChainId === rollupB.id && values.toChainId === rollupA.id;
 
+    const is_from_A_to_A =
+      values.fromChainId === rollupA.id && values.toChainId === rollupA.id;
+
     setTransactionData((prev) => {
       if (!prev) return null;
       const clone = cloneDeep(prev);
@@ -373,14 +377,20 @@ export const Swap: SwapFC = () => {
     });
 
     // Is Swapping from A -> B
-    if (is_from_A_to_B || is_from_B_to_A) {
-      const createSwapUserOps = is_from_A_to_B
-        ? is_eth_to_erc20
-          ? createSwapETHForERC20UserOps_A_to_B
-          : createSwapUserOpsFrom_A_to_B
-        : is_eth_to_erc20
-          ? createSwapETHForERC20UserOps_B_to_A
-          : createSwapUserOpsFrom_B_to_A;
+    if (
+      is_from_A_to_B ||
+      is_from_B_to_A ||
+      (is_from_A_to_A && !is_eth_to_erc20)
+    ) {
+      const createSwapUserOps = is_from_A_to_A
+        ? createSwapUserOpsFrom_A_to_A
+        : is_from_A_to_B
+          ? is_eth_to_erc20
+            ? createSwapETHForERC20UserOps_A_to_B
+            : createSwapUserOpsFrom_A_to_B
+          : is_eth_to_erc20
+            ? createSwapETHForERC20UserOps_B_to_A
+            : createSwapUserOpsFrom_B_to_A;
 
       const { sendUserOps } = await createSwapUserOps(
         {
@@ -414,9 +424,10 @@ export const Swap: SwapFC = () => {
             setTransactionData((prev) => {
               if (!prev) return null;
               const clone = cloneDeep(prev);
-              clone.actions[userOpIndex].hash = builds.map((build) => {
-                return build.hash;
-              });
+              clone.actions[userOpIndex].hash = builds.map((build) => ({
+                chainId: build.chainId,
+                hash: build.hash,
+              }));
               return clone;
             });
           },
@@ -525,7 +536,6 @@ export const Swap: SwapFC = () => {
                 {
                   chainId: rollupA.id,
                   tokens: [zeroAddress, USDC_ADDRESS, SSV_ADDRESS],
-                  isNotSupported: values.toChainId === rollupA.id,
                   notSupportedReason:
                     " - Swapping from Rollup A to Rollup A is not supported",
                 },
@@ -596,7 +606,7 @@ export const Swap: SwapFC = () => {
                 {
                   chainId: rollupA.id,
                   tokens: [zeroAddress, USDC_ADDRESS, SSV_ADDRESS],
-                  isNotSupported: values.fromChainId === rollupA.id,
+                  // isNotSupported: values.fromChainId === rollupA.id,
                 },
                 {
                   chainId: rollupB.id,

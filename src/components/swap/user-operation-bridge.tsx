@@ -384,7 +384,10 @@ export const UserOperationBridge: SwapFC = () => {
     setTransactionData((prev) => {
       if (!prev) return null;
       const clone = cloneDeep(prev);
-      clone.actions[userOpIndex].hash = [buildA.hash, buildB.hash];
+      clone.actions[userOpIndex].hash = [
+        { chainId: buildA.chainId, hash: buildA.hash },
+        { chainId: buildB.chainId, hash: buildB.hash },
+      ];
       return clone;
     });
 
@@ -404,7 +407,10 @@ export const UserOperationBridge: SwapFC = () => {
     setTransactionData((prev) => {
       if (!prev) return null;
       const clone = cloneDeep(prev);
-      clone.actions[userOpIndex].hash = [hashA, hashB];
+      clone.actions[userOpIndex].hash = [
+        { chainId: values.from.chainId, hash: hashA },
+        { chainId: values.to.chainId, hash: hashB },
+      ];
       // clone.actions[2].hash = hashB;
       return clone;
     });

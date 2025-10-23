@@ -29,7 +29,7 @@ export type TransactionModalProps = {
       chainId: number;
       toChainId?: number;
       status: keyof typeof statusIcons;
-      hash?: `0x${string}` | `0x${string}`[];
+      hash?: Hex | { chainId: number; hash: Hex }[];
       userOpData?: { chainId: number; data: string }[];
     }[];
   } | null;
@@ -119,19 +119,18 @@ export const TransactionModal: FCProps = ({ data, title, ...props }) => {
                   <div className="flex flex-col  rounded-[16px] bg-gray-300 p-0.5">
                     {(Array.isArray(action.hash)
                       ? action.hash
-                      : [action.hash]
-                    ).map((hash, i) => {
-                      const isFirst = i === 0;
-                      const chainId = isFirst
-                        ? action.chainId
-                        : (action.toChainId ?? 0);
+                      : action.hash
+                        ? [{ chainId: action.chainId, hash: action.hash }]
+                        : []
+                    ).map((hashObj, i) => {
+                      const { chainId, hash } = hashObj;
                       return (
                         <a
-                          key={hash}
+                          key={`${chainId}-${hash}-${i}`}
                           target="_blank"
                           href={
                             hash
-                              ? getExplorerHashUrl(chainId, hash || "0x")
+                              ? getExplorerHashUrl(chainId, hash)
                               : undefined
                           }
                           className="flex items-center gap-1 text-[12px] text-gray-700 px-2 py-1 cursor-pointer font-mono"
@@ -143,7 +142,7 @@ export const TransactionModal: FCProps = ({ data, title, ...props }) => {
                               className="mr-0.5"
                             />
                           )}
-                          {hash ? shortenAddress(hash || "0x") : "Waiting..."}
+                          {hash ? shortenAddress(hash) : "Waiting..."}
                           {hash && <TbExternalLink className="size-3" />}
                         </a>
                       );

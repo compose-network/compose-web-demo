@@ -477,7 +477,6 @@ export const createSwapUserOpsFrom_A_to_A = async (
 ) => {
   const rollupAChainId = rollupA.id;
   const rollupBChainId = rollupB.id;
-
   const [rollupAPublicClient, rollupBPublicClient] = createRollupPublicClients(
     rollupAChainId,
     rollupBChainId,
@@ -679,7 +678,10 @@ export const createSwapUserOpsFrom_A_to_A = async (
     ]);
   });
 
-  options.onBuildUserOps?.([buildRollupB, buildRollupA], explorerUrls);
+  options.onBuildUserOps?.(
+    [buildRollupA, buildRollupB, buildRollupC],
+    explorerUrls,
+  );
 
   const payload = encodeXtMessage({
     senderId: "client",

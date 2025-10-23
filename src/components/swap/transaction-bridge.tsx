@@ -129,17 +129,17 @@ export const TransactionBridge: SwapFC = () => {
       address: "0x4200000000000000000000000000000000000010",
       abi: l2StandardBridgeABI,
       eventName: "ETHBridgeFinalized",
-      onLogs: (logs) => {
-        const log = logs.find((l) => l.args.extraData === transactionData.id);
-        if (log) {
-          setTransactionData((prev) => {
-            if (!prev) return null;
-            const clone = cloneDeep(prev);
-            clone.actions[1].status = "success";
-            clone.actions[1].hash = log.transactionHash;
-            return clone;
-          });
-        }
+        onLogs: (logs) => {
+          const log = logs.find((l) => l.args.extraData === transactionData.id);
+          if (log) {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              clone.actions[1].status = "success";
+              clone.actions[1].hash = log.transactionHash;
+              return clone;
+            });
+          }
       },
     });
 
