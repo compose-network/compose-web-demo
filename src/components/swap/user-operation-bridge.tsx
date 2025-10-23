@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
-import type { statusIcons } from "@/components/modals/batch-transaction-modal.tsx";
 import { SwapRoute } from "@/components/swap/swap-route";
 import { TokenInput } from "@/components/swap/token-picker/token-input";
+import type { TransactionModalProps } from "@/components/swap/transaction-bridge/transaction-modal.tsx";
 import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal.tsx";
 import {
   createAndSignBridgeERC20UserOps,
@@ -113,18 +113,9 @@ export const UserOperationBridge: SwapFC = () => {
   console.log("ops");
   const queryClient = useQueryClient();
 
-  const [transactionData, setTransactionData] = useState<{
-    id: Hex;
-    actions: {
-      name: string;
-      description?: string;
-      chainId: number;
-      toChainId?: number;
-      status: keyof typeof statusIcons;
-      hash?: `0x${string}` | `0x${string}`[];
-      userOpData?: { chainId: number; data: string }[];
-    }[];
-  } | null>(null);
+  const [transactionData, setTransactionData] = useState<
+    TransactionModalProps["data"] | null
+  >(null);
 
   const [advancedMode, setAdvancedMode] = useLocalStorage(
     "advancedMode",
@@ -211,6 +202,9 @@ export const UserOperationBridge: SwapFC = () => {
                 chainId: values.from.chainId,
                 status: "pending" as const,
                 description: `${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
+                tooltip: isNative
+                  ? "ETH must first be transferred to your Smart Account before initiating a cross-chain transaction."
+                  : undefined,
               },
             ]
           : []),
