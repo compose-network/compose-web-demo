@@ -548,6 +548,11 @@ export const Swap: SwapFC = () => {
               tokenAddress={values.fromToken}
               chainId={values.fromChainId}
               onSelectToken={(token) => {
+                if (isAddressEqual(token, values.toToken)) {
+                  form.setValue("toToken", values.fromToken, {
+                    shouldValidate: true,
+                  });
+                }
                 return form.setValue("fromToken", token, {
                   shouldValidate: true,
                 });
@@ -563,7 +568,6 @@ export const Swap: SwapFC = () => {
                   shouldValidate: true,
                 });
               }}
-              disabledTokens={[values.toToken]}
             />
             {form.formState.errors.fromAmount && (
               <Text variant="body-3-medium" className="text-error-500">
@@ -620,15 +624,17 @@ export const Swap: SwapFC = () => {
               chainId={values.toChainId}
               isLoading={prices.isPending}
               readOnly
-              onSelectToken={(token) =>
-                form.setValue("toToken", token, {
+              onSelectToken={(token) => {
+                if (isAddressEqual(token, values.fromToken)) {
+                  form.setValue("fromToken", values.toToken, {
+                    shouldValidate: true,
+                  });
+                }
+                return form.setValue("toToken", token, {
                   shouldValidate: true,
-                })
-              }
-              onChange={() => {
-                return;
+                });
               }}
-              disabledTokens={[values.fromToken]}
+              onChange={() => {}}
             />
           </div>
           <Divider />
