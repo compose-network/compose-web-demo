@@ -1,7 +1,7 @@
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
-import type { statusIcons } from "@/components/modals/batch-transaction-modal";
 import { SwapRoute } from "@/components/swap/swap-route";
 import { TokenInput } from "@/components/swap/token-picker/token-input";
+import type { TransactionModalProps } from "@/components/swap/transaction-bridge/transaction-modal";
 import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal";
 import { createRollupPublicClients } from "@/components/swap/utils/core";
 import {
@@ -48,7 +48,6 @@ import {
 import { useForm } from "react-hook-form";
 import { FaArrowDown } from "react-icons/fa6";
 import { useLocalStorage } from "react-use";
-import type { Hex } from "viem";
 import { isAddress, parseEther, zeroAddress } from "viem";
 import { useSendTransaction, useSwitchChain } from "wagmi";
 import { z } from "zod";
@@ -84,18 +83,9 @@ const schema = z.object({
 export const Swap: SwapFC = () => {
   const { address, isConnected } = useAccount();
   const switchChain = useSwitchChain();
-  const [transactionData, setTransactionData] = useState<{
-    id: Hex;
-    actions: {
-      name: string;
-      description?: string;
-      chainId: number;
-      toChainId?: number;
-      status: keyof typeof statusIcons;
-      hash?: `0x${string}` | `0x${string}`[];
-      userOpData?: { chainId: number; data: string }[];
-    }[];
-  } | null>(null);
+  const [transactionData, setTransactionData] = useState<
+    TransactionModalProps["data"] | null
+  >(null);
 
   const [prevSwapValues, persistPrevSwapValues] = useLocalStorage<
     z.infer<typeof schema>
@@ -243,6 +233,9 @@ export const Swap: SwapFC = () => {
                 name: `${is_eth_to_erc20 ? `Send ${formatCurrency(values.fromAmount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${fromToken.symbol}`} `,
                 chainId: values.fromChainId,
                 status: "pending" as const,
+                tooltip: is_eth_to_erc20
+                  ? "ETH must first be transferred to your Smart Account before initiating a cross-chain transaction."
+                  : undefined,
               },
             ]
           : []),

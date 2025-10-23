@@ -15,6 +15,8 @@ import { shortenAddress } from "@/lib/utils/strings.ts";
 import { TbExternalLink } from "react-icons/tb";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
+import { Tooltip } from "@/components/ui/tooltip";
+import { FaInfoCircle } from "react-icons/fa";
 
 export type TransactionModalProps = {
   title: string;
@@ -23,6 +25,7 @@ export type TransactionModalProps = {
     actions: {
       name: string;
       description?: string;
+      tooltip?: string;
       chainId: number;
       toChainId?: number;
       status: keyof typeof statusIcons;
@@ -63,11 +66,18 @@ export const TransactionModal: FCProps = ({ data, title, ...props }) => {
                 <div className="flex gap-4 p-5 bg-gray-100 items-center rounded-sm">
                   {statusIcons[action.status]}
                   <div className="flex flex-col gap-1">
-                    <Text
-                      variant="body-2-medium"
-                      className="flex items-center gap-1"
-                    >
-                      {action.name}{" "}
+                    <div className="flex gap-1 items-center">
+                      <Text
+                        variant="body-2-medium"
+                        className="flex items-center gap-1"
+                      >
+                        {action.name}{" "}
+                      </Text>
+                      {action.tooltip && (
+                        <Tooltip content={action.tooltip}>
+                          <FaInfoCircle className="size-4 text-gray-500 cursor-pointer  " />
+                        </Tooltip>
+                      )}
                       {action.userOpData &&
                         (openData ? (
                           <ChevronUp
@@ -80,7 +90,7 @@ export const TransactionModal: FCProps = ({ data, title, ...props }) => {
                             className="h-4 w-4"
                           />
                         ))}
-                    </Text>
+                    </div>
                     <div className="flex items-center gap-2">
                       <ChainIcon size="sm" chainId={action.chainId} />
                       <Text
