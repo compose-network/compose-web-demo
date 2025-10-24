@@ -15,6 +15,8 @@ import { shortenAddress } from "@/lib/utils/strings.ts";
 import { TbExternalLink } from "react-icons/tb";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
+import { Tooltip } from "@/components/ui/tooltip";
+import { FaInfoCircle } from "react-icons/fa";
 
 export type TransactionModalProps = {
   title: string;
@@ -23,10 +25,11 @@ export type TransactionModalProps = {
     actions: {
       name: string;
       description?: string;
+      tooltip?: string;
       chainId: number;
       toChainId?: number;
       status: keyof typeof statusIcons;
-      hash?: `0x${string}` | `0x${string}`[];
+      hash?: Hex | { chainId: number; hash: Hex }[];
       userOpData?: { chainId: number; data: string }[];
     }[];
   } | null;
@@ -63,11 +66,18 @@ export const TransactionModal: FCProps = ({ data, title, ...props }) => {
                 <div className="flex gap-4 p-5 bg-gray-100 items-center rounded-sm">
                   {statusIcons[action.status]}
                   <div className="flex flex-col gap-1">
-                    <Text
-                      variant="body-2-medium"
-                      className="flex items-center gap-1"
-                    >
-                      {action.name}{" "}
+                    <div className="flex gap-1 items-center">
+                      <Text
+                        variant="body-2-medium"
+                        className="flex items-center gap-1"
+                      >
+                        {action.name}{" "}
+                      </Text>
+                      {action.tooltip && (
+                        <Tooltip content={action.tooltip}>
+                          <FaInfoCircle className="size-4 text-gray-500 cursor-pointer  " />
+                        </Tooltip>
+                      )}
                       {action.userOpData &&
                         (openData ? (
                           <ChevronUp
@@ -80,7 +90,7 @@ export const TransactionModal: FCProps = ({ data, title, ...props }) => {
                             className="h-4 w-4"
                           />
                         ))}
-                    </Text>
+                    </div>
                     <div className="flex items-center gap-2">
                       <ChainIcon size="sm" chainId={action.chainId} />
                       <Text
@@ -109,19 +119,18 @@ export const TransactionModal: FCProps = ({ data, title, ...props }) => {
                   <div className="flex flex-col  rounded-[16px] bg-gray-300 p-0.5">
                     {(Array.isArray(action.hash)
                       ? action.hash
-                      : [action.hash]
-                    ).map((hash, i) => {
-                      const isFirst = i === 0;
-                      const chainId = isFirst
-                        ? action.chainId
-                        : (action.toChainId ?? 0);
+                      : action.hash
+                        ? [{ chainId: action.chainId, hash: action.hash }]
+                        : []
+                    ).map((hashObj, i) => {
+                      const { chainId, hash } = hashObj;
                       return (
                         <a
-                          key={hash}
+                          key={`${chainId}-${hash}-${i}`}
                           target="_blank"
                           href={
                             hash
-                              ? getExplorerHashUrl(chainId, hash || "0x")
+                              ? getExplorerHashUrl(chainId, hash)
                               : undefined
                           }
                           className="flex items-center gap-1 text-[12px] text-gray-700 px-2 py-1 cursor-pointer font-mono"
@@ -133,7 +142,7 @@ export const TransactionModal: FCProps = ({ data, title, ...props }) => {
                               className="mr-0.5"
                             />
                           )}
-                          {hash ? shortenAddress(hash || "0x") : "Waiting..."}
+                          {hash ? shortenAddress(hash) : "Waiting..."}
                           {hash && <TbExternalLink className="size-3" />}
                         </a>
                       );

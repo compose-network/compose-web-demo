@@ -1,12 +1,13 @@
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
-import type { statusIcons } from "@/components/modals/batch-transaction-modal";
 import { SwapRoute } from "@/components/swap/swap-route";
 import { TokenInput } from "@/components/swap/token-picker/token-input";
+import type { TransactionModalProps } from "@/components/swap/transaction-bridge/transaction-modal";
 import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal";
 import { createRollupPublicClients } from "@/components/swap/utils/core";
 import {
   createSwapETHForERC20UserOps_A_to_B,
   createSwapETHForERC20UserOps_B_to_A,
+  createSwapUserOpsFrom_A_to_A,
   createSwapUserOpsFrom_A_to_B,
   createSwapUserOpsFrom_B_to_A,
 } from "@/components/swap/utils/generate-swap-userops";
@@ -48,7 +49,6 @@ import {
 import { useForm } from "react-hook-form";
 import { FaArrowDown } from "react-icons/fa6";
 import { useLocalStorage } from "react-use";
-import type { Hex } from "viem";
 import { isAddress, parseEther, zeroAddress } from "viem";
 import { useSendTransaction, useSwitchChain } from "wagmi";
 import { z } from "zod";
@@ -84,18 +84,9 @@ const schema = z.object({
 export const Swap: SwapFC = () => {
   const { address, isConnected } = useAccount();
   const switchChain = useSwitchChain();
-  const [transactionData, setTransactionData] = useState<{
-    id: Hex;
-    actions: {
-      name: string;
-      description?: string;
-      chainId: number;
-      toChainId?: number;
-      status: keyof typeof statusIcons;
-      hash?: `0x${string}` | `0x${string}`[];
-      userOpData?: { chainId: number; data: string }[];
-    }[];
-  } | null>(null);
+  const [transactionData, setTransactionData] = useState<
+    TransactionModalProps["data"] | null
+  >(null);
 
   const [prevSwapValues, persistPrevSwapValues] = useLocalStorage<
     z.infer<typeof schema>
@@ -243,6 +234,9 @@ export const Swap: SwapFC = () => {
                 name: `${is_eth_to_erc20 ? `Send ${formatCurrency(values.fromAmount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${fromToken.symbol}`} `,
                 chainId: values.fromChainId,
                 status: "pending" as const,
+                tooltip: is_eth_to_erc20
+                  ? "ETH must first be transferred to your Smart Account before initiating a cross-chain transaction."
+                  : undefined,
               },
             ]
           : []),
@@ -372,6 +366,9 @@ export const Swap: SwapFC = () => {
     const is_from_B_to_A =
       values.fromChainId === rollupB.id && values.toChainId === rollupA.id;
 
+    const is_from_A_to_A =
+      values.fromChainId === rollupA.id && values.toChainId === rollupA.id;
+
     setTransactionData((prev) => {
       if (!prev) return null;
       const clone = cloneDeep(prev);
@@ -380,14 +377,20 @@ export const Swap: SwapFC = () => {
     });
 
     // Is Swapping from A -> B
-    if (is_from_A_to_B || is_from_B_to_A) {
-      const createSwapUserOps = is_from_A_to_B
-        ? is_eth_to_erc20
-          ? createSwapETHForERC20UserOps_A_to_B
-          : createSwapUserOpsFrom_A_to_B
-        : is_eth_to_erc20
-          ? createSwapETHForERC20UserOps_B_to_A
-          : createSwapUserOpsFrom_B_to_A;
+    if (
+      is_from_A_to_B ||
+      is_from_B_to_A ||
+      (is_from_A_to_A && !is_eth_to_erc20)
+    ) {
+      const createSwapUserOps = is_from_A_to_A
+        ? createSwapUserOpsFrom_A_to_A
+        : is_from_A_to_B
+          ? is_eth_to_erc20
+            ? createSwapETHForERC20UserOps_A_to_B
+            : createSwapUserOpsFrom_A_to_B
+          : is_eth_to_erc20
+            ? createSwapETHForERC20UserOps_B_to_A
+            : createSwapUserOpsFrom_B_to_A;
 
       const { sendUserOps } = await createSwapUserOps(
         {
@@ -421,9 +424,10 @@ export const Swap: SwapFC = () => {
             setTransactionData((prev) => {
               if (!prev) return null;
               const clone = cloneDeep(prev);
-              clone.actions[userOpIndex].hash = builds.map((build) => {
-                return build.hash;
-              });
+              clone.actions[userOpIndex].hash = builds.map((build) => ({
+                chainId: build.chainId,
+                hash: build.hash,
+              }));
               return clone;
             });
           },
@@ -532,7 +536,6 @@ export const Swap: SwapFC = () => {
                 {
                   chainId: rollupA.id,
                   tokens: [zeroAddress, USDC_ADDRESS, SSV_ADDRESS],
-                  isNotSupported: values.toChainId === rollupA.id,
                   notSupportedReason:
                     " - Swapping from Rollup A to Rollup A is not supported",
                 },
@@ -548,6 +551,11 @@ export const Swap: SwapFC = () => {
               tokenAddress={values.fromToken}
               chainId={values.fromChainId}
               onSelectToken={(token) => {
+                if (isAddressEqual(token, values.toToken)) {
+                  form.setValue("toToken", values.fromToken, {
+                    shouldValidate: true,
+                  });
+                }
                 return form.setValue("fromToken", token, {
                   shouldValidate: true,
                 });
@@ -563,7 +571,6 @@ export const Swap: SwapFC = () => {
                   shouldValidate: true,
                 });
               }}
-              disabledTokens={[values.toToken]}
             />
             {form.formState.errors.fromAmount && (
               <Text variant="body-3-medium" className="text-error-500">
@@ -599,7 +606,7 @@ export const Swap: SwapFC = () => {
                 {
                   chainId: rollupA.id,
                   tokens: [zeroAddress, USDC_ADDRESS, SSV_ADDRESS],
-                  isNotSupported: values.fromChainId === rollupA.id,
+                  // isNotSupported: values.fromChainId === rollupA.id,
                 },
                 {
                   chainId: rollupB.id,
@@ -620,15 +627,17 @@ export const Swap: SwapFC = () => {
               chainId={values.toChainId}
               isLoading={prices.isPending}
               readOnly
-              onSelectToken={(token) =>
-                form.setValue("toToken", token, {
+              onSelectToken={(token) => {
+                if (isAddressEqual(token, values.fromToken)) {
+                  form.setValue("fromToken", values.toToken, {
+                    shouldValidate: true,
+                  });
+                }
+                return form.setValue("toToken", token, {
                   shouldValidate: true,
-                })
-              }
-              onChange={() => {
-                return;
+                });
               }}
-              disabledTokens={[values.fromToken]}
+              onChange={() => {}}
             />
           </div>
           <Divider />

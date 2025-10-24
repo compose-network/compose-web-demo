@@ -28,7 +28,7 @@ export const MainPage = ({ children }: { children: React.ReactNode }) => {
           navigate(`/${value}`);
         }}
       >
-        <TabsList className="w-full bg-gray-300">
+        <TabsList className="w-full bg-gray-200">
           <TabsTrigger
             className={textVariants({
               variant: "headline4",

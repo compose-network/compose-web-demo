@@ -20,7 +20,7 @@ module.exports = {
       },
       colors: {
         black: "hsl(var(--black))",
-        white: "var(--gray-50)",
+        white: "hsl(var(--white))",
         violeta: {
           pale: "#E0BBFE",
           light: "#D099FD",
