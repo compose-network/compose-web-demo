@@ -244,7 +244,6 @@ export const UserOperationBridge: SwapFC = () => {
         setTransactionData((prev) => {
           if (!prev) return null;
           const clone = cloneDeep(prev);
-          console.log("setting hash eth");
           clone.actions[0].hash = hash;
           return clone;
         });
@@ -264,7 +263,6 @@ export const UserOperationBridge: SwapFC = () => {
           clone.actions[0].status = "pending";
           return clone;
         });
-        // tick();
         await approve.write(
           {
             address: values.token,
@@ -296,7 +294,6 @@ export const UserOperationBridge: SwapFC = () => {
               setTransactionData((prev) => {
                 if (!prev) return null;
                 const clone = cloneDeep(prev);
-                console.log("setting hash all");
                 clone.actions[0].hash = hash;
                 return clone;
               });
@@ -398,13 +395,21 @@ export const UserOperationBridge: SwapFC = () => {
           params: [[userOpB], { chainId: values.to.chainId }],
         }),
       ]).catch((errs) => {
-        console.log("errors", errs);
         setTransactionData((prev) => {
           if (!prev) return null;
           const clone = cloneDeep(prev);
           clone.actions[userOpIndex].status = "failed";
           return clone;
         });
+
+        const errMes = "Compose transactions failed.";
+        setErrorMessage(errMes);
+        toast({
+          title: "Transaction failed",
+          variant: "destructive",
+          description: <Span className="whitespace-pre-wrap">{errMes}</Span>,
+        });
+
         throw errs;
       });
 
@@ -542,19 +547,17 @@ export const UserOperationBridge: SwapFC = () => {
           chainId: values.from.chainId,
           toChainId: values.to.chainId,
           toTokenAddress: values.token,
+          status: "idle" as const,
           retry: async () => {
             setErrorMessage(undefined);
             await actionFn();
           },
-          status: "idle" as const,
         },
       ],
     });
 
     await prereqFn?.();
     await actionFn();
-
-    // PREREQ END
   });
 
   const mint = useMint();
