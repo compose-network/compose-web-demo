@@ -1,7 +1,7 @@
 import { config } from "@/wagmi/config";
 import type {
-  WriteContractErrorType,
   WaitForTransactionReceiptErrorType,
+  WriteContractErrorType,
 } from "viem";
 
 export const getChainName = (chainId: (typeof config.chains)[number]["id"]) => {
@@ -12,9 +12,9 @@ export const getErrorMessage = (
   error: Error | WriteContractErrorType | WaitForTransactionReceiptErrorType,
 ) => {
   if ("shortMessage" in error) {
-    if ("metaMessages" in error && error.metaMessages) {
-      return `${error.shortMessage}\n\n${error.metaMessages[0]}`;
-    }
+    // if ("metaMessages" in error && error.metaMessages) {
+    //   return `${error.shortMessage}\n\n${error.metaMessages[0]}`;
+    // }
     return error.shortMessage;
   }
   return error.message;

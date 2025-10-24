@@ -7,19 +7,23 @@ import {
 import type { ComponentPropsWithoutRef } from "react";
 import { type FC, useState } from "react";
 import type { Hex } from "viem";
+import { zeroAddress } from "viem";
 import { statusIcons } from "@/components/modals/batch-transaction-modal";
 import { Text } from "@/components/ui/text";
 import { ChainIcon } from "@/components/ui/chain-icon";
 import { getChainById, getExplorerHashUrl } from "@/wagmi/config";
 import { shortenAddress } from "@/lib/utils/strings.ts";
 import { TbExternalLink } from "react-icons/tb";
-import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { ChevronDown, ChevronUp, PlusIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Tooltip } from "@/components/ui/tooltip";
 import { FaInfoCircle } from "react-icons/fa";
+import { useAddTokenToWallet } from "@/hooks/use-add-token-to-wallet.ts";
+import { Badge } from "@/components/ui/badge.tsx";
 
 export type TransactionModalProps = {
   title: string;
+  errorMessage?: string;
   data: {
     id: Hex;
     actions: {
@@ -28,12 +32,17 @@ export type TransactionModalProps = {
       tooltip?: string;
       chainId: number;
       toChainId?: number;
+      toTokenAddress?: `0x${string}`;
       status: keyof typeof statusIcons;
       hash?: Hex | { chainId: number; hash: Hex }[];
       userOpData?: { chainId: number; data: string }[];
+      retry: () => void;
     }[];
   } | null;
 };
+
+export type TransactionModalData = TransactionModalProps["data"];
+
 const finalizedStatuses: (keyof typeof statusIcons)[] = ["success", "failed"];
 
 type FCProps = FC<
@@ -41,9 +50,32 @@ type FCProps = FC<
     TransactionModalProps
 >;
 
-export const TransactionModal: FCProps = ({ data, title, ...props }) => {
+export const TransactionModal: FCProps = ({
+  data,
+  title,
+  errorMessage,
+  ...props
+}) => {
   const [openData, setOpenData] = useState(false);
+
+  const { addToken } = useAddTokenToWallet();
+
   const onOpenDataHandler = () => setOpenData(!openData);
+
+  const toChainId = data?.actions.find(({ toChainId }) => toChainId)?.toChainId;
+  const toTokenAddress = data?.actions.find(
+    ({ toTokenAddress }) => toTokenAddress,
+  )?.toTokenAddress;
+
+  const canAdd = toChainId && toTokenAddress && toTokenAddress !== zeroAddress;
+
+  const handleAddToWallet = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!canAdd) return;
+    await addToken({ address: toTokenAddress, chainId: toChainId });
+  };
+
   return (
     <Dialog {...props}>
       <DialogContent
@@ -115,7 +147,14 @@ export const TransactionModal: FCProps = ({ data, title, ...props }) => {
                     </div>
                   </div>
                 </div>
-                {["pending", "success", "failed"].includes(action.status) && (
+                {action.status === "failed" && (
+                  <div>
+                    <Button variant="white" onClick={action.retry}>
+                      Try again
+                    </Button>
+                  </div>
+                )}
+                {["pending", "success"].includes(action.status) && (
                   <div className="flex flex-col  rounded-[16px] bg-gray-300 p-0.5">
                     {(Array.isArray(action.hash)
                       ? action.hash
@@ -177,12 +216,32 @@ export const TransactionModal: FCProps = ({ data, title, ...props }) => {
             </div>
           ))}
         </div>
-        {data?.actions.every((a) => finalizedStatuses.includes(a.status)) && (
+        {canAdd &&
+          data?.actions.every(({ status }) => status === "success") && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleAddToWallet}
+              className="flex items-center gap-1.5 text-xs"
+              title="Add token to wallet"
+            >
+              <PlusIcon className="h-3 w-3" />
+              Add to Wallet
+            </Button>
+          )}
+        {data?.actions.every(({ status }) =>
+          finalizedStatuses.includes(status),
+        ) && (
           <DialogClose>
             <Button width="full" size="xl">
               Close
             </Button>
           </DialogClose>
+        )}
+        {errorMessage && (
+          <Badge className="rounded-lg p-3" variant="errorOutline">
+            {errorMessage}
+          </Badge>
         )}
       </DialogContent>
     </Dialog>
