@@ -270,16 +270,23 @@ const hoodiToRollupBBridgeAddress = parseContractAddress(
   DEFAULT_HOODI_TO_ROLLUP_B_BRIDGE_ADDRESS,
 );
 
+const DEFAULT_ROLLUP_B_SWAP_ADDRESS =
+  "0x70f2e907bf467E28A96A2e314B5200c2B144b76c" as Address;
+const rollupBSwapAddress = parseContractAddress(
+  "VITE_ROLLUP_B_SWAP_ADDRESS",
+  DEFAULT_ROLLUP_B_SWAP_ADDRESS,
+);
+
 export const contracts = {
   [rollupB.id]: {
-    swap: "0x70f2e907bf467E28A96A2e314B5200c2B144b76c",
+    swap: rollupBSwapAddress,
   },
   [hoodi.id]: {
     bridge: hoodiBridgeAddress,
   },
 } as const;
 
-export const rollupBSwapContract = "0x70f2e907bf467E28A96A2e314B5200c2B144b76c";
+export const rollupBSwapContract = rollupBSwapAddress;
 
 export const bridgeContracts = {
   [hoodi.id]: {
