@@ -142,7 +142,7 @@ export const Swap: SwapFC = () => {
   // );
 
   const values = form.watch();
-  // console.table(values);
+  console.table(values);
 
   useEffect(() => {
     persistPrevSwapValues(values);
@@ -188,6 +188,9 @@ export const Swap: SwapFC = () => {
   const sendTx = useSendTransaction();
 
   const submit = form.handleSubmit(async (values) => {
+    console.log("values");
+    console.table(values);
+
     const [rollupAPublicClient, rollupBPublicClient] =
       createRollupPublicClients(rollupA.id, rollupB.id);
 
