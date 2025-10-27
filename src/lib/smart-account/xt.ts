@@ -1,11 +1,11 @@
 "use client";
 
-import { hexToBytes, type Hex } from "viem";
+import { type Hex, hexToBytes } from "viem";
 import type { INamespace } from "protobufjs/light";
 import protobuf from "protobufjs/light";
 
 // Minimal protobuf schema for the messages we need
-const rootJson = {
+const rootJson: INamespace = {
   nested: {
     rollup: {
       nested: {
@@ -42,7 +42,7 @@ const rootJson = {
   },
 } as const;
 
-const root = protobuf.Root.fromJSON(rootJson as INamespace);
+const root = protobuf.Root.fromJSON(rootJson);
 const Message = root.lookupType("rollup.v1.Message");
 const XTRequest = root.lookupType("rollup.v1.XTRequest");
 const TransactionRequest = root.lookupType("rollup.v1.TransactionRequest");
