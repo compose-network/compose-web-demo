@@ -53,7 +53,7 @@ export const BigNumberInput: BigNumberInputFC = forwardRef<
       decimals = 18,
       allowNegative = false,
       onChange,
-      displayDecimals = 7,
+      displayDecimals = 18,
       tooltipPlacement = "left",
       render,
       ...props
@@ -220,7 +220,7 @@ export const NumberInput: NumberInputFC = forwardRef<
       max,
       min,
       className,
-      decimals = 6,
+      decimals = 18,
       allowNegative = false,
       onChange,
       render,
