@@ -5,15 +5,14 @@ import {
 } from "@rainbow-me/rainbowkit/wallets";
 import type { Transport } from "@wagmi/core";
 
-import type { Chain } from "viem";
-import type { Address } from "viem";
+import type { Address, Chain } from "viem";
 import { defineChain, fallback, http } from "viem";
 import {
-  mainnet as mainnetChain,
-  polygon as polygonChain,
-  base,
   arbitrum,
+  base,
+  mainnet as mainnetChain,
   optimism,
+  polygon as polygonChain,
 } from "viem/chains";
 import { createConfig } from "wagmi";
 
@@ -269,6 +268,9 @@ const hoodiToRollupBBridgeAddress = parseContractAddress(
   "VITE_BRIDGE_HOODI_TO_ROLLUP_B",
   DEFAULT_HOODI_TO_ROLLUP_B_BRIDGE_ADDRESS,
 );
+
+export const l2StandardBridgeProxyAddress =
+  "0x4200000000000000000000000000000000000010";
 
 export const contracts = {
   [rollupB.id]: {

@@ -36,7 +36,7 @@ export type TransactionModalProps = {
       status: keyof typeof statusIcons;
       hash?: Hex | { chainId: number; hash: Hex }[];
       userOpData?: { chainId: number; data: string }[];
-      retry: () => void;
+      retry: undefined | (() => void);
     }[];
   } | null;
 };
@@ -147,7 +147,7 @@ export const TransactionModal: FCProps = ({
                     </div>
                   </div>
                 </div>
-                {action.status === "failed" && (
+                {action.status === "failed" && action.retry && (
                   <div>
                     <Button variant="white" onClick={action.retry}>
                       Try again
@@ -168,9 +168,7 @@ export const TransactionModal: FCProps = ({
                           key={`${chainId}-${hash}-${i}`}
                           target="_blank"
                           href={
-                            hash
-                              ? getExplorerHashUrl(chainId, hash)
-                              : undefined
+                            hash ? getExplorerHashUrl(chainId, hash) : undefined
                           }
                           className="flex items-center gap-1 text-[12px] text-gray-700 px-2 py-1 cursor-pointer font-mono"
                         >
