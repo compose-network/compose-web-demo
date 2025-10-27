@@ -725,7 +725,7 @@ export const Swap: SwapFC = () => {
                     ? "Processing..."
                     : undefined
               }
-              disabled={!form.formState.isValid}
+              disabled={!form.formState.isValid || (fromToken.balance !== undefined && values.fromAmount > fromToken.balance)}
             >
               Swap
             </Button>

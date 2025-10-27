@@ -700,7 +700,7 @@ export const UserOperationBridge: SwapFC = () => {
               size="xl"
               className="w-full"
               type="submit"
-              disabled={!form.formState.isValid || kernel.isLoading}
+              disabled={!form.formState.isValid || kernel.isLoading || (fromToken.balance !== undefined && values.from.amount > fromToken.balance)}
               loadingText="Bridging..."
             >
               Bridge
