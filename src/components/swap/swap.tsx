@@ -40,26 +40,13 @@ import { getToken, isAddressEqual } from "@/wagmi/tokens";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { keepPreviousData } from "@tanstack/react-query";
 import { cloneDeep } from "lodash-es";
-import {
-  type ComponentPropsWithoutRef,
-  type FC,
-  useEffect,
-  useState,
-} from "react";
+import { type FC, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { FaArrowDown } from "react-icons/fa6";
 import { useLocalStorage } from "react-use";
 import { isAddress, parseEther, zeroAddress } from "viem";
 import { useSendTransaction, useSwitchChain } from "wagmi";
 import { z } from "zod";
-
-export type SwapProps = {
-  // TODO: Add props or remove this type
-};
-
-type SwapFC = FC<
-  Omit<ComponentPropsWithoutRef<"div">, keyof SwapProps> & SwapProps
->;
 
 const schema = z.object({
   fromChainId: z
@@ -81,7 +68,8 @@ const schema = z.object({
   toToken: z.string().refine(isAddress),
   slippage: z.number(),
 });
-export const Swap: SwapFC = () => {
+
+export const Swap: FC = () => {
   const { address, isConnected } = useAccount();
   const switchChain = useSwitchChain();
   const [transactionData, setTransactionData] =
@@ -375,107 +363,107 @@ export const Swap: SwapFC = () => {
       const is_from_B_to_A =
         values.fromChainId === rollupB.id && values.toChainId === rollupA.id;
 
-    const is_from_A_to_A =
-      values.fromChainId === rollupA.id && values.toChainId === rollupA.id;
+      const is_from_A_to_A =
+        values.fromChainId === rollupA.id && values.toChainId === rollupA.id;
 
-    setTransactionData((prev) => {
-      if (!prev) return null;
-      const clone = cloneDeep(prev);
-      clone.actions[userOpIndex].status = "pending";
-      return clone;
-    });
-
-    // Is Swapping from A -> B
-    if (
-      is_from_A_to_B ||
-      is_from_B_to_A ||
-      (is_from_A_to_A && !is_eth_to_erc20)
-    ) {
-      const createSwapUserOps = is_from_A_to_A
-        ? createSwapUserOpsFrom_A_to_A
-        : is_from_A_to_B
-          ? is_eth_to_erc20
-            ? createSwapETHForERC20UserOps_A_to_B
-            : createSwapUserOpsFrom_A_to_B
-          : is_eth_to_erc20
-            ? createSwapETHForERC20UserOps_B_to_A
-            : createSwapUserOpsFrom_B_to_A;
-
-      const { sendUserOps } = await createSwapUserOps(
-        {
-          amountIn: values.fromAmount,
-          fromToken: values.fromToken,
-          toToken: values.toToken,
-          eoaAddress: address!,
-          kernelA: kernel.kernel.data!.accounts.A,
-          kernelB: kernel.kernel.data!.accounts.B,
-          amountOut: prices.data?.[0] ?? 0n,
-        },
-        {
-          onSignedUserOps(userOps) {
-            setTransactionData((prev) => {
-              if (!prev) return null;
-              const clone = cloneDeep(prev);
-              clone.actions[userOpIndex].userOpData = [
-                {
-                  chainId: values.fromChainId,
-                  data: JSON.stringify(stringifyBigints(userOps[0])),
-                },
-                {
-                  chainId: values.toChainId,
-                  data: JSON.stringify(stringifyBigints(userOps[1])),
-                },
-              ];
-              return clone;
-            });
-          },
-          onBuildUserOps(builds) {
-            setTransactionData((prev) => {
-              if (!prev) return null;
-              const clone = cloneDeep(prev);
-              clone.actions[userOpIndex].hash = builds.map((build) => ({
-                chainId: build.chainId,
-                hash: build.hash,
-              }));
-              return clone;
-            });
-          },
-          onUserOpsMined: () => {
-            setTransactionData((prev) => {
-              if (!prev) return null;
-              const clone = cloneDeep(prev);
-              clone.actions[userOpIndex].status = "success";
-              return clone;
-            });
-            form.reset({
-              fromChainId: values.fromChainId,
-              fromToken: values.fromToken,
-              fromAmount: 0n,
-              toChainId: values.toChainId,
-              toToken: values.toToken,
-              slippage: values.slippage,
-            });
-            form.clearErrors();
-          },
-        },
-      ).catch((error) => {
-        setTransactionData((prev) => {
-          if (!prev) return null;
-          const clone = cloneDeep(prev);
-          clone.actions[userOpIndex].status = "failed";
-          return clone;
-        });
-        const errMes = getErrorMessage(error);
-        setErrorMessage(errMes);
-        toast({
-          title: "Swap failed",
-          variant: "destructive",
-          description: <Span className="whitespace-pre-wrap">{errMes}</Span>,
-        });
-        throw error;
+      setTransactionData((prev) => {
+        if (!prev) return null;
+        const clone = cloneDeep(prev);
+        clone.actions[userOpIndex].status = "pending";
+        return clone;
       });
-      return sendUserOps();
-    }
+
+      // Is Swapping from A -> B
+      if (
+        is_from_A_to_B ||
+        is_from_B_to_A ||
+        (is_from_A_to_A && !is_eth_to_erc20)
+      ) {
+        const createSwapUserOps = is_from_A_to_A
+          ? createSwapUserOpsFrom_A_to_A
+          : is_from_A_to_B
+            ? is_eth_to_erc20
+              ? createSwapETHForERC20UserOps_A_to_B
+              : createSwapUserOpsFrom_A_to_B
+            : is_eth_to_erc20
+              ? createSwapETHForERC20UserOps_B_to_A
+              : createSwapUserOpsFrom_B_to_A;
+
+        const { sendUserOps } = await createSwapUserOps(
+          {
+            amountIn: values.fromAmount,
+            fromToken: values.fromToken,
+            toToken: values.toToken,
+            eoaAddress: address!,
+            kernelA: kernel.kernel.data!.accounts.A,
+            kernelB: kernel.kernel.data!.accounts.B,
+            amountOut: prices.data?.[0] ?? 0n,
+          },
+          {
+            onSignedUserOps(userOps) {
+              setTransactionData((prev) => {
+                if (!prev) return null;
+                const clone = cloneDeep(prev);
+                clone.actions[userOpIndex].userOpData = [
+                  {
+                    chainId: values.fromChainId,
+                    data: JSON.stringify(stringifyBigints(userOps[0])),
+                  },
+                  {
+                    chainId: values.toChainId,
+                    data: JSON.stringify(stringifyBigints(userOps[1])),
+                  },
+                ];
+                return clone;
+              });
+            },
+            onBuildUserOps(builds) {
+              setTransactionData((prev) => {
+                if (!prev) return null;
+                const clone = cloneDeep(prev);
+                clone.actions[userOpIndex].hash = builds.map((build) => ({
+                  chainId: build.chainId,
+                  hash: build.hash,
+                }));
+                return clone;
+              });
+            },
+            onUserOpsMined: () => {
+              setTransactionData((prev) => {
+                if (!prev) return null;
+                const clone = cloneDeep(prev);
+                clone.actions[userOpIndex].status = "success";
+                return clone;
+              });
+              form.reset({
+                fromChainId: values.fromChainId,
+                fromToken: values.fromToken,
+                fromAmount: 0n,
+                toChainId: values.toChainId,
+                toToken: values.toToken,
+                slippage: values.slippage,
+              });
+              form.clearErrors();
+            },
+          },
+        ).catch((error) => {
+          setTransactionData((prev) => {
+            if (!prev) return null;
+            const clone = cloneDeep(prev);
+            clone.actions[userOpIndex].status = "failed";
+            return clone;
+          });
+          const errMes = getErrorMessage(error);
+          setErrorMessage(errMes);
+          toast({
+            title: "Swap failed",
+            variant: "destructive",
+            description: <Span className="whitespace-pre-wrap">{errMes}</Span>,
+          });
+          throw error;
+        });
+        return sendUserOps();
+      }
 
       // Execute swap
       await swap.write(
@@ -575,6 +563,7 @@ export const Swap: SwapFC = () => {
       ],
     });
 
+    setErrorMessage(undefined);
     await prereqFn?.();
     await actionFn();
   });

@@ -24,7 +24,6 @@ import { useApprove } from "@/lib/contract-interactions/erc-20/write/use-approve
 import { useMint } from "@/lib/contract-interactions/erc-20/write/use-mint";
 import { withTransactionModal } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
 import { useSmartAccount } from "@/lib/smart-account/kernel";
-import type { ComposedSignedUserOpsTxReturnType } from "@/lib/smart-account/user-op";
 import {
   decodeUserOperationLogs,
   toRpcUserOpCanonical,
@@ -36,7 +35,7 @@ import { type BRIDGE_ADDRESSES, BRIDGE_TOKEN } from "@/wagmi/addresses";
 import { chainsMap, hoodi, rollupA, rollupB } from "@/wagmi/config";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cloneDeep } from "lodash-es";
-import { type ComponentPropsWithoutRef, type FC, useState } from "react";
+import { type FC, useState } from "react";
 import { useForm } from "react-hook-form";
 import { FaArrowDown } from "react-icons/fa6";
 import { useLocalStorage } from "react-use";
@@ -55,30 +54,7 @@ import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { BRIDGE_CONFIG } from "@/wagmi/bridge.ts";
 import { getErrorMessage } from "@/lib/utils/wagmi.ts";
-
-export type SwapProps = {
-  // TODO: Add props or remove this type
-};
-
-type SwapFC = FC<
-  Omit<ComponentPropsWithoutRef<"div">, keyof SwapProps> & SwapProps
->;
-
-type ComposeRpcSchema = [
-  {
-    Method: "eth_sendXTransaction";
-    Parameters: [string];
-    ReturnType: null;
-  },
-  {
-    Method: "compose_buildSignedUserOpsTx";
-    Parameters: [
-      ReturnType<typeof toRpcUserOpCanonical>[],
-      { chainId: number },
-    ];
-    ReturnType: ComposedSignedUserOpsTxReturnType;
-  },
-];
+import type { ComposeRpcSchema } from "@/components/swap/utils/core.ts";
 
 const schema = z.object({
   token: z.string().refine(isAddress),
@@ -104,7 +80,7 @@ const schema = z.object({
   slippage: z.number(),
 });
 
-export const UserOperationBridge: SwapFC = () => {
+export const UserOperationBridge: FC = () => {
   const eoa = useAccount();
   const sendTx = useSendTransaction();
 
@@ -413,15 +389,15 @@ export const UserOperationBridge: SwapFC = () => {
         throw errs;
       });
 
-    setTransactionData((prev) => {
-      if (!prev) return null;
-      const clone = cloneDeep(prev);
-      clone.actions[userOpIndex].hash = [
-        { chainId: buildA.chainId, hash: buildA.hash },
-        { chainId: buildB.chainId, hash: buildB.hash },
-      ];
-      return clone;
-    });
+      setTransactionData((prev) => {
+        if (!prev) return null;
+        const clone = cloneDeep(prev);
+        clone.actions[userOpIndex].hash = [
+          { chainId: buildA.chainId, hash: buildA.hash },
+          { chainId: buildB.chainId, hash: buildB.hash },
+        ];
+        return clone;
+      });
 
       const hashA = buildA.hash;
       const hashB = buildB.hash;
@@ -436,16 +412,16 @@ export const UserOperationBridge: SwapFC = () => {
         destPublicClient.chain.blockExplorers?.default?.url,
       ).toString();
 
-    setTransactionData((prev) => {
-      if (!prev) return null;
-      const clone = cloneDeep(prev);
-      clone.actions[userOpIndex].hash = [
-        { chainId: values.from.chainId, hash: hashA },
-        { chainId: values.to.chainId, hash: hashB },
-      ];
-      // clone.actions[2].hash = hashB;
-      return clone;
-    });
+      setTransactionData((prev) => {
+        if (!prev) return null;
+        const clone = cloneDeep(prev);
+        clone.actions[userOpIndex].hash = [
+          { chainId: values.from.chainId, hash: hashA },
+          { chainId: values.to.chainId, hash: hashB },
+        ];
+        // clone.actions[2].hash = hashB;
+        return clone;
+      });
 
       console.log("buildA:", buildA, explorerAURL);
       console.log("buildB ", buildB, explorerBURL);

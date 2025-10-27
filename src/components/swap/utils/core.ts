@@ -97,7 +97,7 @@ export const createUserOp = async ({
   };
 };
 
-type ComposeRpcSchema = [
+export type ComposeRpcSchema = [
   {
     Method: "eth_sendXTransaction";
     Parameters: [string];
