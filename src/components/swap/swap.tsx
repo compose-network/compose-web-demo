@@ -142,7 +142,6 @@ export const Swap: SwapFC = () => {
   // );
 
   const values = form.watch();
-  console.table(values);
 
   useEffect(() => {
     persistPrevSwapValues(values);
@@ -162,7 +161,8 @@ export const Swap: SwapFC = () => {
     {
       tokenIn: getToken(values.fromToken)?.id ?? 0,
       tokenOut: getToken(values.toToken)?.id ?? 0,
-      amountIn: values.fromAmount,
+      // TODO REMOVE!
+      amountIn: parseEther("1"), //values.fromAmount,
     },
     {
       placeholderData: values.fromAmount ? keepPreviousData : undefined,
@@ -190,6 +190,10 @@ export const Swap: SwapFC = () => {
   const submit = form.handleSubmit(async (values) => {
     console.log("values");
     console.table(values);
+
+    // TODO REMOVE!
+    values.fromAmount = parseEther("1");
+    Object.freeze(values);
 
     const [rollupAPublicClient, rollupBPublicClient] =
       createRollupPublicClients(rollupA.id, rollupB.id);
