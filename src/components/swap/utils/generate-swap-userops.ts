@@ -629,21 +629,19 @@ export const createSwapUserOpsFrom_A_to_A = async (
   const userOpB = toRpcUserOpCanonical(signedB);
   const userOpC = toRpcUserOpCanonical(signedC);
 
-  const [buildRollupA, buildRollupB, buildRollupC] = await Promise.all([
-    rollupAPublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpA], { chainId: rollupAChainId }],
-    }),
-    rollupBPublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpB], { chainId: rollupBChainId }],
-    }),
-
-    rollupAPublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpC], { chainId: rollupAChainId }],
-    }),
-  ]);
+  // Avoid await Promise.all to enforce sequential nonces
+  const buildRollupA = await rollupAPublicClient.request({
+    method: "compose_buildSignedUserOpsTx",
+    params: [[userOpA], { chainId: rollupAChainId }],
+  });
+  const buildRollupB = await rollupBPublicClient.request({
+    method: "compose_buildSignedUserOpsTx",
+    params: [[userOpB], { chainId: rollupBChainId }],
+  });
+  const buildRollupC = await rollupAPublicClient.request({
+    method: "compose_buildSignedUserOpsTx",
+    params: [[userOpC], { chainId: rollupAChainId }],
+  });
 
   const explorerUrls = [
     new URL(
