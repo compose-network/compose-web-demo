@@ -310,7 +310,7 @@ export const TransactionBridge: SwapFC = () => {
               size="xl"
               className="w-full"
               type="submit"
-              disabled={!form.formState.isValid}
+              disabled={!form.formState.isValid || (fromToken.balance !== undefined && values.from.amount > fromToken.balance)}
               isLoading={bridgeETH.isPending}
               loadingText="Bridging..."
             >

@@ -6,8 +6,9 @@ import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn
 
 import { ComposeLogo } from "@/components/ui/compose-logo.tsx";
 // import { ThemeSwitcher } from "@/components/ui/theme-switcher";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { ThemeSwitcher } from "@/components/ui/theme-switcher";
+import { Button } from "@/components/ui/button.tsx";
 
 export type NavbarProps = {
   // TODO: Add props or remove this type
@@ -29,7 +30,7 @@ export const Navbar: FCProps = ({ className, ...props }) => {
             <ComposeLogo className="h-[48px]" />
           </NavLink>
         </div>
-
+        <Button as={Link} to={'https://docs.compose.network/'} target={'_blank'} variant={"ghost"} className={" hover:bg-transparent"}>Docs</Button>
         <div className="flex items-center gap-3">
           {/*<NetworkSwitchBtn />*/}
           <ConnectWalletBtn />
