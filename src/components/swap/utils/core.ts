@@ -1,18 +1,10 @@
-import type {
-  ComposedSignedUserOpsTxReturnType,
-  toRpcUserOpCanonical,
-} from "@/lib/smart-account/user-op";
+import type { ComposedSignedUserOpsTxReturnType, toRpcUserOpCanonical } from "@/lib/smart-account/user-op";
 import { chainsMap, config, rollupA, rollupB } from "@/wagmi/config";
 import { getPublicClient, http } from "@wagmi/core";
 import type { CreateKernelAccountReturnType } from "@zerodev/sdk";
 import { type Address, createPublicClient, type Hex, rpcSchema } from "viem";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type {
-  GetPaymasterDataParameters,
-  PaymasterActions,
-} from "viem/account-abstraction";
-import { getPaymasterDataForChain } from "@/api/paymaster.ts";
 
 const FALLBACK_CALL_GAS_LIMIT = 900_000n;
 const MIN_VERIFICATION_GAS_LIMIT = 1_200_000n;
@@ -73,14 +65,15 @@ export const createUserOp = async ({
   // Estimate fees per gas
   const gasEstimate = await publicClient.estimateFeesPerGas();
 
-  const paymaster: PaymasterActions = {
-    getPaymasterData: (parameters: GetPaymasterDataParameters) => {
-      return getPaymasterDataForChain(parameters, "pm_sponsorUserOperation");
-    },
-    getPaymasterStubData: (parameters: GetPaymasterDataParameters) => {
-      return getPaymasterDataForChain(parameters, "pm_getPaymasterStubData");
-    },
-  };
+  // TODO: TEMP DISABLED PAYMASTER
+  // const paymaster: PaymasterActions = {
+  //   getPaymasterData: (parameters: GetPaymasterDataParameters) => {
+  //     return getPaymasterDataForChain(parameters, "pm_sponsorUserOperation");
+  //   },
+  //   getPaymasterStubData: (parameters: GetPaymasterDataParameters) => {
+  //     return getPaymasterDataForChain(parameters, "pm_getPaymasterStubData");
+  //   },
+  // };
 
   const callData = await account.encodeCalls(calls);
 
@@ -93,7 +86,7 @@ export const createUserOp = async ({
     preVerificationGas: PRE_VERIFICATION_GAS,
     maxFeePerGas: gasEstimate.maxFeePerGas!,
     maxPriorityFeePerGas: gasEstimate.maxPriorityFeePerGas!,
-    paymaster,
+    // paymaster,
   };
 };
 
