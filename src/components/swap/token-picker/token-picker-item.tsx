@@ -71,7 +71,7 @@ export const TokenPickerItem: TokenPickerItemFC = ({
                 await switchChain.switchChainAsync({ chainId });
                 mint.write(
                   { address: token, chainId },
-                  { to: account.address!, amount: parseEther("10") },
+                  { to: account.address!, amount: parseEther("10000000") },
                   withTransactionModal(),
                 );
               }}
