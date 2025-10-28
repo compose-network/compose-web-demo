@@ -22,6 +22,7 @@ import {
   type DecodedReceipt,
 } from "@/lib/utils/viem";
 import type { AllEvents } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
+import { globals } from "@/config";
 type UserOpSwapOptions = {
   onSignedUserOps?: (userOps: PrepareUserOperationReturnType[]) => void;
   onBuildUserOps?: (
@@ -66,6 +67,7 @@ export const createSwapUserOpsFrom_A_to_B = async (
   const sourceChainId = rollupA.id;
   const destChainId = rollupB.id;
 
+  console.log("amountOut:", amountOut);
   const [sourcePublicClient, destPublicClient] = createRollupPublicClients(
     sourceChainId,
     destChainId,
@@ -136,7 +138,7 @@ export const createSwapUserOpsFrom_A_to_B = async (
           data: encodeFunctionData({
             abi: TokenABI,
             functionName: "approve",
-            args: [rollupBSwapContract, amountIn],
+            args: [rollupBSwapContract, globals.MAX_WEI_AMOUNT],
           }),
         },
         {
@@ -184,7 +186,6 @@ export const createSwapUserOpsFrom_A_to_B = async (
       ],
     }),
   ]);
-
   const [signedA, signedB] = await prepareAndSignUserOperations(
     [sourcePublicClient as any, destPublicClient as any],
     [sourceUserOp, destUserOp],
@@ -295,7 +296,7 @@ export const createSwapUserOpsFrom_B_to_A = async (
           data: encodeFunctionData({
             abi: TokenABI,
             functionName: "transferFrom",
-            args: [eoaAddress, kernelA.address, amountIn],
+            args: [eoaAddress, kernelB.address, amountIn],
           }),
         },
         {
@@ -330,8 +331,8 @@ export const createSwapUserOpsFrom_B_to_A = async (
             args: [
               BigInt(destChainId),
               isSwappingToETH ? WETH_ADDRESS : toToken,
-              kernelA.address,
               kernelB.address,
+              kernelA.address,
               amountOut,
               sessionId,
               destBridgeContract,
@@ -352,8 +353,8 @@ export const createSwapUserOpsFrom_B_to_A = async (
             functionName: "receiveTokens",
             args: [
               BigInt(sourceChainId),
-              kernelA.address,
               kernelB.address,
+              kernelA.address,
               sessionId,
               sourceBridgeContract,
             ],
@@ -777,8 +778,8 @@ export const createSwapETHForERC20UserOps_B_to_A = async (
             args: [
               BigInt(destChainId),
               toToken,
-              kernelA.address,
               kernelB.address,
+              kernelA.address,
               amountOut,
               sessionId,
               destBridgeContract,
@@ -799,8 +800,8 @@ export const createSwapETHForERC20UserOps_B_to_A = async (
             functionName: "receiveTokens",
             args: [
               BigInt(sourceChainId),
-              kernelA.address,
               kernelB.address,
+              kernelA.address,
               sessionId,
               sourceBridgeContract,
             ],
@@ -973,7 +974,7 @@ export const createSwapETHForERC20UserOps_A_to_B = async (
           data: encodeFunctionData({
             abi: TokenABI,
             functionName: "approve",
-            args: [rollupBSwapContract, amountIn],
+            args: [rollupBSwapContract, globals.MAX_WEI_AMOUNT],
           }),
         },
         {
