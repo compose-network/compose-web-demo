@@ -34,6 +34,7 @@ import {
   optimismChain,
   rollupA,
   rollupB,
+  rollupBSwapContract,
 } from "@/wagmi/config";
 import { SWAP_CONFIG } from "@/wagmi/swap.ts";
 import { getToken, isAddressEqual } from "@/wagmi/tokens";
@@ -142,7 +143,6 @@ export const Swap: SwapFC = () => {
   // );
 
   const values = form.watch();
-  console.table(values);
 
   useEffect(() => {
     persistPrevSwapValues(values);
@@ -188,11 +188,20 @@ export const Swap: SwapFC = () => {
   const sendTx = useSendTransaction();
 
   const submit = form.handleSubmit(async (values) => {
-    console.log("values");
-    console.table(values);
-
     const [rollupAPublicClient, rollupBPublicClient] =
       createRollupPublicClients(rollupA.id, rollupB.id);
+
+    const is_from_A_to_B =
+      values.fromChainId === rollupA.id && values.toChainId === rollupB.id;
+
+    const is_from_B_to_A =
+      values.fromChainId === rollupB.id && values.toChainId === rollupA.id;
+
+    const is_from_A_to_A =
+      values.fromChainId === rollupA.id && values.toChainId === rollupA.id;
+
+    const is_from_B_to_B =
+      values.fromChainId === rollupB.id && values.toChainId === rollupB.id;
 
     const is_eth_to_erc20 = isAddressEqual(values.fromToken, zeroAddress);
 
@@ -219,7 +228,14 @@ export const Swap: SwapFC = () => {
         ).readContract({
           abi: TokenABI,
           functionName: "allowance",
-          args: [address!, kernel.kernel.data?.accounts.A.address],
+          args: [
+            address!,
+            is_from_B_to_B
+              ? rollupBSwapContract
+              : values.fromChainId === rollupA.id
+                ? kernel.kernel.data?.accounts.A.address
+                : kernel.kernel.data?.accounts.B.address,
+          ],
           address: values.fromToken,
         });
 
@@ -261,7 +277,11 @@ export const Swap: SwapFC = () => {
           chainId: values.fromChainId,
         },
         {
-          spender: kernel.kernel.data?.accounts.A.address,
+          spender: is_from_B_to_B
+            ? rollupBSwapContract
+            : values.fromChainId === rollupA.id
+              ? kernel.kernel.data?.accounts.A.address
+              : kernel.kernel.data?.accounts.B.address,
           amount: globals.MAX_WEI_AMOUNT,
         },
         {
@@ -363,14 +383,6 @@ export const Swap: SwapFC = () => {
     //   );
     //   return sendUserOps();
     // }
-    const is_from_A_to_B =
-      values.fromChainId === rollupA.id && values.toChainId === rollupB.id;
-
-    const is_from_B_to_A =
-      values.fromChainId === rollupB.id && values.toChainId === rollupA.id;
-
-    const is_from_A_to_A =
-      values.fromChainId === rollupA.id && values.toChainId === rollupA.id;
 
     setTransactionData((prev) => {
       if (!prev) return null;
