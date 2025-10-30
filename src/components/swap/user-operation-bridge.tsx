@@ -318,7 +318,8 @@ export const UserOperationBridge: FC = () => {
         : createAndSignBridgeERC20UserOps;
 
       // Create and sign user operations for bridge
-      const [signedA, signedB] = await createOps({
+      const { sign } = await createOps({
+        // const [signedA, signedB] = await createOps({
         eoaAddress: eoa.address!,
         sourceKernelAccount: sourceKernel!,
         destKernelAccount: destKernel!,
@@ -343,6 +344,8 @@ export const UserOperationBridge: FC = () => {
         });
         throw error;
       });
+
+      const [signedA, signedB] = await sign();
 
       const userOpA = toRpcUserOpCanonical(signedA);
       const userOpB = toRpcUserOpCanonical(signedB);
@@ -676,7 +679,12 @@ export const UserOperationBridge: FC = () => {
               size="xl"
               className="w-full"
               type="submit"
-              disabled={!form.formState.isValid || kernel.isLoading || (fromToken.balance !== undefined && values.from.amount > fromToken.balance)}
+              disabled={
+                !form.formState.isValid ||
+                kernel.isLoading ||
+                (fromToken.balance !== undefined &&
+                  values.from.amount > fromToken.balance)
+              }
               loadingText="Bridging..."
             >
               Bridge

@@ -10,9 +10,10 @@ import {
 } from "@/wagmi/addresses";
 import { config } from "@/wagmi/config";
 import { getPublicClient } from "@wagmi/core";
-import { prepareAndSignUserOperations } from "@zerodev/multi-chain-ecdsa-validator";
+import { signUserOperations } from "@zerodev/multi-chain-ecdsa-validator/actions"; //NOTE (Chris): Do not remove "actions" suffix as it breaks function
 import type { CreateKernelAccountReturnType } from "@zerodev/sdk";
 import { type Address, encodeFunctionData, type Hex } from "viem";
+import { prepareUserOperation } from "viem/account-abstraction";
 
 export type GenerateERC20BridgeUserOpsParams = {
   eoaAddress: Address;
@@ -108,10 +109,28 @@ export const createAndSignBridgeERC20UserOps = async ({
     }),
   ]);
 
-  return prepareAndSignUserOperations(
-    [sourcePublicClient as any, destPublicClient as any],
-    [sourceUserOp, destUserOp],
+  const preparedSourceUserOps = await prepareUserOperation(
+    sourcePublicClient,
+    sourceUserOp,
   );
+
+  const preparedDestUserOps = await prepareUserOperation(
+    destPublicClient,
+    destUserOp,
+  );
+
+  return {
+    sign: async () => {
+      return signUserOperations(sourcePublicClient as any, {
+        userOperations: [preparedSourceUserOps, preparedDestUserOps],
+        account: sourceKernelAccount,
+      });
+    },
+    preparedOps: {
+      source: preparedSourceUserOps,
+      destination: preparedDestUserOps,
+    },
+  };
 };
 
 export type GenerateETHBridgeUserOpsParams = {
@@ -211,8 +230,26 @@ export const createAndSignBridgeETHUserOps = async ({
     }),
   ]);
 
-  return prepareAndSignUserOperations(
-    [sourcePublicClient as any, destPublicClient as any],
-    [sourceUserOp, destUserOp],
+  const preparedSourceUserOps = await prepareUserOperation(
+    sourcePublicClient,
+    sourceUserOp,
   );
+
+  const preparedDestUserOps = await prepareUserOperation(
+    destPublicClient,
+    destUserOp,
+  );
+
+  return {
+    sign: async () => {
+      return signUserOperations(sourcePublicClient as any, {
+        userOperations: [preparedSourceUserOps, preparedDestUserOps],
+        account: sourceKernelAccount,
+      });
+    },
+    preparedOps: {
+      source: preparedSourceUserOps,
+      destination: preparedDestUserOps,
+    },
+  };
 };
