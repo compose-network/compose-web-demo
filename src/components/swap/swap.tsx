@@ -420,7 +420,7 @@ export const Swap: FC = () => {
       (is_from_A_to_A && !is_eth_to_erc20)
     ) {
       const createSwapUserOps = is_from_A_to_A
-        ? createSwapUserOpsFrom_A_to_A
+        ? createSwapUserOpsFrom_A_to_A_2ops
         : is_from_A_to_B
           ? is_eth_to_erc20
             ? createSwapETHForERC20UserOps_A_to_B
