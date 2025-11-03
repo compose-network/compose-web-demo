@@ -337,6 +337,8 @@ export const UserOperationBridge: FC = () => {
       throw error;
     });
 
+    setErrorMessage(undefined);
+
     setTransactionData({
       id,
       actions: [
@@ -345,7 +347,7 @@ export const UserOperationBridge: FC = () => {
               {
                 name: `${isNative ? `Send ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${symbol}`}`,
                 chainId: values.from.chainId,
-                status: "pending" as const,
+                status: "idle" as const,
                 description: `${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
                 tooltip: isNative
                   ? "ETH must first be transferred to your Smart Account before initiating a cross-chain transaction."

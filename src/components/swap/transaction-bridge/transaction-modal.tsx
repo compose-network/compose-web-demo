@@ -149,45 +149,50 @@ export const TransactionModal: FCProps = ({
                   </div>
                 </div>
                 {["idle", "failed"].includes(action.status) &&
+                  (!data.actions[i - 1] ||
+                    data.actions[i - 1]?.status === "success") &&
                   action.signAndSend && (
                     <div>
                       <Button variant="white" onClick={action.signAndSend}>
-                        {errorMessage ? "Try again" : "Sign"}
+                        {errorMessage ? "Try again" : "Sign & Send"}
                       </Button>
                     </div>
                   )}
-                {["pending", "success"].includes(action.status) && (
-                  <div className="flex flex-col  rounded-[16px] bg-gray-300 p-0.5">
-                    {(Array.isArray(action.hash)
-                      ? action.hash
-                      : action.hash
-                        ? [{ chainId: action.chainId, hash: action.hash }]
-                        : []
-                    ).map((hashObj, i) => {
-                      const { chainId, hash } = hashObj;
-                      return (
-                        <a
-                          key={`${chainId}-${hash}-${i}`}
-                          target="_blank"
-                          href={
-                            hash ? getExplorerHashUrl(chainId, hash) : undefined
-                          }
-                          className="flex items-center gap-1 text-[12px] text-gray-700 px-2 py-1 cursor-pointer font-mono"
-                        >
-                          {hash && (
-                            <ChainIcon
-                              size="xs"
-                              chainId={chainId}
-                              className="mr-0.5"
-                            />
-                          )}
-                          {hash ? shortenAddress(hash) : "Waiting..."}
-                          {hash && <TbExternalLink className="size-3" />}
-                        </a>
-                      );
-                    })}
-                  </div>
-                )}
+                {["pending", "success", "failed"].includes(action.status) &&
+                  action.hash && (
+                    <div className="flex flex-col  rounded-[16px] bg-gray-300 p-0.5">
+                      {(Array.isArray(action.hash)
+                        ? action.hash
+                        : action.hash
+                          ? [{ chainId: action.chainId, hash: action.hash }]
+                          : []
+                      ).map((hashObj, i) => {
+                        const { chainId, hash } = hashObj;
+                        return (
+                          <a
+                            key={`${chainId}-${hash}-${i}`}
+                            target="_blank"
+                            href={
+                              hash
+                                ? getExplorerHashUrl(chainId, hash)
+                                : undefined
+                            }
+                            className="flex items-center gap-1 text-[12px] text-gray-700 px-2 py-1 cursor-pointer font-mono"
+                          >
+                            {hash && (
+                              <ChainIcon
+                                size="xs"
+                                chainId={chainId}
+                                className="mr-0.5"
+                              />
+                            )}
+                            {hash ? shortenAddress(hash) : "Waiting..."}
+                            {hash && <TbExternalLink className="size-3" />}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
               </div>
               {openData &&
                 action.userOpData?.map((userOp, i) => (

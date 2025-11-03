@@ -1,20 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getBridgeAddress, WETH_ADDRESS } from "@/wagmi/addresses";
-import { encodeFunctionData, zeroAddress, type Address, type Hex } from "viem";
+import { type Address, encodeFunctionData, type Hex, zeroAddress } from "viem";
 import { rollupA, rollupB, rollupBSwapContract } from "@/wagmi/config";
 import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
 import { TokenABI } from "@/lib/abi/token";
-import { prepareAndSignUserOperations } from "@zerodev/multi-chain-ecdsa-validator";
 import type { CreateKernelAccountReturnType } from "@zerodev/sdk";
 import {
-  createUserOp,
   createRollupPublicClients,
+  createUserOp,
 } from "@/components/swap/utils/core";
 import { SwapABI } from "@/lib/abi/swap/swap";
 import { getToken, isAddressEqual } from "@/wagmi/tokens";
 import type { ComposedSignedUserOpsTxReturnType } from "@/lib/smart-account/user-op";
 import { toRpcUserOpCanonical } from "@/lib/smart-account/user-op";
 import type { PrepareUserOperationReturnType } from "viem/account-abstraction";
+import { prepareUserOperation } from "viem/account-abstraction";
 import { encodeXtMessage } from "@/lib/smart-account/xt";
 import { WETHAbi } from "@/lib/abi/weth";
 import {
@@ -23,6 +23,9 @@ import {
 } from "@/lib/utils/viem";
 import type { AllEvents } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
 import { globals } from "@/config";
+import { omit } from "lodash-es";
+import { signUserOperations } from "@zerodev/multi-chain-ecdsa-validator/actions";
+
 type UserOpSwapOptions = {
   onSignedUserOps?: (userOps: PrepareUserOperationReturnType[]) => void;
   onBuildUserOps?: (
@@ -186,75 +189,96 @@ export const createSwapUserOpsFrom_A_to_B = async (
       ],
     }),
   ]);
-  const [signedA, signedB] = await prepareAndSignUserOperations(
-    [sourcePublicClient as any, destPublicClient as any],
-    [sourceUserOp, destUserOp],
+
+  const preparedSourceUserOps = omit(
+    await prepareUserOperation(sourcePublicClient, sourceUserOp),
+    "account",
   );
 
-  options.onSignedUserOps?.([signedA, signedB]);
-
-  const userOpA = toRpcUserOpCanonical(signedA);
-  const userOpB = toRpcUserOpCanonical(signedB);
-
-  const [buildA, buildB] = await Promise.all([
-    sourcePublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpA], { chainId: sourceChainId }],
-    }),
-    destPublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpB], { chainId: destChainId }],
-    }),
-  ]);
-
-  const explorerUrls = [
-    new URL(
-      `tx/${buildA.hash}`,
-      sourcePublicClient.chain.blockExplorers?.default?.url,
-    ).toString(),
-    new URL(
-      `tx/${buildB.hash}`,
-      destPublicClient.chain.blockExplorers?.default?.url,
-    ).toString(),
-  ];
-
-  Promise.all([
-    sourcePublicClient.waitForTransactionReceipt({
-      hash: buildA.hash,
-    }),
-    destPublicClient.waitForTransactionReceipt({
-      hash: buildB.hash,
-    }),
-  ]).then(([receiptA, receiptB]) => {
-    options.onUserOpsMined?.([
-      addDecodedEventsToReceipt<AllEvents>(receiptA),
-      addDecodedEventsToReceipt<AllEvents>(receiptB),
-    ]);
-  });
-
-  options.onBuildUserOps?.([buildA, buildB], explorerUrls);
-
-  const payload = encodeXtMessage({
-    senderId: "client",
-    entries: [
-      { chainId: sourceChainId, rawTx: buildA.raw as `0x${string}` },
-      { chainId: destChainId, rawTx: buildB.raw as `0x${string}` },
-    ],
-  });
-
-  options.onPayloadEncoded?.(payload);
+  const preparedDestUserOps = omit(
+    await prepareUserOperation(destPublicClient, destUserOp),
+    "account",
+  );
 
   return {
-    signedUserOps: [signedA, signedB],
-    userOps: [userOpA, userOpB],
-    build: [buildA, buildB],
-    payload,
-    explorerUrls,
-    sendUserOps: () =>
+    sign: async () => {
+      const [signedA, signedB] = await signUserOperations(
+        sourcePublicClient as any,
+        {
+          userOperations: [preparedSourceUserOps, preparedDestUserOps],
+          account: kernelA, // it uses it to get the Entrypoint address and version
+        },
+      );
+      options.onSignedUserOps?.([signedA, signedB]);
+
+      const userOpA = toRpcUserOpCanonical(signedA);
+      const userOpB = toRpcUserOpCanonical(signedB);
+
+      const [buildA, buildB] = await Promise.all([
+        sourcePublicClient.request({
+          method: "compose_buildSignedUserOpsTx",
+          params: [[userOpA], { chainId: sourceChainId }],
+        }),
+        destPublicClient.request({
+          method: "compose_buildSignedUserOpsTx",
+          params: [[userOpB], { chainId: destChainId }],
+        }),
+      ]);
+
+      const explorerUrls = [
+        new URL(
+          `tx/${buildA.hash}`,
+          sourcePublicClient.chain.blockExplorers?.default?.url,
+        ).toString(),
+        new URL(
+          `tx/${buildB.hash}`,
+          destPublicClient.chain.blockExplorers?.default?.url,
+        ).toString(),
+      ];
+
+      Promise.all([
+        sourcePublicClient.waitForTransactionReceipt({
+          hash: buildA.hash,
+        }),
+        destPublicClient.waitForTransactionReceipt({
+          hash: buildB.hash,
+        }),
+      ]).then(([receiptA, receiptB]) => {
+        options.onUserOpsMined?.([
+          addDecodedEventsToReceipt<AllEvents>(receiptA),
+          addDecodedEventsToReceipt<AllEvents>(receiptB),
+        ]);
+      });
+
+      options.onBuildUserOps?.([buildA, buildB], explorerUrls);
+
+      const payload = encodeXtMessage({
+        senderId: "client",
+        entries: [
+          { chainId: sourceChainId, rawTx: buildA.raw as `0x${string}` },
+          { chainId: destChainId, rawTx: buildB.raw as `0x${string}` },
+        ],
+      });
+
+      options.onPayloadEncoded?.(payload);
+
       sourcePublicClient.request({
         method: "eth_sendXTransaction",
         params: [payload],
-      }),
+      });
+
+      return {
+        signedUserOps: [signedA, signedB],
+        userOps: [userOpA, userOpB],
+        build: [buildA, buildB],
+        payload,
+        explorerUrls,
+      };
+    },
+    preparedOps: {
+      source: preparedSourceUserOps,
+      destination: preparedDestUserOps,
+    },
   };
 };
 
@@ -392,75 +416,95 @@ export const createSwapUserOpsFrom_B_to_A = async (
     }),
   ]);
 
-  const [signedA, signedB] = await prepareAndSignUserOperations(
-    [sourcePublicClient as any, destPublicClient as any],
-    [sourceUserOp, destUserOp],
+  const preparedSourceUserOps = omit(
+    await prepareUserOperation(sourcePublicClient, sourceUserOp),
+    "account",
   );
 
-  options.onSignedUserOps?.([signedA, signedB]);
-
-  const userOpA = toRpcUserOpCanonical(signedA);
-  const userOpB = toRpcUserOpCanonical(signedB);
-
-  const [buildA, buildB] = await Promise.all([
-    sourcePublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpA], { chainId: sourceChainId }],
-    }),
-    destPublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpB], { chainId: destChainId }],
-    }),
-  ]);
-
-  const explorerUrls = [
-    new URL(
-      `tx/${buildA.hash}`,
-      sourcePublicClient.chain.blockExplorers?.default?.url,
-    ).toString(),
-    new URL(
-      `tx/${buildB.hash}`,
-      destPublicClient.chain.blockExplorers?.default?.url,
-    ).toString(),
-  ];
-
-  Promise.all([
-    sourcePublicClient.waitForTransactionReceipt({
-      hash: buildA.hash,
-    }),
-    destPublicClient.waitForTransactionReceipt({
-      hash: buildB.hash,
-    }),
-  ]).then(([receiptA, receiptB]) => {
-    options.onUserOpsMined?.([
-      addDecodedEventsToReceipt<AllEvents>(receiptA),
-      addDecodedEventsToReceipt<AllEvents>(receiptB),
-    ]);
-  });
-
-  options.onBuildUserOps?.([buildA, buildB], explorerUrls);
-
-  const payload = encodeXtMessage({
-    senderId: "client",
-    entries: [
-      { chainId: sourceChainId, rawTx: buildA.raw as `0x${string}` },
-      { chainId: destChainId, rawTx: buildB.raw as `0x${string}` },
-    ],
-  });
-
-  options.onPayloadEncoded?.(payload);
+  const preparedDestUserOps = omit(
+    await prepareUserOperation(destPublicClient, destUserOp),
+    "account",
+  );
 
   return {
-    signedUserOps: [signedA, signedB],
-    userOps: [userOpA, userOpB],
-    build: [buildA, buildB],
-    payload,
-    explorerUrls,
-    sendUserOps: () =>
+    sign: async () => {
+      const [signedA, signedB] = await signUserOperations(
+        sourcePublicClient as any,
+        {
+          userOperations: [preparedSourceUserOps, preparedDestUserOps],
+          account: kernelA, // it uses it to get the Entrypoint address and version
+        },
+      );
+      options.onSignedUserOps?.([signedA, signedB]);
+
+      const userOpA = toRpcUserOpCanonical(signedA);
+      const userOpB = toRpcUserOpCanonical(signedB);
+
+      const [buildA, buildB] = await Promise.all([
+        sourcePublicClient.request({
+          method: "compose_buildSignedUserOpsTx",
+          params: [[userOpA], { chainId: sourceChainId }],
+        }),
+        destPublicClient.request({
+          method: "compose_buildSignedUserOpsTx",
+          params: [[userOpB], { chainId: destChainId }],
+        }),
+      ]);
+
+      const explorerUrls = [
+        new URL(
+          `tx/${buildA.hash}`,
+          sourcePublicClient.chain.blockExplorers?.default?.url,
+        ).toString(),
+        new URL(
+          `tx/${buildB.hash}`,
+          destPublicClient.chain.blockExplorers?.default?.url,
+        ).toString(),
+      ];
+
+      Promise.all([
+        sourcePublicClient.waitForTransactionReceipt({
+          hash: buildA.hash,
+        }),
+        destPublicClient.waitForTransactionReceipt({
+          hash: buildB.hash,
+        }),
+      ]).then(([receiptA, receiptB]) => {
+        options.onUserOpsMined?.([
+          addDecodedEventsToReceipt<AllEvents>(receiptA),
+          addDecodedEventsToReceipt<AllEvents>(receiptB),
+        ]);
+      });
+
+      options.onBuildUserOps?.([buildA, buildB], explorerUrls);
+
+      const payload = encodeXtMessage({
+        senderId: "client",
+        entries: [
+          { chainId: sourceChainId, rawTx: buildA.raw as `0x${string}` },
+          { chainId: destChainId, rawTx: buildB.raw as `0x${string}` },
+        ],
+      });
+
+      options.onPayloadEncoded?.(payload);
+
       sourcePublicClient.request({
         method: "eth_sendXTransaction",
         params: [payload],
-      }),
+      });
+
+      return {
+        signedUserOps: [signedA, signedB],
+        userOps: [userOpA, userOpB],
+        build: [buildA, buildB],
+        payload,
+        explorerUrls,
+      };
+    },
+    preparedOps: {
+      source: preparedSourceUserOps,
+      destination: preparedDestUserOps,
+    },
   };
 };
 
@@ -615,95 +659,122 @@ export const createSwapUserOpsFrom_A_to_A = async (
     }),
   ]);
 
-  const [signedA, signedB, signedC] = await prepareAndSignUserOperations(
-    [
-      rollupAPublicClient as any,
-      rollupBPublicClient as any,
-      rollupAPublicClient as any,
-    ],
-    [op1, op2, op3],
+  const preparedSourceUserOps1 = omit(
+    await prepareUserOperation(rollupAPublicClient, op1),
+    "account",
   );
 
-  options.onSignedUserOps?.([signedA, signedB, signedC]);
-
-  const userOpA = toRpcUserOpCanonical(signedA);
-  const userOpB = toRpcUserOpCanonical(signedB);
-  const userOpC = toRpcUserOpCanonical(signedC);
-
-  // Avoid await Promise.all to enforce sequential nonces
-  const buildRollupA = await rollupAPublicClient.request({
-    method: "compose_buildSignedUserOpsTx",
-    params: [[userOpA], { chainId: rollupAChainId }],
-  });
-  const buildRollupB = await rollupBPublicClient.request({
-    method: "compose_buildSignedUserOpsTx",
-    params: [[userOpB], { chainId: rollupBChainId }],
-  });
-  const buildRollupC = await rollupAPublicClient.request({
-    method: "compose_buildSignedUserOpsTx",
-    params: [[userOpC], { chainId: rollupAChainId }],
-  });
-
-  const explorerUrls = [
-    new URL(
-      `tx/${buildRollupA.hash}`,
-      rollupAPublicClient.chain.blockExplorers?.default?.url,
-    ).toString(),
-    new URL(
-      `tx/${buildRollupB.hash}`,
-      rollupBPublicClient.chain.blockExplorers?.default?.url,
-    ).toString(),
-    new URL(
-      `tx/${buildRollupC.hash}`,
-      rollupAPublicClient.chain.blockExplorers?.default?.url,
-    ).toString(),
-  ];
-
-  Promise.all([
-    rollupAPublicClient.waitForTransactionReceipt({
-      hash: buildRollupA.hash,
-    }),
-    rollupBPublicClient.waitForTransactionReceipt({
-      hash: buildRollupB.hash,
-    }),
-    rollupAPublicClient.waitForTransactionReceipt({
-      hash: buildRollupC.hash,
-    }),
-  ]).then(([receiptA, receiptB, receiptC]) => {
-    options.onUserOpsMined?.([
-      addDecodedEventsToReceipt<AllEvents>(receiptA),
-      addDecodedEventsToReceipt<AllEvents>(receiptB),
-      addDecodedEventsToReceipt<AllEvents>(receiptC),
-    ]);
-  });
-
-  options.onBuildUserOps?.(
-    [buildRollupA, buildRollupB, buildRollupC],
-    explorerUrls,
+  const preparedDestUserOps = omit(
+    await prepareUserOperation(rollupBPublicClient, op2),
+    "account",
   );
 
-  const payload = encodeXtMessage({
-    senderId: "client",
-    entries: [
-      { chainId: rollupAChainId, rawTx: buildRollupA.raw as `0x${string}` },
-      { chainId: rollupBChainId, rawTx: buildRollupB.raw as `0x${string}` },
-      { chainId: rollupAChainId, rawTx: buildRollupC.raw as `0x${string}` },
-    ],
-  });
-
-  options.onPayloadEncoded?.(payload);
+  const preparedSourceUserOps2 = omit(
+    await prepareUserOperation(rollupAPublicClient, op3),
+    "account",
+  );
 
   return {
-    signedUserOps: [signedA, signedB, signedC],
-    userOps: [userOpA, userOpB, userOpC],
-    build: [buildRollupA, buildRollupB, buildRollupC],
-    payload,
-    explorerUrls,
-    sendUserOps: () =>
-      rollupAPublicClient.request({
+    sign: async () => {
+      const [signedA, signedB, signedC] = await signUserOperations(
+        rollupAPublicClient as any,
+        {
+          userOperations: [
+            preparedSourceUserOps1,
+            preparedDestUserOps,
+            preparedSourceUserOps2,
+          ],
+          account: kernelA, // it uses it to get the Entrypoint address and version
+        },
+      );
+
+      options.onSignedUserOps?.([signedA, signedB, signedC]);
+
+      const userOpA = toRpcUserOpCanonical(signedA);
+      const userOpB = toRpcUserOpCanonical(signedB);
+      const userOpC = toRpcUserOpCanonical(signedC);
+
+      // Avoid await Promise.all to enforce sequential nonces
+      const buildRollupA = await rollupAPublicClient.request({
+        method: "compose_buildSignedUserOpsTx",
+        params: [[userOpA], { chainId: rollupAChainId }],
+      });
+      const buildRollupB = await rollupBPublicClient.request({
+        method: "compose_buildSignedUserOpsTx",
+        params: [[userOpB], { chainId: rollupBChainId }],
+      });
+      const buildRollupC = await rollupAPublicClient.request({
+        method: "compose_buildSignedUserOpsTx",
+        params: [[userOpC], { chainId: rollupAChainId }],
+      });
+
+      const explorerUrls = [
+        new URL(
+          `tx/${buildRollupA.hash}`,
+          rollupAPublicClient.chain.blockExplorers?.default?.url,
+        ).toString(),
+        new URL(
+          `tx/${buildRollupB.hash}`,
+          rollupBPublicClient.chain.blockExplorers?.default?.url,
+        ).toString(),
+        new URL(
+          `tx/${buildRollupC.hash}`,
+          rollupAPublicClient.chain.blockExplorers?.default?.url,
+        ).toString(),
+      ];
+
+      Promise.all([
+        rollupAPublicClient.waitForTransactionReceipt({
+          hash: buildRollupA.hash,
+        }),
+        rollupBPublicClient.waitForTransactionReceipt({
+          hash: buildRollupB.hash,
+        }),
+        rollupAPublicClient.waitForTransactionReceipt({
+          hash: buildRollupC.hash,
+        }),
+      ]).then(([receiptA, receiptB, receiptC]) => {
+        options.onUserOpsMined?.([
+          addDecodedEventsToReceipt<AllEvents>(receiptA),
+          addDecodedEventsToReceipt<AllEvents>(receiptB),
+          addDecodedEventsToReceipt<AllEvents>(receiptC),
+        ]);
+      });
+
+      options.onBuildUserOps?.(
+        [buildRollupA, buildRollupB, buildRollupC],
+        explorerUrls,
+      );
+
+      const payload = encodeXtMessage({
+        senderId: "client",
+        entries: [
+          { chainId: rollupAChainId, rawTx: buildRollupA.raw as `0x${string}` },
+          { chainId: rollupBChainId, rawTx: buildRollupB.raw as `0x${string}` },
+          { chainId: rollupAChainId, rawTx: buildRollupC.raw as `0x${string}` },
+        ],
+      });
+
+      options.onPayloadEncoded?.(payload);
+
+      await rollupAPublicClient.request({
         method: "eth_sendXTransaction",
         params: [payload],
-      }),
+      });
+
+      return {
+        signedUserOps: [signedA, signedB, signedC],
+        userOps: [userOpA, userOpB, userOpC],
+        build: [buildRollupA, buildRollupB, buildRollupC],
+        payload,
+        explorerUrls,
+      };
+    },
+    preparedOps: {
+      //TODO(Chris): Consider what to do with third User OP - preparedSourceUserOps2
+      source: preparedSourceUserOps1,
+      destination: preparedDestUserOps,
+    },
   };
 };
 
@@ -820,75 +891,95 @@ export const createSwapETHForERC20UserOps_B_to_A = async (
     }),
   ]);
 
-  const [signedA, signedB] = await prepareAndSignUserOperations(
-    [sourcePublicClient as any, destPublicClient as any],
-    [sourceUserOp, destUserOp],
+  const preparedSourceUserOps = omit(
+    await prepareUserOperation(sourcePublicClient, sourceUserOp),
+    "account",
   );
 
-  options.onSignedUserOps?.([signedA, signedB]);
-
-  const userOpA = toRpcUserOpCanonical(signedA);
-  const userOpB = toRpcUserOpCanonical(signedB);
-
-  const [buildA, buildB] = await Promise.all([
-    sourcePublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpA], { chainId: sourceChainId }],
-    }),
-    destPublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpB], { chainId: destChainId }],
-    }),
-  ]);
-
-  const explorerUrls = [
-    new URL(
-      `tx/${buildA.hash}`,
-      sourcePublicClient.chain.blockExplorers?.default?.url,
-    ).toString(),
-    new URL(
-      `tx/${buildB.hash}`,
-      destPublicClient.chain.blockExplorers?.default?.url,
-    ).toString(),
-  ];
-
-  Promise.all([
-    sourcePublicClient.waitForTransactionReceipt({
-      hash: buildA.hash,
-    }),
-    destPublicClient.waitForTransactionReceipt({
-      hash: buildB.hash,
-    }),
-  ]).then(([receiptA, receiptB]) => {
-    options.onUserOpsMined?.([
-      addDecodedEventsToReceipt<AllEvents>(receiptA),
-      addDecodedEventsToReceipt<AllEvents>(receiptB),
-    ]);
-  });
-
-  options.onBuildUserOps?.([buildA, buildB], explorerUrls);
-
-  const payload = encodeXtMessage({
-    senderId: "client",
-    entries: [
-      { chainId: sourceChainId, rawTx: buildA.raw as `0x${string}` },
-      { chainId: destChainId, rawTx: buildB.raw as `0x${string}` },
-    ],
-  });
-
-  options.onPayloadEncoded?.(payload);
+  const preparedDestUserOps = omit(
+    await prepareUserOperation(destPublicClient, destUserOp),
+    "account",
+  );
 
   return {
-    signedUserOps: [signedA, signedB],
-    userOps: [userOpA, userOpB],
-    build: [buildA, buildB],
-    payload,
-    explorerUrls,
-    sendUserOps: () =>
+    sign: async () => {
+      const [signedA, signedB] = await signUserOperations(
+        sourcePublicClient as any,
+        {
+          userOperations: [preparedSourceUserOps, preparedDestUserOps],
+          account: kernelA, // it uses it to get the Entrypoint address and version
+        },
+      );
+      options.onSignedUserOps?.([signedA, signedB]);
+
+      const userOpA = toRpcUserOpCanonical(signedA);
+      const userOpB = toRpcUserOpCanonical(signedB);
+
+      const [buildA, buildB] = await Promise.all([
+        sourcePublicClient.request({
+          method: "compose_buildSignedUserOpsTx",
+          params: [[userOpA], { chainId: sourceChainId }],
+        }),
+        destPublicClient.request({
+          method: "compose_buildSignedUserOpsTx",
+          params: [[userOpB], { chainId: destChainId }],
+        }),
+      ]);
+
+      const explorerUrls = [
+        new URL(
+          `tx/${buildA.hash}`,
+          sourcePublicClient.chain.blockExplorers?.default?.url,
+        ).toString(),
+        new URL(
+          `tx/${buildB.hash}`,
+          destPublicClient.chain.blockExplorers?.default?.url,
+        ).toString(),
+      ];
+
+      Promise.all([
+        sourcePublicClient.waitForTransactionReceipt({
+          hash: buildA.hash,
+        }),
+        destPublicClient.waitForTransactionReceipt({
+          hash: buildB.hash,
+        }),
+      ]).then(([receiptA, receiptB]) => {
+        options.onUserOpsMined?.([
+          addDecodedEventsToReceipt<AllEvents>(receiptA),
+          addDecodedEventsToReceipt<AllEvents>(receiptB),
+        ]);
+      });
+
+      options.onBuildUserOps?.([buildA, buildB], explorerUrls);
+
+      const payload = encodeXtMessage({
+        senderId: "client",
+        entries: [
+          { chainId: sourceChainId, rawTx: buildA.raw as `0x${string}` },
+          { chainId: destChainId, rawTx: buildB.raw as `0x${string}` },
+        ],
+      });
+
+      options.onPayloadEncoded?.(payload);
+
       sourcePublicClient.request({
         method: "eth_sendXTransaction",
         params: [payload],
-      }),
+      });
+
+      return {
+        signedUserOps: [signedA, signedB],
+        userOps: [userOpA, userOpB],
+        build: [buildA, buildB],
+        payload,
+        explorerUrls,
+      };
+    },
+    preparedOps: {
+      source: preparedSourceUserOps,
+      destination: preparedDestUserOps,
+    },
   };
 };
 
@@ -1004,75 +1095,95 @@ export const createSwapETHForERC20UserOps_A_to_B = async (
     }),
   ]);
 
-  const [signedA, signedB] = await prepareAndSignUserOperations(
-    [sourcePublicClient as any, destPublicClient as any],
-    [sourceUserOp, destUserOp],
+  const preparedSourceUserOps = omit(
+    await prepareUserOperation(sourcePublicClient, sourceUserOp),
+    "account",
   );
 
-  options.onSignedUserOps?.([signedA, signedB]);
-
-  const userOpA = toRpcUserOpCanonical(signedA);
-  const userOpB = toRpcUserOpCanonical(signedB);
-
-  const [buildA, buildB] = await Promise.all([
-    sourcePublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpA], { chainId: sourceChainId }],
-    }),
-    destPublicClient.request({
-      method: "compose_buildSignedUserOpsTx",
-      params: [[userOpB], { chainId: destChainId }],
-    }),
-  ]);
-
-  const explorerUrls = [
-    new URL(
-      `tx/${buildA.hash}`,
-      sourcePublicClient.chain.blockExplorers?.default?.url,
-    ).toString(),
-    new URL(
-      `tx/${buildB.hash}`,
-      destPublicClient.chain.blockExplorers?.default?.url,
-    ).toString(),
-  ];
-
-  Promise.all([
-    sourcePublicClient.waitForTransactionReceipt({
-      hash: buildA.hash,
-    }),
-    destPublicClient.waitForTransactionReceipt({
-      hash: buildB.hash,
-    }),
-  ]).then(([receiptA, receiptB]) => {
-    options.onUserOpsMined?.([
-      addDecodedEventsToReceipt<AllEvents>(receiptA),
-      addDecodedEventsToReceipt<AllEvents>(receiptB),
-    ]);
-  });
-
-  options.onBuildUserOps?.([buildA, buildB], explorerUrls);
-
-  const payload = encodeXtMessage({
-    senderId: "client",
-    entries: [
-      { chainId: sourceChainId, rawTx: buildA.raw as `0x${string}` },
-      { chainId: destChainId, rawTx: buildB.raw as `0x${string}` },
-    ],
-  });
-
-  options.onPayloadEncoded?.(payload);
+  const preparedDestUserOps = omit(
+    await prepareUserOperation(destPublicClient, destUserOp),
+    "account",
+  );
 
   return {
-    signedUserOps: [signedA, signedB],
-    userOps: [userOpA, userOpB],
-    build: [buildA, buildB],
-    payload,
-    explorerUrls,
-    sendUserOps: () =>
+    sign: async () => {
+      const [signedA, signedB] = await signUserOperations(
+        sourcePublicClient as any,
+        {
+          userOperations: [preparedSourceUserOps, preparedDestUserOps],
+          account: kernelA, // it uses it to get the Entrypoint address and version
+        },
+      );
+      options.onSignedUserOps?.([signedA, signedB]);
+
+      const userOpA = toRpcUserOpCanonical(signedA);
+      const userOpB = toRpcUserOpCanonical(signedB);
+
+      const [buildA, buildB] = await Promise.all([
+        sourcePublicClient.request({
+          method: "compose_buildSignedUserOpsTx",
+          params: [[userOpA], { chainId: sourceChainId }],
+        }),
+        destPublicClient.request({
+          method: "compose_buildSignedUserOpsTx",
+          params: [[userOpB], { chainId: destChainId }],
+        }),
+      ]);
+
+      const explorerUrls = [
+        new URL(
+          `tx/${buildA.hash}`,
+          sourcePublicClient.chain.blockExplorers?.default?.url,
+        ).toString(),
+        new URL(
+          `tx/${buildB.hash}`,
+          destPublicClient.chain.blockExplorers?.default?.url,
+        ).toString(),
+      ];
+
+      Promise.all([
+        sourcePublicClient.waitForTransactionReceipt({
+          hash: buildA.hash,
+        }),
+        destPublicClient.waitForTransactionReceipt({
+          hash: buildB.hash,
+        }),
+      ]).then(([receiptA, receiptB]) => {
+        options.onUserOpsMined?.([
+          addDecodedEventsToReceipt<AllEvents>(receiptA),
+          addDecodedEventsToReceipt<AllEvents>(receiptB),
+        ]);
+      });
+
+      options.onBuildUserOps?.([buildA, buildB], explorerUrls);
+
+      const payload = encodeXtMessage({
+        senderId: "client",
+        entries: [
+          { chainId: sourceChainId, rawTx: buildA.raw as `0x${string}` },
+          { chainId: destChainId, rawTx: buildB.raw as `0x${string}` },
+        ],
+      });
+
+      options.onPayloadEncoded?.(payload);
+
       sourcePublicClient.request({
         method: "eth_sendXTransaction",
         params: [payload],
-      }),
+      });
+
+      return {
+        signedUserOps: [signedA, signedB],
+        userOps: [userOpA, userOpB],
+        build: [buildA, buildB],
+        payload,
+        explorerUrls,
+      };
+    },
+    preparedOps: {
+      source: preparedSourceUserOps,
+      destination: preparedDestUserOps,
+    },
   };
 };
 

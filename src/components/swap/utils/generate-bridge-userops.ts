@@ -245,7 +245,7 @@ export const createAndSignBridgeETHUserOps = async ({
     sign: async () => {
       return signUserOperations(sourcePublicClient as any, {
         userOperations: [preparedSourceUserOps, preparedDestUserOps],
-        account: sourceKernelAccount,
+        account: sourceKernelAccount, // it uses it to get the Entrypoint address and version
       });
     },
     preparedOps: {
