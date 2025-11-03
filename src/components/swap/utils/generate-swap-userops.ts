@@ -1127,8 +1127,7 @@ export const createSwapUserOpsFrom_A_to_A_2ops = async (
             functionName: "send",
             args: [
               BigInt(rollupBChainId),
-              // toToken, // only for disabled swap
-              fromToken, // ^^
+              toToken,
               kernelA.address,
               kernelB.address,
               amountIn,
@@ -1191,20 +1190,20 @@ export const createSwapUserOpsFrom_A_to_A_2ops = async (
             args: [rollupBSwapContract, amountIn],
           }),
         },
-        // {
-        //   to: rollupBSwapContract,
-        //   value: 0n,
-        //   data: encodeFunctionData({
-        //     abi: SwapABI,
-        //     functionName: "swap",
-        //     args: [
-        //       kernelB.address,
-        //       getToken(fromToken)?.id ?? 0,
-        //       getToken(toToken)?.id ?? 0,
-        //       amountIn,
-        //     ],
-        //   }),
-        // },
+        {
+          to: rollupBSwapContract,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: SwapABI,
+            functionName: "swap",
+            args: [
+              kernelB.address,
+              getToken(fromToken)?.id ?? 0,
+              getToken(toToken)?.id ?? 0,
+              amountIn,
+            ],
+          }),
+        },
         {
           to: rollupBBridgeContract,
           value: 0n,
