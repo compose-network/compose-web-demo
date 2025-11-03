@@ -1127,7 +1127,7 @@ export const createSwapUserOpsFrom_A_to_A_2ops = async (
             functionName: "send",
             args: [
               BigInt(rollupBChainId),
-              toToken,
+              fromToken,
               kernelA.address,
               kernelB.address,
               amountIn,
@@ -1152,7 +1152,7 @@ export const createSwapUserOpsFrom_A_to_A_2ops = async (
           }),
         },
         {
-          to: fromToken,
+          to: toToken,
           value: 0n,
           data: encodeFunctionData({
             abi: TokenABI,
@@ -1167,7 +1167,7 @@ export const createSwapUserOpsFrom_A_to_A_2ops = async (
       chainId: rollupBChainId,
       calls: [
         {
-          to: rollupABridgeContract,
+          to: rollupBBridgeContract,
           value: 0n,
           data: encodeFunctionData({
             abi: UserOperationBridgeAbi,
