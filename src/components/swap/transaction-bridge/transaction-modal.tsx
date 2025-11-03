@@ -20,6 +20,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { FaInfoCircle } from "react-icons/fa";
 import { useAddTokenToWallet } from "@/hooks/use-add-token-to-wallet.ts";
 import { Badge } from "@/components/ui/badge.tsx";
+import { CopyBtn } from "@/components/ui/copy-btn.tsx";
 
 export type TransactionModalProps = {
   title: string;
@@ -36,7 +37,7 @@ export type TransactionModalProps = {
       status: keyof typeof statusIcons;
       hash?: Hex | { chainId: number; hash: Hex }[];
       userOpData?: { chainId: number; data: string }[];
-      retry: undefined | (() => void);
+      signAndSend: undefined | (() => void);
     }[];
   } | null;
 };
@@ -147,13 +148,14 @@ export const TransactionModal: FCProps = ({
                     </div>
                   </div>
                 </div>
-                {action.status === "failed" && action.retry && (
-                  <div>
-                    <Button variant="white" onClick={action.retry}>
-                      Try again
-                    </Button>
-                  </div>
-                )}
+                {["idle", "failed"].includes(action.status) &&
+                  action.signAndSend && (
+                    <div>
+                      <Button variant="white" onClick={action.signAndSend}>
+                        {errorMessage ? "Try again" : "Sign"}
+                      </Button>
+                    </div>
+                  )}
                 {["pending", "success"].includes(action.status) && (
                   <div className="flex flex-col  rounded-[16px] bg-gray-300 p-0.5">
                     {(Array.isArray(action.hash)
@@ -200,6 +202,10 @@ export const TransactionModal: FCProps = ({
                       >
                         {getChainById(userOp.chainId).name}
                       </Text>
+                      <CopyBtn
+                        className="flex items-center"
+                        text={userOp.data}
+                      />
                     </div>
                     <div>
                       <Text

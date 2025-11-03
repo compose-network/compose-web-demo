@@ -164,7 +164,7 @@ export const TransactionBridge: FC = () => {
                   name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
                   chainId: values.from.chainId,
                   status: "pending",
-                  retry: () => {
+                  signAndSend: () => {
                     setErrorMessage(undefined);
                     actionFn();
                   },
@@ -173,7 +173,7 @@ export const TransactionBridge: FC = () => {
                   name: `Get ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
                   chainId: values.to.chainId,
                   status: "idle",
-                  retry: undefined,
+                  signAndSend: undefined,
                 },
               ],
             });
@@ -315,7 +315,11 @@ export const TransactionBridge: FC = () => {
               size="xl"
               className="w-full"
               type="submit"
-              disabled={!form.formState.isValid || (fromToken.balance !== undefined && values.from.amount > fromToken.balance)}
+              disabled={
+                !form.formState.isValid ||
+                (fromToken.balance !== undefined &&
+                  values.from.amount > fromToken.balance)
+              }
               isLoading={bridgeETH.isPending}
               loadingText="Bridging..."
             >

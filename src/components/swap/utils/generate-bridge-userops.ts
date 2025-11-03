@@ -14,6 +14,7 @@ import { signUserOperations } from "@zerodev/multi-chain-ecdsa-validator/actions
 import type { CreateKernelAccountReturnType } from "@zerodev/sdk";
 import { type Address, encodeFunctionData, type Hex } from "viem";
 import { prepareUserOperation } from "viem/account-abstraction";
+import { omit } from "lodash-es";
 
 export type GenerateERC20BridgeUserOpsParams = {
   eoaAddress: Address;
@@ -109,14 +110,14 @@ export const createAndSignBridgeERC20UserOps = async ({
     }),
   ]);
 
-  const preparedSourceUserOps = await prepareUserOperation(
-    sourcePublicClient,
-    sourceUserOp,
+  const preparedSourceUserOps = omit(
+    await prepareUserOperation(sourcePublicClient, sourceUserOp),
+    "account",
   );
 
-  const preparedDestUserOps = await prepareUserOperation(
-    destPublicClient,
-    destUserOp,
+  const preparedDestUserOps = omit(
+    await prepareUserOperation(destPublicClient, destUserOp),
+    "account",
   );
 
   return {
@@ -230,14 +231,14 @@ export const createAndSignBridgeETHUserOps = async ({
     }),
   ]);
 
-  const preparedSourceUserOps = await prepareUserOperation(
-    sourcePublicClient,
-    sourceUserOp,
+  const preparedSourceUserOps = omit(
+    await prepareUserOperation(sourcePublicClient, sourceUserOp),
+    "account",
   );
 
-  const preparedDestUserOps = await prepareUserOperation(
-    destPublicClient,
-    destUserOp,
+  const preparedDestUserOps = omit(
+    await prepareUserOperation(destPublicClient, destUserOp),
+    "account",
   );
 
   return {

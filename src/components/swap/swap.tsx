@@ -254,8 +254,8 @@ export const Swap: FC = () => {
             spender: is_from_B_to_B
               ? rollupBSwapContract
               : values.fromChainId === rollupA.id
-                ? kernel.kernel.data?.accounts.A.address
-                : kernel.kernel.data?.accounts.B.address,
+                ? kernel.kernel.data?.accounts.A.address!
+                : kernel.kernel.data?.accounts.B.address!,
             amount: globals.MAX_WEI_AMOUNT,
           },
           {
@@ -555,7 +555,7 @@ export const Swap: FC = () => {
                 tooltip: is_eth_to_erc20
                   ? "ETH must first be transferred to your Smart Account before initiating a cross-chain transaction."
                   : undefined,
-                retry: async () => {
+                signAndSend: async () => {
                   setErrorMessage(undefined);
                   await prereqFn!();
                   await actionFn();
@@ -569,7 +569,7 @@ export const Swap: FC = () => {
           toChainId: values.toChainId,
           toTokenAddress: values.toToken,
           status: needsApproval || is_eth_to_erc20 ? "idle" : "pending",
-          retry: async () => {
+          signAndSend: async () => {
             setErrorMessage(undefined);
             await actionFn();
           },
@@ -728,7 +728,11 @@ export const Swap: FC = () => {
                     ? "Processing..."
                     : undefined
               }
-              disabled={!form.formState.isValid || (fromToken.balance !== undefined && values.fromAmount > fromToken.balance)}
+              disabled={
+                !form.formState.isValid ||
+                (fromToken.balance !== undefined &&
+                  values.fromAmount > fromToken.balance)
+              }
             >
               Swap
             </Button>

@@ -55,6 +55,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { BRIDGE_CONFIG } from "@/wagmi/bridge.ts";
 import { getErrorMessage } from "@/lib/utils/wagmi.ts";
 import type { ComposeRpcSchema } from "@/components/swap/utils/core.ts";
+import { safeStringify } from "@/lib/utils/bigint.ts";
 
 const schema = z.object({
   token: z.string().refine(isAddress),
@@ -180,6 +181,15 @@ export const UserOperationBridge: FC = () => {
       rpcSchema: rpcSchema<ComposeRpcSchema>(),
     });
 
+    const destPublicClient = createPublicClient({
+      chain: chainsMap[values.to.chainId as keyof typeof chainsMap],
+      transport: http(
+        chainsMap[values.to.chainId as keyof typeof chainsMap].rpcUrls.default
+          .http[0],
+      ),
+      rpcSchema: rpcSchema<ComposeRpcSchema>(),
+    });
+
     let prereqFn: (() => Promise<void>) | undefined = undefined;
 
     if (isNative) {
@@ -290,16 +300,88 @@ export const UserOperationBridge: FC = () => {
       console.log("Skipping transfer transaction");
     }
 
-    const actionFn = async () => {
-      const destPublicClient = createPublicClient({
-        chain: chainsMap[values.to.chainId as keyof typeof chainsMap],
-        transport: http(
-          chainsMap[values.to.chainId as keyof typeof chainsMap].rpcUrls.default
-            .http[0],
-        ),
-        rpcSchema: rpcSchema<ComposeRpcSchema>(),
-      });
+    const sourceKernel = kernel.getKernelByChainId(values.from.chainId);
 
+    const destKernel = kernel.getKernelByChainId(values.to.chainId);
+
+    const sessionId = BigInt(Math.floor(Math.random() * 1000000));
+
+    const createOps = isNative
+      ? createAndSignBridgeETHUserOps
+      : createAndSignBridgeERC20UserOps;
+
+    // Create and sign user operations for bridge
+    const { sign, preparedOps } = await createOps({
+      eoaAddress: eoa.address!,
+      sourceKernelAccount: sourceKernel!,
+      destKernelAccount: destKernel!,
+      tokenAddress: values.token,
+      amount: values.from.amount,
+      sessionId,
+      sourceChainId: values.from.chainId as keyof typeof BRIDGE_ADDRESSES,
+      destChainId: values.to.chainId as keyof typeof BRIDGE_ADDRESSES,
+    }).catch((error) => {
+      setTransactionData((prev) => {
+        if (!prev) return null;
+        const clone = cloneDeep(prev);
+        clone.actions[userOpIndex].status = "failed";
+        return clone;
+      });
+      const errMes = getErrorMessage(error);
+      setErrorMessage(errMes);
+      toast({
+        title: "Transaction failed",
+        variant: "destructive",
+        description: <Span className="whitespace-pre-wrap">{errMes}</Span>,
+      });
+      throw error;
+    });
+
+    setTransactionData({
+      id,
+      actions: [
+        ...(needsApprove || isNative
+          ? [
+              {
+                name: `${isNative ? `Send ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${symbol}`}`,
+                chainId: values.from.chainId,
+                status: "pending" as const,
+                description: `${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
+                tooltip: isNative
+                  ? "ETH must first be transferred to your Smart Account before initiating a cross-chain transaction."
+                  : undefined,
+                signAndSend: async () => {
+                  setErrorMessage(undefined);
+                  await prereqFn!();
+                },
+              },
+            ]
+          : []),
+        {
+          name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${symbol}`,
+          chainId: values.from.chainId,
+          toChainId: values.to.chainId,
+          toTokenAddress: values.token,
+          status: "idle" as const,
+          userOpData: [
+            {
+              chainId: values.from.chainId,
+              data: safeStringify(preparedOps.source),
+            },
+            {
+              chainId: values.to.chainId,
+              data: safeStringify(preparedOps.destination),
+            },
+          ],
+          signAndSend: async () => {
+            setErrorMessage(undefined);
+            await actionFn();
+          },
+        },
+      ],
+    });
+
+    const actionFn = async () => {
       setTransactionData((prev) => {
         if (!prev) return null;
         const clone = cloneDeep(prev);
@@ -307,28 +389,7 @@ export const UserOperationBridge: FC = () => {
         return clone;
       });
 
-      const sourceKernel = kernel.getKernelByChainId(values.from.chainId);
-
-      const destKernel = kernel.getKernelByChainId(values.to.chainId);
-
-      const sessionId = BigInt(Math.floor(Math.random() * 1000000));
-
-      const createOps = isNative
-        ? createAndSignBridgeETHUserOps
-        : createAndSignBridgeERC20UserOps;
-
-      // Create and sign user operations for bridge
-      const { sign } = await createOps({
-        // const [signedA, signedB] = await createOps({
-        eoaAddress: eoa.address!,
-        sourceKernelAccount: sourceKernel!,
-        destKernelAccount: destKernel!,
-        tokenAddress: values.token,
-        amount: values.from.amount,
-        sessionId,
-        sourceChainId: values.from.chainId as keyof typeof BRIDGE_ADDRESSES,
-        destChainId: values.to.chainId as keyof typeof BRIDGE_ADDRESSES,
-      }).catch((error) => {
+      const [signedA, signedB] = await sign().catch((error) => {
         setTransactionData((prev) => {
           if (!prev) return null;
           const clone = cloneDeep(prev);
@@ -345,24 +406,11 @@ export const UserOperationBridge: FC = () => {
         throw error;
       });
 
-      const [signedA, signedB] = await sign();
-
       const userOpA = toRpcUserOpCanonical(signedA);
       const userOpB = toRpcUserOpCanonical(signedB);
 
       console.log("signedA:", signedA);
       console.log("signedB:", signedB);
-
-      // Update transactionData with userOp data
-      setTransactionData((prev) => {
-        if (!prev) return null;
-        const clone = cloneDeep(prev);
-        clone.actions[userOpIndex].userOpData = [
-          { chainId: values.from.chainId, data: JSON.stringify(userOpA) },
-          { chainId: values.to.chainId, data: JSON.stringify(userOpB) },
-        ];
-        return clone;
-      });
 
       const [buildA, buildB] = await Promise.all([
         sourcePublicClient.request({
@@ -422,7 +470,6 @@ export const UserOperationBridge: FC = () => {
           { chainId: values.from.chainId, hash: hashA },
           { chainId: values.to.chainId, hash: hashB },
         ];
-        // clone.actions[2].hash = hashB;
         return clone;
       });
 
@@ -500,43 +547,8 @@ export const UserOperationBridge: FC = () => {
       });
     };
 
-    setTransactionData({
-      id,
-      actions: [
-        ...(needsApprove || isNative
-          ? [
-              {
-                name: `${isNative ? `Send ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${symbol}`}`,
-                chainId: values.from.chainId,
-                status: "pending" as const,
-                description: `${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
-                tooltip: isNative
-                  ? "ETH must first be transferred to your Smart Account before initiating a cross-chain transaction."
-                  : undefined,
-                retry: async () => {
-                  setErrorMessage(undefined);
-                  await prereqFn!();
-                  await actionFn();
-                },
-              },
-            ]
-          : []),
-        {
-          name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${symbol}`,
-          chainId: values.from.chainId,
-          toChainId: values.to.chainId,
-          toTokenAddress: values.token,
-          status: "idle" as const,
-          retry: async () => {
-            setErrorMessage(undefined);
-            await actionFn();
-          },
-        },
-      ],
-    });
-
-    await prereqFn?.();
-    await actionFn();
+    // await prereqFn?.();
+    // await actionFn();
   });
 
   const mint = useMint();
