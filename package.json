@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "start": "live-server build ",
-    "dev": "vite",
+    "start": "live-server build",
+    "dev": "vite --mode stage",
     "dev:prod": "vite --mode prod",
     "watch": "vite build --watch",
     "build": "vite build",
