@@ -44,8 +44,6 @@ export type TransactionModalProps = {
 
 export type TransactionModalData = TransactionModalProps["data"];
 
-const finalizedStatuses: (keyof typeof statusIcons)[] = ["success", "failed"];
-
 type FCProps = FC<
   Omit<ComponentPropsWithoutRef<typeof Dialog>, keyof TransactionModalProps> &
     TransactionModalProps
@@ -239,7 +237,7 @@ export const TransactionModal: FCProps = ({
             </Button>
           )}
         {data?.actions.every(({ status }) =>
-          finalizedStatuses.includes(status),
+          ["success", "failed"].includes(status),
         ) && (
           <DialogClose>
             <Button width="full" size="xl">

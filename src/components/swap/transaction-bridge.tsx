@@ -156,26 +156,11 @@ export const TransactionBridge: FC = () => {
               title: "Bridge initiated",
               description: "Check your wallet to confirm the transaction",
             });
-
-            setTransactionData({
-              id,
-              actions: [
-                {
-                  name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
-                  chainId: values.from.chainId,
-                  status: "pending",
-                  signAndSend: () => {
-                    setErrorMessage(undefined);
-                    actionFn();
-                  },
-                },
-                {
-                  name: `Get ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
-                  chainId: values.to.chainId,
-                  status: "idle",
-                  signAndSend: undefined,
-                },
-              ],
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              clone.actions[0].status = "pending";
+              return clone;
             });
           },
           onConfirmed: (hash) => {
@@ -247,7 +232,27 @@ export const TransactionBridge: FC = () => {
     };
 
     setErrorMessage(undefined);
-    actionFn();
+
+    setTransactionData({
+      id,
+      actions: [
+        {
+          name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
+          chainId: values.from.chainId,
+          status: "idle",
+          signAndSend: () => {
+            setErrorMessage(undefined);
+            actionFn();
+          },
+        },
+        {
+          name: `Get ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
+          chainId: values.to.chainId,
+          status: "idle",
+          signAndSend: undefined,
+        },
+      ],
+    });
   });
 
   return (
