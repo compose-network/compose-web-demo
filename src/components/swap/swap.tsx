@@ -7,7 +7,7 @@ import { createRollupPublicClients } from "@/components/swap/utils/core";
 import {
   createSwapETHForERC20UserOps_A_to_B,
   createSwapETHForERC20UserOps_B_to_A,
-  createSwapUserOpsFrom_A_to_A,
+  createSwapUserOpsFrom_A_to_A_2ops,
   createSwapUserOpsFrom_A_to_B,
   createSwapUserOpsFrom_B_to_A,
 } from "@/components/swap/utils/generate-swap-userops";
@@ -394,7 +394,7 @@ export const Swap: FC = () => {
         (is_from_A_to_A && !is_eth_to_erc20)
       ) {
         const createSwapUserOps = is_from_A_to_A
-          ? createSwapUserOpsFrom_A_to_A
+          ? createSwapUserOpsFrom_A_to_A_2ops
           : is_from_A_to_B
             ? is_eth_to_erc20
               ? createSwapETHForERC20UserOps_A_to_B
@@ -694,11 +694,12 @@ export const Swap: FC = () => {
               isLoading={prices.isPending}
               readOnly
               onSelectToken={(token) => {
-                if (isAddressEqual(token, values.fromToken)) {
-                  form.setValue("fromToken", values.toToken, {
-                    shouldValidate: true,
-                  });
-                }
+                // FIXME(CHRIS) ONLY FOR SAKE OF TESTING A->A - simplified flow
+                // if (isAddressEqual(token, values.fromToken)) {
+                //   form.setValue("fromToken", values.toToken, {
+                //     shouldValidate: true,
+                //   });
+                // }
                 return form.setValue("toToken", token, {
                   shouldValidate: true,
                 });
@@ -728,7 +729,11 @@ export const Swap: FC = () => {
                     ? "Processing..."
                     : undefined
               }
-              disabled={!form.formState.isValid || (fromToken.balance !== undefined && values.fromAmount > fromToken.balance)}
+              disabled={
+                !form.formState.isValid ||
+                (fromToken.balance !== undefined &&
+                  values.fromAmount > fromToken.balance)
+              }
             >
               Swap
             </Button>
