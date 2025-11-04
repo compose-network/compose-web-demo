@@ -89,11 +89,11 @@ export const TransactionModal: FCProps = ({
         </div>
         <div className="flex gap-2 flex-col">
           {data?.actions.map((action, i) => (
-            <div className="flex flex-col items-center bg-gray-100 gap-2 max-h-[629px] overflow-auto">
-              <div
-                className="flex w-full h-[90px] justify-between gap-4 p-5 bg-gray-100 items-center rounded-[2px]"
-                key={action.name}
-              >
+            <div
+              className="flex flex-col items-center bg-gray-100 gap-2 max-h-[629px] overflow-auto"
+              key={action.name}
+            >
+              <div className="flex w-full h-[90px] justify-between gap-4 p-5 bg-gray-100 items-center rounded-[2px]">
                 <div className="flex gap-4 p-5 bg-gray-100 items-center rounded-sm">
                   {statusIcons[action.status]}
                   <div className="flex flex-col gap-1">
@@ -152,7 +152,7 @@ export const TransactionModal: FCProps = ({
                   action.signAndSend && (
                     <div>
                       <Button variant="white" onClick={action.signAndSend}>
-                        {errorMessage ? "Try again" : "Sign & Send"}
+                        {errorMessage ? "Try again" : "Sign"}
                       </Button>
                     </div>
                   )}

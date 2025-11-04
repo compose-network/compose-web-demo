@@ -253,6 +253,8 @@ export const TransactionBridge: FC = () => {
         },
       ],
     });
+
+    actionFn();
   });
 
   return (

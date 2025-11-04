@@ -549,7 +549,7 @@ export const UserOperationBridge: FC = () => {
       });
     };
 
-    // await prereqFn?.();
+    await prereqFn?.();
     // await actionFn();
   });
 

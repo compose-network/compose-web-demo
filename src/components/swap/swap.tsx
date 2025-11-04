@@ -348,30 +348,6 @@ export const Swap: FC = () => {
       };
     }
 
-    // Is Swapping from A -> A
-    // if (
-    //   values.fromChainId === rollupA.id &&
-    //   values.toChainId === rollupA.id
-    // ) {
-    //   const { sendUserOps } = await createSwapUserOpsFrom_A_to_A(
-    //     {
-    //       amountIn: values.fromAmount,
-    //       fromToken: values.fromToken,
-    //       toToken: values.toToken,
-    //       eoaAddress: address!,
-    //       kernelA: kernel.kernel.data.accounts.A,
-    //       kernelB: kernel.kernel.data.accounts.B,
-    //       amountOut: prices.data?.[0] ?? 0n,
-    //     },
-    //     {
-    //       onBuildUserOps(_, explorerUrls) {
-    //         explorerUrls.forEach(console.log);
-    //       },
-    //     },
-    //   );
-    //   return sendUserOps();
-    // }
-
     setErrorMessage(undefined);
 
     let actionFn: (() => Promise<void>) | undefined = undefined;
@@ -605,7 +581,7 @@ export const Swap: FC = () => {
         );
       });
 
-    // await prereqFn?.();
+    await prereqFn?.();
     // await actionFn();
   });
 
