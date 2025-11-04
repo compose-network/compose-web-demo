@@ -278,7 +278,24 @@ export const Swap: FC = () => {
                 ),
               });
             },
-            onMined: () => {
+            onMined: (receipt) => {
+              if (receipt.status !== "success") {
+                setTransactionData((prev) => {
+                  if (!prev) return null;
+                  const clone = cloneDeep(prev);
+                  clone.actions[0].status = "failed";
+                  return clone;
+                });
+
+                const errMes = "Transaction was reverted by the contract.";
+                setErrorMessage(errMes);
+                toast({
+                  variant: "destructive",
+                  title: "Swap failed",
+                  description: errMes,
+                });
+                return;
+              }
               setTransactionData((prev) => {
                 if (!prev) return null;
                 const clone = cloneDeep(prev);
@@ -334,11 +351,30 @@ export const Swap: FC = () => {
           return clone;
         });
 
-        await (
+        const receipt = await (
           values.fromChainId === rollupA.id
             ? rollupAPublicClient
             : rollupBPublicClient
         ).waitForTransactionReceipt({ hash });
+
+        if (receipt.status !== "success") {
+          setTransactionData((prev) => {
+            if (!prev) return null;
+            const clone = cloneDeep(prev);
+            clone.actions[0].status = "failed";
+            return clone;
+          });
+
+          const errMes = "Transaction was reverted by the contract.";
+          setErrorMessage(errMes);
+          toast({
+            variant: "destructive",
+            title: "Swap failed",
+            description: errMes,
+          });
+          return;
+        }
+
         setTransactionData((prev) => {
           if (!prev) return null;
           const clone = cloneDeep(prev);
@@ -435,7 +471,25 @@ export const Swap: FC = () => {
               return clone;
             });
           },
-          onUserOpsMined: () => {
+          onUserOpsMined: (receipts) => {
+            if (receipts.some((r) => r.status !== "success")) {
+              setTransactionData((prev) => {
+                if (!prev) return null;
+                const clone = cloneDeep(prev);
+                clone.actions[0].status = "failed";
+                return clone;
+              });
+
+              const errMes = "Transaction was reverted by the contract.";
+              setErrorMessage(errMes);
+              toast({
+                variant: "destructive",
+                title: "Swap failed",
+                description: errMes,
+              });
+              return;
+            }
+
             setTransactionData((prev) => {
               if (!prev) return null;
               const clone = cloneDeep(prev);
@@ -534,7 +588,25 @@ export const Swap: FC = () => {
                 return clone;
               });
             },
-            onMined: () => {
+            onMined: (receipt) => {
+              if (receipt.status !== "success") {
+                setTransactionData((prev) => {
+                  if (!prev) return null;
+                  const clone = cloneDeep(prev);
+                  clone.actions[userOpIndex].status = "failed";
+                  return clone;
+                });
+
+                const errMes = "Transaction was reverted by the contract.";
+                setErrorMessage(errMes);
+                toast({
+                  variant: "destructive",
+                  title: "Swap failed",
+                  description: errMes,
+                });
+                return;
+              }
+
               setTransactionData((prev) => {
                 if (!prev) return null;
                 const clone = cloneDeep(prev);

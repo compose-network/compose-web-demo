@@ -233,7 +233,29 @@ export const UserOperationBridge: FC = () => {
           clone.actions[0].hash = hash;
           return clone;
         });
-        await sourcePublicClient.waitForTransactionReceipt({ hash });
+
+        const receipt = await sourcePublicClient.waitForTransactionReceipt({
+          hash,
+        });
+
+        if (receipt.status !== "success") {
+          setTransactionData((prev) => {
+            if (!prev) return null;
+            const clone = cloneDeep(prev);
+            clone.actions[0].status = "failed";
+            return clone;
+          });
+
+          const errMes = "Transaction was reverted by the contract.";
+          setErrorMessage(errMes);
+          toast({
+            variant: "destructive",
+            title: "Bridge failed",
+            description: errMes,
+          });
+          return;
+        }
+
         setTransactionData((prev) => {
           if (!prev) return null;
           const clone = cloneDeep(prev);
@@ -284,7 +306,24 @@ export const UserOperationBridge: FC = () => {
                 return clone;
               });
             },
-            onMined: () => {
+            onMined: (receipt) => {
+              if (receipt.status !== "success") {
+                setTransactionData((prev) => {
+                  if (!prev) return null;
+                  const clone = cloneDeep(prev);
+                  clone.actions[0].status = "failed";
+                  return clone;
+                });
+
+                const errMes = "Transaction was reverted by the contract.";
+                setErrorMessage(errMes);
+                toast({
+                  variant: "destructive",
+                  title: "Bridge failed",
+                  description: errMes,
+                });
+                return;
+              }
               setTransactionData((prev) => {
                 if (!prev) return null;
                 const clone = cloneDeep(prev);
