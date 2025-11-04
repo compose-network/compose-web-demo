@@ -291,7 +291,7 @@ export const Swap: FC = () => {
                 setErrorMessage(errMes);
                 toast({
                   variant: "destructive",
-                  title: "Bridge failed",
+                  title: "Swap failed",
                   description: errMes,
                 });
                 return;
