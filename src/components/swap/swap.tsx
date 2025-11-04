@@ -23,7 +23,7 @@ import { TokenABI } from "@/lib/abi/token";
 import { useSwapContract } from "@/lib/contract-interactions/core/create-write-hooks";
 import { useApprove } from "@/lib/contract-interactions/erc-20/write/use-approve";
 import { useSmartAccount } from "@/lib/smart-account/kernel";
-import { stringifyBigints } from "@/lib/utils/bigint";
+import { safeStringify, stringifyBigints } from "@/lib/utils/bigint";
 import { formatCurrency } from "@/lib/utils/number";
 import { getErrorMessage } from "@/lib/utils/wagmi";
 import { SSV_ADDRESS, USDC_ADDRESS } from "@/wagmi/addresses";
@@ -123,12 +123,6 @@ export const Swap: FC = () => {
     defaultValues: prevSwapValues,
     resolver: zodResolver(schema),
   });
-
-  // console.log("form.formState.isValid:", form.formState.isValid);
-  // console.log(
-  //   "form.formState.isValid:",
-  //   stringifyBigints(form.formState.errors),
-  // );
 
   const values = form.watch();
 
@@ -254,8 +248,8 @@ export const Swap: FC = () => {
             spender: is_from_B_to_B
               ? rollupBSwapContract
               : values.fromChainId === rollupA.id
-                ? kernel.kernel.data?.accounts.A.address
-                : kernel.kernel.data?.accounts.B.address,
+                ? kernel.kernel.data?.accounts.A.address!
+                : kernel.kernel.data?.accounts.B.address!,
             amount: globals.MAX_WEI_AMOUNT,
           },
           {
@@ -354,113 +348,130 @@ export const Swap: FC = () => {
       };
     }
 
-    // Is Swapping from A -> A
-    // if (
-    //   values.fromChainId === rollupA.id &&
-    //   values.toChainId === rollupA.id
-    // ) {
-    //   const { sendUserOps } = await createSwapUserOpsFrom_A_to_A(
-    //     {
-    //       amountIn: values.fromAmount,
-    //       fromToken: values.fromToken,
-    //       toToken: values.toToken,
-    //       eoaAddress: address!,
-    //       kernelA: kernel.kernel.data.accounts.A,
-    //       kernelB: kernel.kernel.data.accounts.B,
-    //       amountOut: prices.data?.[0] ?? 0n,
-    //     },
-    //     {
-    //       onBuildUserOps(_, explorerUrls) {
-    //         explorerUrls.forEach(console.log);
-    //       },
-    //     },
-    //   );
-    //   return sendUserOps();
-    // }
+    setErrorMessage(undefined);
 
-    // \/ SWAPPING
-    const actionFn = async () => {
-      setTransactionData((prev) => {
-        if (!prev) return null;
-        const clone = cloneDeep(prev);
-        clone.actions[userOpIndex].status = "pending";
-        return clone;
+    let actionFn: (() => Promise<void>) | undefined = undefined;
+
+    setTransactionData({
+      id: `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`,
+      actions: [
+        ...(needsApproval || is_eth_to_erc20
+          ? [
+              {
+                name: `${is_eth_to_erc20 ? `Send ${formatCurrency(values.fromAmount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${fromToken.symbol}`} `,
+                chainId: values.fromChainId,
+                status: "idle" as const,
+                tooltip: is_eth_to_erc20
+                  ? "ETH must first be transferred to your Smart Account before initiating a cross-chain transaction."
+                  : undefined,
+                signAndSend: async () => {
+                  setErrorMessage(undefined);
+                  await prereqFn!();
+                },
+              },
+            ]
+          : []),
+        {
+          name: `Swap ${formatCurrency(values.fromAmount, fromToken.decimals || 18)} ${fromToken.symbol} for ${formatCurrency(prices.data?.[0] ?? 0n, toToken.decimals || 18)} ${toToken.symbol}`,
+          chainId: values.fromChainId,
+          toChainId: values.toChainId,
+          toTokenAddress: values.toToken,
+          status: "idle" as const,
+          signAndSend: async () => {
+            setErrorMessage(undefined);
+            if (actionFn) {
+              await actionFn();
+            } else {
+              console.warn("MISSIGN ACTION FN");
+            }
+          },
+        },
+      ],
+    });
+
+    // Is Swapping from A -> B
+    if (
+      is_from_A_to_B ||
+      is_from_B_to_A ||
+      (is_from_A_to_A && !is_eth_to_erc20)
+    ) {
+      const createSwapUserOps = is_from_A_to_A
+        ? createSwapUserOpsFrom_A_to_A_2ops
+        : is_from_A_to_B
+          ? is_eth_to_erc20
+            ? createSwapETHForERC20UserOps_A_to_B
+            : createSwapUserOpsFrom_A_to_B
+          : is_eth_to_erc20
+            ? createSwapETHForERC20UserOps_B_to_A
+            : createSwapUserOpsFrom_B_to_A;
+
+      const { sign, preparedOps } = await createSwapUserOps(
+        {
+          amountIn: values.fromAmount,
+          fromToken: values.fromToken,
+          toToken: values.toToken,
+          eoaAddress: address!,
+          kernelA: kernel.kernel.data!.accounts.A,
+          kernelB: kernel.kernel.data!.accounts.B,
+          amountOut: prices.data?.[0] ?? 0n,
+        },
+        {
+          onSignedUserOps() {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              clone.actions[userOpIndex].status = "pending";
+              return clone;
+            });
+          },
+          onBuildUserOps(builds) {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              clone.actions[userOpIndex].hash = builds.map((build) => ({
+                chainId: build.chainId,
+                hash: build.hash,
+              }));
+              return clone;
+            });
+          },
+          onUserOpsMined: () => {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              clone.actions[userOpIndex].status = "success";
+              return clone;
+            });
+            form.reset({
+              fromChainId: values.fromChainId,
+              fromToken: values.fromToken,
+              fromAmount: 0n,
+              toChainId: values.toChainId,
+              toToken: values.toToken,
+              slippage: values.slippage,
+            });
+            form.clearErrors();
+          },
+        },
+      ).catch((error) => {
+        setTransactionData((prev) => {
+          if (!prev) return null;
+          const clone = cloneDeep(prev);
+          clone.actions[userOpIndex].status = "failed";
+          return clone;
+        });
+        const errMes = getErrorMessage(error);
+        setErrorMessage(errMes);
+        toast({
+          title: "Swap failed",
+          variant: "destructive",
+          description: <Span className="whitespace-pre-wrap">{errMes}</Span>,
+        });
+        throw error;
       });
 
-      // Is Swapping from A -> B
-      if (
-        is_from_A_to_B ||
-        is_from_B_to_A ||
-        (is_from_A_to_A && !is_eth_to_erc20)
-      ) {
-        const createSwapUserOps = is_from_A_to_A
-          ? createSwapUserOpsFrom_A_to_A_2ops
-          : is_from_A_to_B
-            ? is_eth_to_erc20
-              ? createSwapETHForERC20UserOps_A_to_B
-              : createSwapUserOpsFrom_A_to_B
-            : is_eth_to_erc20
-              ? createSwapETHForERC20UserOps_B_to_A
-              : createSwapUserOpsFrom_B_to_A;
-
-        const { sendUserOps } = await createSwapUserOps(
-          {
-            amountIn: values.fromAmount,
-            fromToken: values.fromToken,
-            toToken: values.toToken,
-            eoaAddress: address!,
-            kernelA: kernel.kernel.data!.accounts.A,
-            kernelB: kernel.kernel.data!.accounts.B,
-            amountOut: prices.data?.[0] ?? 0n,
-          },
-          {
-            onSignedUserOps(userOps) {
-              setTransactionData((prev) => {
-                if (!prev) return null;
-                const clone = cloneDeep(prev);
-                clone.actions[userOpIndex].userOpData = [
-                  {
-                    chainId: values.fromChainId,
-                    data: JSON.stringify(stringifyBigints(userOps[0])),
-                  },
-                  {
-                    chainId: values.toChainId,
-                    data: JSON.stringify(stringifyBigints(userOps[1])),
-                  },
-                ];
-                return clone;
-              });
-            },
-            onBuildUserOps(builds) {
-              setTransactionData((prev) => {
-                if (!prev) return null;
-                const clone = cloneDeep(prev);
-                clone.actions[userOpIndex].hash = builds.map((build) => ({
-                  chainId: build.chainId,
-                  hash: build.hash,
-                }));
-                return clone;
-              });
-            },
-            onUserOpsMined: () => {
-              setTransactionData((prev) => {
-                if (!prev) return null;
-                const clone = cloneDeep(prev);
-                clone.actions[userOpIndex].status = "success";
-                return clone;
-              });
-              form.reset({
-                fromChainId: values.fromChainId,
-                fromToken: values.fromToken,
-                fromAmount: 0n,
-                toChainId: values.toChainId,
-                toToken: values.toToken,
-                slippage: values.slippage,
-              });
-              form.clearErrors();
-            },
-          },
-        ).catch((error) => {
+      actionFn = async () => {
+        await sign().catch((error) => {
           setTransactionData((prev) => {
             if (!prev) return null;
             const clone = cloneDeep(prev);
@@ -476,110 +487,102 @@ export const Swap: FC = () => {
           });
           throw error;
         });
-        return sendUserOps();
-      }
+      };
 
-      // Execute swap
-      await swap.write(
-        {
-          amountIn: values.fromAmount,
-          recipient: address!,
-          tokenIn: getToken(values.fromToken)?.id ?? 0,
-          tokenOut: getToken(values.toToken)?.id ?? 0,
-        },
-        {
-          onConfirmed: (hash) => {
-            setTransactionData((prev) => {
-              if (!prev) return null;
-              const clone = cloneDeep(prev);
-              clone.actions[userOpIndex].hash = hash;
-              return clone;
-            });
+      setTransactionData((prev) => {
+        if (!prev) return null;
+        const clone = cloneDeep(prev);
+        clone.actions[userOpIndex].userOpData = [
+          {
+            chainId: values.fromChainId,
+            data: safeStringify(preparedOps.source),
           },
-          onMined: () => {
-            setTransactionData((prev) => {
-              if (!prev) return null;
-              const clone = cloneDeep(prev);
-              clone.actions[userOpIndex].status = "success";
-              return clone;
-            });
-
-            fromToken.refreshBalance();
-            toToken.refreshBalance();
-
-            form.reset({
-              fromChainId: values.fromChainId,
-              fromToken: values.fromToken,
-              fromAmount: 0n,
-              toChainId: values.toChainId,
-              toToken: values.toToken,
-              slippage: values.slippage,
-            });
-            form.clearErrors();
-
-            toast({
-              title: "Swap completed",
-              description: "Your tokens have been swapped successfully",
-            });
+          {
+            chainId: values.toChainId,
+            data: safeStringify(preparedOps.destination),
           },
-          onError: (error) => {
-            setTransactionData((prev) => {
-              if (!prev) return null;
-              const clone = cloneDeep(prev);
-              clone.actions[userOpIndex].status = "failed";
-              return clone;
-            });
-            const errMes = getErrorMessage(error);
-            setErrorMessage(errMes);
-            toast({
-              title: "Transaction failed",
-              variant: "destructive",
-              description: (
-                <Span className="whitespace-pre-wrap">{errMes}</Span>
-              ),
-            });
-          },
-        },
-      );
-    };
+        ];
+        return clone;
+      });
+    }
 
-    setTransactionData({
-      id: `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`,
-      actions: [
-        ...(needsApproval || is_eth_to_erc20
-          ? [
-              {
-                name: `${is_eth_to_erc20 ? `Send ${formatCurrency(values.fromAmount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${fromToken.symbol}`} `,
-                chainId: values.fromChainId,
-                status: "pending" as const,
-                tooltip: is_eth_to_erc20
-                  ? "ETH must first be transferred to your Smart Account before initiating a cross-chain transaction."
-                  : undefined,
-                retry: async () => {
-                  setErrorMessage(undefined);
-                  await prereqFn!();
-                  await actionFn();
-                },
-              },
-            ]
-          : []),
-        {
-          name: `Swap ${formatCurrency(values.fromAmount, fromToken.decimals || 18)} ${fromToken.symbol} for ${formatCurrency(prices.data?.[0] ?? 0n, toToken.decimals || 18)} ${toToken.symbol}`,
-          chainId: values.fromChainId,
-          toChainId: values.toChainId,
-          toTokenAddress: values.toToken,
-          status: needsApproval || is_eth_to_erc20 ? "idle" : "pending",
-          retry: async () => {
-            setErrorMessage(undefined);
-            await actionFn();
-          },
-        },
-      ],
-    });
+    // \/ SWAPPING
+    actionFn =
+      actionFn ||
+      (async () => {
+        setTransactionData((prev) => {
+          if (!prev) return null;
+          const clone = cloneDeep(prev);
+          clone.actions[userOpIndex].status = "pending";
+          return clone;
+        });
 
-    setErrorMessage(undefined);
+        // Execute swap
+        await swap.write(
+          {
+            amountIn: values.fromAmount,
+            recipient: address!,
+            tokenIn: getToken(values.fromToken)?.id ?? 0,
+            tokenOut: getToken(values.toToken)?.id ?? 0,
+          },
+          {
+            onConfirmed: (hash) => {
+              setTransactionData((prev) => {
+                if (!prev) return null;
+                const clone = cloneDeep(prev);
+                clone.actions[userOpIndex].hash = hash;
+                return clone;
+              });
+            },
+            onMined: () => {
+              setTransactionData((prev) => {
+                if (!prev) return null;
+                const clone = cloneDeep(prev);
+                clone.actions[userOpIndex].status = "success";
+                return clone;
+              });
+
+              fromToken.refreshBalance();
+              toToken.refreshBalance();
+
+              form.reset({
+                fromChainId: values.fromChainId,
+                fromToken: values.fromToken,
+                fromAmount: 0n,
+                toChainId: values.toChainId,
+                toToken: values.toToken,
+                slippage: values.slippage,
+              });
+              form.clearErrors();
+
+              toast({
+                title: "Swap completed",
+                description: "Your tokens have been swapped successfully",
+              });
+            },
+            onError: (error) => {
+              setTransactionData((prev) => {
+                if (!prev) return null;
+                const clone = cloneDeep(prev);
+                clone.actions[userOpIndex].status = "failed";
+                return clone;
+              });
+              const errMes = getErrorMessage(error);
+              setErrorMessage(errMes);
+              toast({
+                title: "Transaction failed",
+                variant: "destructive",
+                description: (
+                  <Span className="whitespace-pre-wrap">{errMes}</Span>
+                ),
+              });
+            },
+          },
+        );
+      });
+
     await prereqFn?.();
-    await actionFn();
+    // await actionFn();
   });
 
   return (

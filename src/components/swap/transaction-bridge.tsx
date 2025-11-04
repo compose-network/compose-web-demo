@@ -156,26 +156,11 @@ export const TransactionBridge: FC = () => {
               title: "Bridge initiated",
               description: "Check your wallet to confirm the transaction",
             });
-
-            setTransactionData({
-              id,
-              actions: [
-                {
-                  name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
-                  chainId: values.from.chainId,
-                  status: "pending",
-                  retry: () => {
-                    setErrorMessage(undefined);
-                    actionFn();
-                  },
-                },
-                {
-                  name: `Get ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
-                  chainId: values.to.chainId,
-                  status: "idle",
-                  retry: undefined,
-                },
-              ],
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              clone.actions[0].status = "pending";
+              return clone;
             });
           },
           onConfirmed: (hash) => {
@@ -247,6 +232,28 @@ export const TransactionBridge: FC = () => {
     };
 
     setErrorMessage(undefined);
+
+    setTransactionData({
+      id,
+      actions: [
+        {
+          name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
+          chainId: values.from.chainId,
+          status: "idle",
+          signAndSend: () => {
+            setErrorMessage(undefined);
+            actionFn();
+          },
+        },
+        {
+          name: `Get ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
+          chainId: values.to.chainId,
+          status: "idle",
+          signAndSend: undefined,
+        },
+      ],
+    });
+
     actionFn();
   });
 
@@ -315,7 +322,11 @@ export const TransactionBridge: FC = () => {
               size="xl"
               className="w-full"
               type="submit"
-              disabled={!form.formState.isValid || (fromToken.balance !== undefined && values.from.amount > fromToken.balance)}
+              disabled={
+                !form.formState.isValid ||
+                (fromToken.balance !== undefined &&
+                  values.from.amount > fromToken.balance)
+              }
               isLoading={bridgeETH.isPending}
               loadingText="Bridging..."
             >

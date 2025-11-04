@@ -20,6 +20,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { FaInfoCircle } from "react-icons/fa";
 import { useAddTokenToWallet } from "@/hooks/use-add-token-to-wallet.ts";
 import { Badge } from "@/components/ui/badge.tsx";
+import { CopyBtn } from "@/components/ui/copy-btn.tsx";
 
 export type TransactionModalProps = {
   title: string;
@@ -36,14 +37,12 @@ export type TransactionModalProps = {
       status: keyof typeof statusIcons;
       hash?: Hex | { chainId: number; hash: Hex }[];
       userOpData?: { chainId: number; data: string }[];
-      retry: undefined | (() => void);
+      signAndSend: undefined | (() => void);
     }[];
   } | null;
 };
 
 export type TransactionModalData = TransactionModalProps["data"];
-
-const finalizedStatuses: (keyof typeof statusIcons)[] = ["success", "failed"];
 
 type FCProps = FC<
   Omit<ComponentPropsWithoutRef<typeof Dialog>, keyof TransactionModalProps> &
@@ -90,11 +89,11 @@ export const TransactionModal: FCProps = ({
         </div>
         <div className="flex gap-2 flex-col">
           {data?.actions.map((action, i) => (
-            <div className="flex flex-col items-center bg-gray-100 gap-2 max-h-[629px] overflow-auto">
-              <div
-                className="flex w-full h-[90px] justify-between gap-4 p-5 bg-gray-100 items-center rounded-[2px]"
-                key={action.name}
-              >
+            <div
+              className="flex flex-col items-center bg-gray-100 gap-2 max-h-[629px] overflow-auto"
+              key={action.name}
+            >
+              <div className="flex w-full h-[90px] justify-between gap-4 p-5 bg-gray-100 items-center rounded-[2px]">
                 <div className="flex gap-4 p-5 bg-gray-100 items-center rounded-sm">
                   {statusIcons[action.status]}
                   <div className="flex flex-col gap-1">
@@ -147,45 +146,51 @@ export const TransactionModal: FCProps = ({
                     </div>
                   </div>
                 </div>
-                {action.status === "failed" && action.retry && (
-                  <div>
-                    <Button variant="white" onClick={action.retry}>
-                      Try again
-                    </Button>
-                  </div>
-                )}
-                {["pending", "success"].includes(action.status) && (
-                  <div className="flex flex-col  rounded-[16px] bg-gray-300 p-0.5">
-                    {(Array.isArray(action.hash)
-                      ? action.hash
-                      : action.hash
-                        ? [{ chainId: action.chainId, hash: action.hash }]
-                        : []
-                    ).map((hashObj, i) => {
-                      const { chainId, hash } = hashObj;
-                      return (
-                        <a
-                          key={`${chainId}-${hash}-${i}`}
-                          target="_blank"
-                          href={
-                            hash ? getExplorerHashUrl(chainId, hash) : undefined
-                          }
-                          className="flex items-center gap-1 text-[12px] text-gray-700 px-2 py-1 cursor-pointer font-mono"
-                        >
-                          {hash && (
-                            <ChainIcon
-                              size="xs"
-                              chainId={chainId}
-                              className="mr-0.5"
-                            />
-                          )}
-                          {hash ? shortenAddress(hash) : "Waiting..."}
-                          {hash && <TbExternalLink className="size-3" />}
-                        </a>
-                      );
-                    })}
-                  </div>
-                )}
+                {["idle", "failed"].includes(action.status) &&
+                  (!data.actions[i - 1] ||
+                    data.actions[i - 1]?.status === "success") &&
+                  action.signAndSend && (
+                    <div>
+                      <Button variant="white" onClick={action.signAndSend}>
+                        {errorMessage ? "Try again" : "Sign"}
+                      </Button>
+                    </div>
+                  )}
+                {["pending", "success", "failed"].includes(action.status) &&
+                  action.hash && (
+                    <div className="flex flex-col  rounded-[16px] bg-gray-300 p-0.5">
+                      {(Array.isArray(action.hash)
+                        ? action.hash
+                        : action.hash
+                          ? [{ chainId: action.chainId, hash: action.hash }]
+                          : []
+                      ).map((hashObj, i) => {
+                        const { chainId, hash } = hashObj;
+                        return (
+                          <a
+                            key={`${chainId}-${hash}-${i}`}
+                            target="_blank"
+                            href={
+                              hash
+                                ? getExplorerHashUrl(chainId, hash)
+                                : undefined
+                            }
+                            className="flex items-center gap-1 text-[12px] text-gray-700 px-2 py-1 cursor-pointer font-mono"
+                          >
+                            {hash && (
+                              <ChainIcon
+                                size="xs"
+                                chainId={chainId}
+                                className="mr-0.5"
+                              />
+                            )}
+                            {hash ? shortenAddress(hash) : "Waiting..."}
+                            {hash && <TbExternalLink className="size-3" />}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
               </div>
               {openData &&
                 action.userOpData?.map((userOp, i) => (
@@ -200,6 +205,10 @@ export const TransactionModal: FCProps = ({
                       >
                         {getChainById(userOp.chainId).name}
                       </Text>
+                      <CopyBtn
+                        className="flex items-center"
+                        text={userOp.data}
+                      />
                     </div>
                     <div>
                       <Text
@@ -228,7 +237,7 @@ export const TransactionModal: FCProps = ({
             </Button>
           )}
         {data?.actions.every(({ status }) =>
-          finalizedStatuses.includes(status),
+          ["success", "failed"].includes(status),
         ) && (
           <DialogClose>
             <Button width="full" size="xl">
