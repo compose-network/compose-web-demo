@@ -7,6 +7,7 @@ import { createRollupPublicClients } from "@/components/swap/utils/core";
 import {
   createSwapETHForERC20UserOps_A_to_B,
   createSwapETHForERC20UserOps_B_to_A,
+  createSwapETHtoERC20UserOpsFrom_A_to_A_2ops,
   createSwapUserOpsFrom_A_to_A_2ops,
   createSwapUserOpsFrom_A_to_B,
   createSwapUserOpsFrom_B_to_A,
@@ -384,55 +385,14 @@ export const Swap: FC = () => {
       };
     }
 
-    setErrorMessage(undefined);
-
     let actionFn: (() => Promise<void>) | undefined = undefined;
 
-    setTransactionData({
-      id: `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`,
-      actions: [
-        ...(needsApproval || is_eth_to_erc20
-          ? [
-              {
-                name: `${is_eth_to_erc20 ? `Send ${formatCurrency(values.fromAmount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${fromToken.symbol}`} `,
-                chainId: values.fromChainId,
-                status: "idle" as const,
-                tooltip: is_eth_to_erc20
-                  ? "ETH must first be transferred to your Smart Account before initiating a cross-chain transaction."
-                  : undefined,
-                signAndSend: async () => {
-                  setErrorMessage(undefined);
-                  await prereqFn!();
-                },
-              },
-            ]
-          : []),
-        {
-          name: `Swap ${formatCurrency(values.fromAmount, fromToken.decimals || 18)} ${fromToken.symbol} for ${formatCurrency(prices.data?.[0] ?? 0n, toToken.decimals || 18)} ${toToken.symbol}`,
-          chainId: values.fromChainId,
-          toChainId: values.toChainId,
-          toTokenAddress: values.toToken,
-          status: "idle" as const,
-          signAndSend: async () => {
-            setErrorMessage(undefined);
-            if (actionFn) {
-              await actionFn();
-            } else {
-              console.warn("MISSIGN ACTION FN");
-            }
-          },
-        },
-      ],
-    });
-
     // Is Swapping from A -> B
-    if (
-      is_from_A_to_B ||
-      is_from_B_to_A ||
-      (is_from_A_to_A && !is_eth_to_erc20)
-    ) {
+    if (is_from_A_to_B || is_from_B_to_A || is_from_A_to_A) {
       const createSwapUserOps = is_from_A_to_A
-        ? createSwapUserOpsFrom_A_to_A_2ops
+        ? is_eth_to_erc20
+          ? createSwapETHtoERC20UserOpsFrom_A_to_A_2ops
+          : createSwapUserOpsFrom_A_to_A_2ops
         : is_from_A_to_B
           ? is_eth_to_erc20
             ? createSwapETHForERC20UserOps_A_to_B
@@ -653,6 +613,45 @@ export const Swap: FC = () => {
         );
       });
 
+    setErrorMessage(undefined);
+
+    setTransactionData({
+      id: `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`,
+      actions: [
+        ...(needsApproval || is_eth_to_erc20
+          ? [
+              {
+                name: `${is_eth_to_erc20 ? `Send ${formatCurrency(values.fromAmount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${fromToken.symbol}`} `,
+                chainId: values.fromChainId,
+                status: "idle" as const,
+                tooltip: is_eth_to_erc20
+                  ? "ETH must first be transferred to your Smart Account before initiating a cross-chain transaction."
+                  : undefined,
+                signAndSend: async () => {
+                  setErrorMessage(undefined);
+                  await prereqFn!();
+                },
+              },
+            ]
+          : []),
+        {
+          name: `Swap ${formatCurrency(values.fromAmount, fromToken.decimals || 18)} ${fromToken.symbol} for ${formatCurrency(prices.data?.[0] ?? 0n, toToken.decimals || 18)} ${toToken.symbol}`,
+          chainId: values.fromChainId,
+          toChainId: values.toChainId,
+          toTokenAddress: values.toToken,
+          status: "idle" as const,
+          signAndSend: async () => {
+            setErrorMessage(undefined);
+            if (actionFn) {
+              await actionFn();
+            } else {
+              console.warn("MISSIGN ACTION FN");
+            }
+          },
+        },
+      ],
+    });
+
     await prereqFn?.();
     // await actionFn();
   });
@@ -806,6 +805,7 @@ export const Swap: FC = () => {
               }
               disabled={
                 !form.formState.isValid ||
+                form.formState.isSubmitting ||
                 (fromToken.balance !== undefined &&
                   values.fromAmount > fromToken.balance)
               }
