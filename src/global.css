@@ -4,12 +4,12 @@
 
 @layer base {
   :root {
-    --primary-50: #e8f6fe;
+    --primary-50: #EBFFFF;
     --primary-100: #d1edfe;
     --primary-200: #bbe4fd;
     --primary-300: #76c8fb;
     --primary-400: #49b6f9;
-    --primary-500: #1ba5f8;
+    --primary-500: #18B5B8;
     --primary-600: #0792e8;
     --primary-700: #067bc4;
     --primary-800: #045588;
@@ -86,7 +86,7 @@
     --primary-200: #045588;
     --primary-300: #067bc4;
     --primary-400: #0792e8;
-    --primary-500: #1ba5f8;
+    --primary-500: #18B5B8;
     --primary-600: #49b6f9;
     --primary-700: #76c8fb;
     --primary-800: #bbe4fd;

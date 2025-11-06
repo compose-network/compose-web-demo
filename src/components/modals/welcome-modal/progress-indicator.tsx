@@ -1,7 +1,7 @@
 import type { ComponentPropsWithoutRef, FC } from "react";
 
 export type ProgressIndicatorProps = {
-  currentStep: 2 | 3 | 4;
+  currentStep: 2 | 3 | 4 | 5;
 };
 
 type FCProps = FC<
@@ -10,8 +10,7 @@ type FCProps = FC<
 >;
 
 export const ProgressIndicator: FCProps = ({ currentStep}) => {
-  // Показываем точки для шагов 2, 3, 4 (не показываем для шага 1)
-  const steps = [2, 3, 4];
+  const steps = [2, 3, 4, 5];
 
   return (
     <div className="flex items-center justify-center gap-2 mb-4">
