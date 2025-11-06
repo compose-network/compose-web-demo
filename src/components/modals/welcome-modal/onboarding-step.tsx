@@ -21,7 +21,7 @@ export const OnboardingStep: FCProps = ({ onNext, onBack }) => {
     <>
       {/* Onboarding Icon */}
       <div
-        className="w-[600px] h-[240px] rounded-[20px] bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center gap-4 text"
+        className="w-[600px] h-[160px] rounded-[20px] bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center gap-4 text"
         style={{ backgroundImage: 'url(/images/welcome-modal/onboarding.png)' }}
       >
         <Text variant={"body-1-semibold"} className="text-white">

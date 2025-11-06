@@ -1,12 +1,14 @@
 import { Navbar } from "@/app/layouts/dashboard/navbar";
 // import { BatchTransactionModal } from "@/components/modals/batch-transaction-modal";
 import { WelcomeModal } from "@/components/modals/welcome-modal";
+import HowItWorks from "@/components/modals/welcome-modal/how-it-works";
 import { ComposeLoader } from "@/components/ui/compose-loader.tsx";
 import { TransactionModal } from "@/components/ui/transaction-modal";
 import { useAccount } from "@/hooks/account/use-account";
 import { useMaintenance } from "@/hooks/app/use-maintenance";
 import { useBlockNavigationOnPendingTx } from "@/hooks/use-block-navigation-on-pending-tx";
 import { useWelcomeModal } from "@/hooks/use-welcome-modal";
+import { useHowItWorksModal } from "@/hooks/use-how-it-works-modal";
 import { BatchTransactionProvider } from "@/lib/machines/batch-transactions/context";
 import { decodeUserOperationLogs } from "@/lib/smart-account/user-op";
 import { cn } from "@/lib/utils/tw";
@@ -50,7 +52,8 @@ export const DashboardLayout: FC<ComponentPropsWithRef<"div">> = ({
       '/images/welcome-modal/welcome.png',
       '/images/welcome-modal/onboarding.png',
       '/images/welcome-modal/bridge.png',
-      '/images/welcome-modal/final.png'
+      '/images/welcome-modal/final.png',
+      '/images/welcome-modal/how-it-works.svg'
     ];
 
     imagesToPreload.forEach((src) => {
@@ -62,6 +65,7 @@ export const DashboardLayout: FC<ComponentPropsWithRef<"div">> = ({
   const isRestoring = useIsRestoring();
   const account = useAccount();
   const welcomeModal = useWelcomeModal();
+  const howItWorksModal = useHowItWorksModal();
 
   const { isMaintenancePage } = useMaintenance();
   if (isMaintenancePage) {
@@ -98,7 +102,7 @@ export const DashboardLayout: FC<ComponentPropsWithRef<"div">> = ({
               <div className="flex flex-1 overflow-hidden">
                 <Sidebar />
                 <main className={cn(className, "flex-1 overflow-auto")}>
-                  <Navbar className="px-5" />
+                  <Navbar className="px-5" onHowItWorksClick={howItWorksModal.openModal} />
                   {children}
                   <div className="flex justify-center">
                     <Faq />
@@ -116,6 +120,7 @@ export const DashboardLayout: FC<ComponentPropsWithRef<"div">> = ({
           onNext={welcomeModal.nextStep}
           onBack={welcomeModal.prevStep}
         />
+        {howItWorksModal.isOpen && <HowItWorks  onClose={howItWorksModal.closeModal} />}
         {/*<BatchTransactionModal />*/}
       </BatchTransactionProvider>
     </>

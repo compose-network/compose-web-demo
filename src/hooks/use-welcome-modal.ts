@@ -11,7 +11,7 @@ export const useWelcomeModal = () => {
     false
   );
   const [isOpen, setIsOpen] = useState(false);
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 
   useEffect(() => {
     // Показываем модальное окно если кошелек подключен и модальное окно еще не показывалось
@@ -33,6 +33,8 @@ export const useWelcomeModal = () => {
       setStep(3);
     } else if (step === 3) {
       setStep(4);
+    } else if (step === 4) {
+      setStep(5);
     } else {
       closeModal();
     }
@@ -45,6 +47,8 @@ export const useWelcomeModal = () => {
       setStep(2);
     } else if (step === 4) {
       setStep(3);
+    } else if (step === 5) {
+      setStep(4);
     }
   };
 
@@ -55,6 +59,6 @@ export const useWelcomeModal = () => {
     step,
     closeModal,
     nextStep,
-    prevStep,
+    prevStep
   };
 };

@@ -15,7 +15,7 @@ export const WelcomeStep: FCProps = ({ onNext }) => {
     <>
       {/* Welcome Icon */}
       <div
-        className="w-[600px] h-[240px] rounded-[20px] bg-cover bg-center bg-no-repeat flex justify-center items-center text"
+        className="w-[600px] h-[160px] rounded-[20px] bg-cover bg-center bg-no-repeat flex justify-center items-center text"
         style={{ backgroundImage: 'url(/images/welcome-modal/welcome.png)' }}
       ><Text variant={"headline1"} className="text-white">
         Welcome to Compose
