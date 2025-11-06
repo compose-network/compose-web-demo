@@ -18,6 +18,7 @@ import type { ComponentPropsWithRef, FC } from "react";
 import { useEffect } from "react";
 import { Navigate } from "react-router";
 import Faq from "@/components/faq/faq.tsx";
+import Sidebar from "@/components/navigation/sidebar.tsx";
 
 // DO NOT REMOVE THIS FUNCTION, it is used for debugging purposes
 ((w) => {
@@ -93,13 +94,17 @@ export const DashboardLayout: FC<ComponentPropsWithRef<"div">> = ({
               exit={{ opacity: 0 }}
               key="content"
             >
-              <Navbar className="px-5" />
-              <main className={cn(className, "flex-1 overflow-auto")}>
-                {children}
-                <div className="flex justify-center">
-                  <Faq />
-                </div>
-              </main>
+
+              <div className="flex flex-1 overflow-hidden">
+                <Sidebar />
+                <main className={cn(className, "flex-1 overflow-auto")}>
+                  <Navbar className="px-5" />
+                  {children}
+                  <div className="flex justify-center">
+                    <Faq />
+                  </div>
+                </main>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
