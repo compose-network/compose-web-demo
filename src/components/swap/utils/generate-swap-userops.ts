@@ -262,7 +262,7 @@ export const createSwapUserOpsFrom_A_to_B = async (
 
       options.onPayloadEncoded?.(payload);
 
-      sourcePublicClient.request({
+      await sourcePublicClient.request({
         method: "eth_sendXTransaction",
         params: [payload],
       });
@@ -488,7 +488,7 @@ export const createSwapUserOpsFrom_B_to_A = async (
 
       options.onPayloadEncoded?.(payload);
 
-      sourcePublicClient.request({
+      await sourcePublicClient.request({
         method: "eth_sendXTransaction",
         params: [payload],
       });
@@ -507,276 +507,6 @@ export const createSwapUserOpsFrom_B_to_A = async (
     },
   };
 };
-
-// export const createSwapUserOpsFrom_A_to_A = async (
-//   {
-//     eoaAddress,
-//     kernelA,
-//     kernelB,
-//     fromToken,
-//     toToken,
-//     amountIn,
-//     amountOut,
-//   }: GenerateERC20SwapUserOpsParams,
-//   options: UserOpSwapOptions = {},
-// ) => {
-//   const rollupAChainId = rollupA.id;
-//   const rollupBChainId = rollupB.id;
-//   const [rollupAPublicClient, rollupBPublicClient] = createRollupPublicClients(
-//     rollupAChainId,
-//     rollupBChainId,
-//   );
-//
-//   const rollupABridgeContract = getBridgeAddress(rollupAChainId);
-//   const rollupBBridgeContract = getBridgeAddress(rollupBChainId);
-//
-//   const firstBridgeSessionId = BigInt(Math.floor(Math.random() * 1000000));
-//   const secondBridgeSessionId = BigInt(Math.floor(Math.random() * 1000000));
-//
-//   const [op1, op2, op3] = await Promise.all([
-//     createUserOp({
-//       account: kernelA,
-//       chainId: rollupAChainId,
-//       calls: [
-//         {
-//           to: fromToken,
-//           value: 0n,
-//           data: encodeFunctionData({
-//             abi: TokenABI,
-//             functionName: "transferFrom",
-//             args: [eoaAddress, kernelA.address, amountIn],
-//           }),
-//         },
-//         {
-//           to: rollupABridgeContract,
-//           value: 0n,
-//           data: encodeFunctionData({
-//             abi: UserOperationBridgeAbi,
-//             functionName: "send",
-//             args: [
-//               BigInt(rollupBChainId),
-//               fromToken,
-//               kernelA.address,
-//               kernelB.address,
-//               amountIn,
-//               firstBridgeSessionId,
-//               rollupBBridgeContract,
-//             ],
-//           }),
-//         },
-//       ],
-//     }),
-//     createUserOp({
-//       account: kernelB,
-//       chainId: rollupBChainId,
-//       calls: [
-//         {
-//           to: rollupABridgeContract,
-//           value: 0n,
-//           data: encodeFunctionData({
-//             abi: UserOperationBridgeAbi,
-//             functionName: "receiveTokens",
-//             args: [
-//               BigInt(rollupAChainId),
-//               kernelA.address,
-//               kernelB.address,
-//               firstBridgeSessionId,
-//               rollupABridgeContract,
-//             ],
-//           }),
-//         },
-//         {
-//           to: fromToken,
-//           value: 0n,
-//           data: encodeFunctionData({
-//             abi: TokenABI,
-//             functionName: "approve",
-//             args: [rollupBSwapContract, amountIn],
-//           }),
-//         },
-//         {
-//           to: rollupBSwapContract,
-//           value: 0n,
-//           data: encodeFunctionData({
-//             abi: SwapABI,
-//             functionName: "swap",
-//             args: [
-//               kernelB.address,
-//               getToken(fromToken)?.id ?? 0,
-//               getToken(toToken)?.id ?? 0,
-//               amountIn,
-//             ],
-//           }),
-//         },
-//         {
-//           to: rollupBBridgeContract,
-//           value: 0n,
-//           data: encodeFunctionData({
-//             abi: UserOperationBridgeAbi,
-//             functionName: "send",
-//             args: [
-//               BigInt(rollupAChainId),
-//               toToken,
-//               kernelB.address,
-//               kernelA.address,
-//               amountOut,
-//               secondBridgeSessionId,
-//               rollupABridgeContract,
-//             ],
-//           }),
-//         },
-//       ],
-//     }),
-//     createUserOp({
-//       account: kernelA,
-//       chainId: rollupAChainId,
-//       calls: [
-//         {
-//           to: rollupABridgeContract,
-//           value: 0n,
-//           data: encodeFunctionData({
-//             abi: UserOperationBridgeAbi,
-//             functionName: "receiveTokens",
-//             args: [
-//               BigInt(rollupBChainId),
-//               kernelA.address,
-//               kernelB.address,
-//               secondBridgeSessionId,
-//               rollupBBridgeContract,
-//             ],
-//           }),
-//         },
-//         {
-//           to: toToken,
-//           value: 0n,
-//           data: encodeFunctionData({
-//             abi: TokenABI,
-//             functionName: "transfer",
-//             args: [eoaAddress, amountOut],
-//           }),
-//         },
-//       ],
-//     }),
-//   ]);
-//
-//   const preparedSourceUserOps1 = omit(
-//     await prepareUserOperation(rollupAPublicClient, op1),
-//     "account",
-//   );
-//
-//   const preparedDestUserOps = omit(
-//     await prepareUserOperation(rollupBPublicClient, op2),
-//     "account",
-//   );
-//
-//   const preparedSourceUserOps2 = omit(
-//     await prepareUserOperation(rollupAPublicClient, op3),
-//     "account",
-//   );
-//
-//   return {
-//     sign: async () => {
-//       const [signedA, signedB, signedC] = await signUserOperations(
-//         rollupAPublicClient as any,
-//         {
-//           userOperations: [
-//             preparedSourceUserOps1,
-//             preparedDestUserOps,
-//             preparedSourceUserOps2,
-//           ],
-//           account: kernelA, // it uses it to get the Entrypoint address and version
-//         },
-//       );
-//
-//       options.onSignedUserOps?.([signedA, signedB, signedC]);
-//
-//       const userOpA = toRpcUserOpCanonical(signedA);
-//       const userOpB = toRpcUserOpCanonical(signedB);
-//       const userOpC = toRpcUserOpCanonical(signedC);
-//
-//       // Avoid await Promise.all to enforce sequential nonces
-//       const buildRollupA = await rollupAPublicClient.request({
-//         method: "compose_buildSignedUserOpsTx",
-//         params: [[userOpA], { chainId: rollupAChainId }],
-//       });
-//       const buildRollupB = await rollupBPublicClient.request({
-//         method: "compose_buildSignedUserOpsTx",
-//         params: [[userOpB], { chainId: rollupBChainId }],
-//       });
-//       const buildRollupC = await rollupAPublicClient.request({
-//         method: "compose_buildSignedUserOpsTx",
-//         params: [[userOpC], { chainId: rollupAChainId }],
-//       });
-//
-//       const explorerUrls = [
-//         new URL(
-//           `tx/${buildRollupA.hash}`,
-//           rollupAPublicClient.chain.blockExplorers?.default?.url,
-//         ).toString(),
-//         new URL(
-//           `tx/${buildRollupB.hash}`,
-//           rollupBPublicClient.chain.blockExplorers?.default?.url,
-//         ).toString(),
-//         new URL(
-//           `tx/${buildRollupC.hash}`,
-//           rollupAPublicClient.chain.blockExplorers?.default?.url,
-//         ).toString(),
-//       ];
-//
-//       Promise.all([
-//         rollupAPublicClient.waitForTransactionReceipt({
-//           hash: buildRollupA.hash,
-//         }),
-//         rollupBPublicClient.waitForTransactionReceipt({
-//           hash: buildRollupB.hash,
-//         }),
-//         rollupAPublicClient.waitForTransactionReceipt({
-//           hash: buildRollupC.hash,
-//         }),
-//       ]).then(([receiptA, receiptB, receiptC]) => {
-//         options.onUserOpsMined?.([
-//           addDecodedEventsToReceipt<AllEvents>(receiptA),
-//           addDecodedEventsToReceipt<AllEvents>(receiptB),
-//           addDecodedEventsToReceipt<AllEvents>(receiptC),
-//         ]);
-//       });
-//
-//       options.onBuildUserOps?.(
-//         [buildRollupA, buildRollupB, buildRollupC],
-//         explorerUrls,
-//       );
-//
-//       const payload = encodeXtMessage({
-//         senderId: "client",
-//         entries: [
-//           { chainId: rollupAChainId, rawTx: buildRollupA.raw as `0x${string}` },
-//           { chainId: rollupBChainId, rawTx: buildRollupB.raw as `0x${string}` },
-//           { chainId: rollupAChainId, rawTx: buildRollupC.raw as `0x${string}` },
-//         ],
-//       });
-//
-//       options.onPayloadEncoded?.(payload);
-//
-//       await rollupAPublicClient.request({
-//         method: "eth_sendXTransaction",
-//         params: [payload],
-//       });
-//
-//       return {
-//         signedUserOps: [signedA, signedB, signedC],
-//         userOps: [userOpA, userOpB, userOpC],
-//         build: [buildRollupA, buildRollupB, buildRollupC],
-//         payload,
-//         explorerUrls,
-//       };
-//     },
-//     preparedOps: {
-//       //TODO(Chris): Consider what to do with third User OP - preparedSourceUserOps2
-//       source: preparedSourceUserOps1,
-//       destination: preparedDestUserOps,
-//     },
-//   };
-// };
 
 // ETH B -> A
 export const createSwapETHForERC20UserOps_B_to_A = async (
@@ -963,7 +693,7 @@ export const createSwapETHForERC20UserOps_B_to_A = async (
 
       options.onPayloadEncoded?.(payload);
 
-      sourcePublicClient.request({
+      await sourcePublicClient.request({
         method: "eth_sendXTransaction",
         params: [payload],
       });
@@ -1167,7 +897,7 @@ export const createSwapETHForERC20UserOps_A_to_B = async (
 
       options.onPayloadEncoded?.(payload);
 
-      sourcePublicClient.request({
+      await sourcePublicClient.request({
         method: "eth_sendXTransaction",
         params: [payload],
       });
@@ -1186,8 +916,6 @@ export const createSwapETHForERC20UserOps_A_to_B = async (
     },
   };
 };
-
-// 2 user ops 👇
 
 export const createSwapUserOpsFrom_A_to_A_2ops = async (
   {
@@ -1208,6 +936,8 @@ export const createSwapUserOpsFrom_A_to_A_2ops = async (
     rollupAChainId,
     rollupBChainId,
   );
+
+  const isSwappingToETH = isAddressEqual(toToken, zeroAddress);
 
   const rollupABridgeContract = getBridgeAddress(rollupAChainId);
   const rollupBBridgeContract = getBridgeAddress(rollupBChainId);
@@ -1261,15 +991,34 @@ export const createSwapUserOpsFrom_A_to_A_2ops = async (
             ],
           }),
         },
-        {
-          to: toToken,
-          value: 0n,
-          data: encodeFunctionData({
-            abi: TokenABI,
-            functionName: "transfer",
-            args: [eoaAddress, amountOut],
-          }),
-        },
+        ...(isSwappingToETH
+          ? [
+              {
+                to: WETH_ADDRESS,
+                value: 0n,
+                data: encodeFunctionData({
+                  abi: WETHAbi,
+                  functionName: "withdraw",
+                  args: [amountOut],
+                }),
+              },
+              {
+                to: eoaAddress,
+                value: amountOut,
+                data: "0x" as Hex,
+              },
+            ]
+          : [
+              {
+                to: toToken,
+                value: 0n,
+                data: encodeFunctionData({
+                  abi: TokenABI,
+                  functionName: "transfer",
+                  args: [eoaAddress, amountOut],
+                }),
+              },
+            ]),
       ],
     }),
     createUserOp({
@@ -1309,6 +1058,272 @@ export const createSwapUserOpsFrom_A_to_A_2ops = async (
             args: [
               kernelB.address,
               getToken(fromToken)?.id ?? 0,
+              getToken(isSwappingToETH ? WETH_ADDRESS : toToken)?.id ?? 0,
+              amountIn,
+            ],
+          }),
+        },
+        {
+          to: rollupBBridgeContract,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: UserOperationBridgeAbi,
+            functionName: "send",
+            args: [
+              BigInt(rollupAChainId),
+              isSwappingToETH ? WETH_ADDRESS : toToken,
+              kernelB.address,
+              kernelA.address,
+              amountOut,
+              secondBridgeSessionId,
+              rollupABridgeContract,
+            ],
+          }),
+        },
+      ],
+    }),
+  ]);
+
+  const preparedUserOps1 = omit(
+    await prepareUserOperation(rollupAPublicClient, op1),
+    "account",
+  );
+
+  const preparedUserOps2 = omit(
+    await prepareUserOperation(rollupBPublicClient, op2),
+    "account",
+  );
+
+  return {
+    sign: async () => {
+      const [signedA, signedB] = await signUserOperations(
+        rollupAPublicClient as any,
+        {
+          userOperations: [preparedUserOps1, preparedUserOps2],
+          account: kernelA, // it uses it to get the Entrypoint address and version
+        },
+      );
+      options.onSignedUserOps?.([signedA, signedB]);
+
+      const userOpA = toRpcUserOpCanonical(signedA);
+      const userOpB = toRpcUserOpCanonical(signedB);
+
+      const [buildA, buildB] = await Promise.all([
+        rollupAPublicClient.request({
+          method: "compose_buildSignedUserOpsTx",
+          params: [[userOpA], { chainId: rollupAChainId }],
+        }),
+        rollupBPublicClient.request({
+          method: "compose_buildSignedUserOpsTx",
+          params: [[userOpB], { chainId: rollupBChainId }],
+        }),
+      ]);
+
+      const explorerUrls = [
+        new URL(
+          `tx/${buildA.hash}`,
+          rollupAPublicClient.chain.blockExplorers?.default?.url,
+        ).toString(),
+        new URL(
+          `tx/${buildB.hash}`,
+          rollupBPublicClient.chain.blockExplorers?.default?.url,
+        ).toString(),
+      ];
+
+      Promise.all([
+        rollupAPublicClient.waitForTransactionReceipt({
+          hash: buildA.hash,
+        }),
+        rollupBPublicClient.waitForTransactionReceipt({
+          hash: buildB.hash,
+        }),
+      ]).then(([receiptA, receiptB]) => {
+        options.onUserOpsMined?.([
+          addDecodedEventsToReceipt<AllEvents>(receiptA),
+          addDecodedEventsToReceipt<AllEvents>(receiptB),
+        ]);
+      });
+
+      options.onBuildUserOps?.([buildA, buildB], explorerUrls);
+
+      const payload = encodeXtMessage({
+        senderId: "client",
+        entries: [
+          { chainId: rollupAChainId, rawTx: buildA.raw as `0x${string}` },
+          { chainId: rollupBChainId, rawTx: buildB.raw as `0x${string}` },
+        ],
+      });
+
+      options.onPayloadEncoded?.(payload);
+
+      await rollupAPublicClient.request({
+        method: "eth_sendXTransaction",
+        params: [payload],
+      });
+
+      return {
+        signedUserOps: [signedA, signedB],
+        userOps: [userOpA, userOpB],
+        build: [buildA, buildB],
+        payload,
+        explorerUrls,
+      };
+    },
+    preparedOps: {
+      source: preparedUserOps1,
+      destination: preparedUserOps2,
+    },
+  };
+};
+
+export const createSwapETHtoERC20UserOpsFrom_A_to_A_2ops = async (
+  {
+    eoaAddress,
+    kernelA,
+    kernelB,
+    toToken,
+    amountIn,
+    amountOut,
+  }: GenerateETHSwapUserOpsParams,
+  options: UserOpSwapOptions = {},
+) => {
+  const rollupAChainId = rollupA.id;
+  const rollupBChainId = rollupB.id;
+
+  const [rollupAPublicClient, rollupBPublicClient] = createRollupPublicClients(
+    rollupAChainId,
+    rollupBChainId,
+  );
+
+  const rollupABridgeContract = getBridgeAddress(rollupAChainId);
+  const rollupBBridgeContract = getBridgeAddress(rollupBChainId);
+
+  const firstBridgeSessionId = BigInt(Math.floor(Math.random() * 1000000));
+  const secondBridgeSessionId = BigInt(Math.floor(Math.random() * 1000000));
+
+  const [op1, op2] = await Promise.all([
+    createUserOp({
+      account: kernelA,
+      chainId: rollupAChainId,
+      calls: [
+        {
+          to: WETH_ADDRESS,
+          value: amountIn,
+          data: encodeFunctionData({
+            abi: WETHAbi,
+            functionName: "deposit",
+            args: [],
+          }),
+        },
+        {
+          to: rollupABridgeContract,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: UserOperationBridgeAbi,
+            functionName: "send",
+            args: [
+              BigInt(rollupBChainId),
+              WETH_ADDRESS,
+              kernelA.address,
+              kernelB.address,
+              amountIn,
+              firstBridgeSessionId,
+              rollupBBridgeContract,
+            ],
+          }),
+        },
+
+        //
+        //
+        // {
+        //   to: fromToken,
+        //   value: 0n,
+        //   data: encodeFunctionData({
+        //     abi: TokenABI,
+        //     functionName: "transferFrom",
+        //     args: [eoaAddress, kernelA.address, amountIn],
+        //   }),
+        // },
+        // {
+        //   to: rollupABridgeContract,
+        //   value: 0n,
+        //   data: encodeFunctionData({
+        //     abi: UserOperationBridgeAbi,
+        //     functionName: "send",
+        //     args: [
+        //       BigInt(rollupBChainId),
+        //       fromToken,
+        //       kernelA.address,
+        //       kernelB.address,
+        //       amountIn,
+        //       firstBridgeSessionId,
+        //       rollupBBridgeContract,
+        //     ],
+        //   }),
+        // },
+        {
+          to: rollupABridgeContract,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: UserOperationBridgeAbi,
+            functionName: "receiveTokens",
+            args: [
+              BigInt(rollupBChainId),
+              kernelB.address,
+              kernelA.address,
+              secondBridgeSessionId,
+              rollupBBridgeContract,
+            ],
+          }),
+        },
+        {
+          to: toToken,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: TokenABI,
+            functionName: "transfer",
+            args: [eoaAddress, amountOut],
+          }),
+        },
+      ],
+    }),
+    createUserOp({
+      account: kernelB,
+      chainId: rollupBChainId,
+      calls: [
+        {
+          to: rollupBBridgeContract,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: UserOperationBridgeAbi,
+            functionName: "receiveTokens",
+            args: [
+              BigInt(rollupAChainId),
+              kernelA.address,
+              kernelB.address,
+              firstBridgeSessionId,
+              rollupABridgeContract,
+            ],
+          }),
+        },
+        {
+          to: WETH_ADDRESS,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: TokenABI,
+            functionName: "approve",
+            args: [rollupBSwapContract, amountIn],
+          }),
+        },
+        {
+          to: rollupBSwapContract,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: SwapABI,
+            functionName: "swap",
+            args: [
+              kernelB.address,
+              getToken(WETH_ADDRESS)?.id ?? 0,
               getToken(toToken)?.id ?? 0,
               amountIn,
             ],
@@ -1407,7 +1422,7 @@ export const createSwapUserOpsFrom_A_to_A_2ops = async (
 
       options.onPayloadEncoded?.(payload);
 
-      rollupAPublicClient.request({
+      await rollupAPublicClient.request({
         method: "eth_sendXTransaction",
         params: [payload],
       });

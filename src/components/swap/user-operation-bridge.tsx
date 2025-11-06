@@ -734,6 +734,7 @@ export const UserOperationBridge: FC = () => {
               type="submit"
               disabled={
                 !form.formState.isValid ||
+                form.formState.isSubmitting ||
                 kernel.isLoading ||
                 (fromToken.balance !== undefined &&
                   values.from.amount > fromToken.balance)
