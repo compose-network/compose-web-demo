@@ -11,16 +11,17 @@ import { zeroAddress } from "viem";
 import { statusIcons } from "@/components/modals/batch-transaction-modal";
 import { Text } from "@/components/ui/text";
 import { ChainIcon } from "@/components/ui/chain-icon";
-import { getChainById, getExplorerHashUrl } from "@/wagmi/config";
+import { getChainById, getExplorerHashUrl, rollupA } from "@/wagmi/config";
 import { shortenAddress } from "@/lib/utils/strings.ts";
 import { TbExternalLink } from "react-icons/tb";
-import { ChevronDown, ChevronUp, PlusIcon, X } from "lucide-react";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Tooltip } from "@/components/ui/tooltip";
 import { FaInfoCircle } from "react-icons/fa";
 import { useAddTokenToWallet } from "@/hooks/use-add-token-to-wallet.ts";
 import { Badge } from "@/components/ui/badge.tsx";
 import { CopyBtn } from "@/components/ui/copy-btn.tsx";
+import { useAsset } from "@/hooks/use-asset";
 
 export type TransactionModalProps = {
   title: string;
@@ -66,7 +67,13 @@ export const TransactionModal: FCProps = ({
     ({ toTokenAddress }) => toTokenAddress,
   )?.toTokenAddress;
 
+  const asset = useAsset({
+    tokenAddress: toTokenAddress,
+    chainId: toChainId || rollupA.id,
+  });
+
   const canAdd = toChainId && toTokenAddress && toTokenAddress !== zeroAddress;
+  const isDone = data?.actions.every(({ status }) => status === "success");
 
   const handleAddToWallet = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -78,12 +85,13 @@ export const TransactionModal: FCProps = ({
   return (
     <Dialog {...props}>
       <DialogContent
-        className="flex flex-col gap-5 min-w-[646px] max-h-[841px]"
+        className="flex flex-col gap-5 p-6 min-w-[646px] max-h-[841px] rounded-[40px]"
+        style={{ borderRadius: "40px" }}
         onInteractOutside={(e) => e.preventDefault()}
       >
         <div className="flex justify-between items-center">
           <DialogTitle>{title}</DialogTitle>
-          <DialogClose>
+          <DialogClose className="absolute -right-3 -top-3 bg-gray-50  size-10 rounded-full flex items-center justify-center">
             <X className="size-6" />
           </DialogClose>
         </div>
@@ -99,7 +107,7 @@ export const TransactionModal: FCProps = ({
                   <div className="flex flex-col gap-1">
                     <div className="flex gap-1 items-center">
                       <Text
-                        variant="body-2-medium"
+                        variant="body-2-semibold"
                         className="flex items-center gap-1"
                       >
                         {action.name}{" "}
@@ -223,19 +231,26 @@ export const TransactionModal: FCProps = ({
             </div>
           ))}
         </div>
-        {canAdd &&
-          data?.actions.every(({ status }) => status === "success") && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleAddToWallet}
-              className="flex items-center gap-1.5 text-xs"
-              title="Add token to wallet"
-            >
-              <PlusIcon className="h-3 w-3" />
-              Add to Wallet
-            </Button>
-          )}
+        {isDone && (
+          <div className="flex p-5 pb-8 justify-between items-center border-t border-gray-300">
+            <Text variant="body-2-semibold">Transaction Successful</Text>
+            {canAdd && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleAddToWallet}
+                className="flex items-center gap-3 text-xs bg-[#18B5B8]/10 text-primary-500 h-8 rounded-xl"
+                title="Add token to wallet"
+              >
+                <span>Add {asset?.symbol} to Metamask</span>
+                <img
+                  src="/public/images/wallets/metamask.svg"
+                  className="size-4"
+                />
+              </Button>
+            )}
+          </div>
+        )}
         {data?.actions.every(({ status }) =>
           ["success", "failed"].includes(status),
         ) && (
