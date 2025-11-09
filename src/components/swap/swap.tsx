@@ -768,12 +768,11 @@ export const Swap: FC = () => {
               isLoading={prices.isPending}
               readOnly
               onSelectToken={(token) => {
-                // FIXME(CHRIS) ONLY FOR SAKE OF TESTING A->A - simplified flow
-                // if (isAddressEqual(token, values.fromToken)) {
-                //   form.setValue("fromToken", values.toToken, {
-                //     shouldValidate: true,
-                //   });
-                // }
+                if (isAddressEqual(token, values.fromToken)) {
+                  form.setValue("fromToken", values.toToken, {
+                    shouldValidate: true,
+                  });
+                }
                 return form.setValue("toToken", token, {
                   shouldValidate: true,
                 });
