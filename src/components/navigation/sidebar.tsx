@@ -3,7 +3,7 @@ import { ComposeLogo } from "@/components/ui/compose-logo.tsx";
 import { Link, NavLink } from "react-router-dom";
 import { useLocation, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button.tsx";
-import { FaDiscord } from "react-icons/fa";
+// import { FaDiscord } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 import { TbWorld } from "react-icons/tb";
 
@@ -21,10 +21,10 @@ const ITEMS = [
     label: "Flash Arbitrage",
     isFlowInProgress: true
   }, {
-    label: "Cross-Chain calls",
+    label: "Cross-Chain Calls",
     isFlowInProgress: true
   }, {
-    label: "Omnichain TV",
+    label: "Omnichain Txs",
     isFlowInProgress: true
   }, {
     label: "NFT Portals",
@@ -52,8 +52,8 @@ const Sidebar = () => {
             {item.label}
             {item.isFlowInProgress &&
               <div
-                className="h-[24px] p-2 flex items-center justify-center cursor-default rounded-[24px] text-nowrap bg-pink-100 ">
-                <Text variant={"caption-medium"} className="text-pink-500"> Coming soon</Text>
+                className="h-[24px] p-2 flex items-center justify-center cursor-default rounded-[24px] text-nowrap bg-[#F42788] bg-opacity-[24%] ">
+                <Text variant={"caption-medium"} className="text-[#F42788]"> Coming soon</Text>
               </div>}
           </Text>))}
         </div>
@@ -62,9 +62,9 @@ const Sidebar = () => {
         <Button as={Link} to={"https://docs.compose.network/"} target={"_blank"} variant={"ghost"}
                 className={"justify-start hover:bg-transparent"}>Docs</Button>
         <div className="w-full flex gap-4 ml-4">
-          <Link target={"_blank"} to={"https://discord.com/invite/5vT22pRBrf"}>
-            <FaDiscord className="size-6" />
-          </Link>
+          {/*<Link target={"_blank"} to={"https://discord.com/invite/5vT22pRBrf"}>*/}
+          {/*  <FaDiscord className="size-6" />*/}
+          {/*</Link>*/}
           <Link target={"_blank"} to={"https://x.com/ComposeNetwork"}>
             <FaXTwitter
               className="size-6" />
