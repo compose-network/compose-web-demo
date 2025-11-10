@@ -19,24 +19,20 @@ export const BridgeStep: FCProps = ({ onComplete, onBack }) => {
     <>
       {/* Bridge Step Icon */}
       <div
-        className="w-[600px] rounded-[20px] h-[160px] bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center gap-4 text"
+        className="w-[600px] rounded-[20px]  h-[160px] bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center gap-4 text"
         style={{ backgroundImage: "url(/images/welcome-modal/bridge.png)" }}
       >
-        <Text variant={"body-1-semibold"} className="text-white">
-          Step 2
-        </Text>
-        <Text variant={"headline1"} className="text-white">
-          Bridge Instantly
-        </Text>
+        <Text variant={"body-1-semibold"}>Step 2</Text>
+        <Text variant={"headline1"}>Bridge Instantly</Text>
       </div>
 
-      <Text className="text-black w-full font-bold">
+      <Text variant={"body-3-bold"} className="text-black w-full">
         Bridge ETH Between Rollups
       </Text>
-      <Text className="text-gray-600 w-full">
+      <Text variant={"body-3-medium"} className="text-gray-600 w-full">
         Next, bridge your ETH between rollups — instantly and atomically.
       </Text>
-      <Text className="text-gray-600 w-full">
+      <Text variant={"body-3-medium"} className="text-gray-600 w-full">
         Pick the destination rollup, transfer the ETH to your Smart Account,
         then sign to execute the full bridge in one synchronized transaction.
       </Text>

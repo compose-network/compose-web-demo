@@ -24,18 +24,14 @@ export const OnboardingStep: FCProps = ({ onNext, onBack }) => {
         className="w-[600px] h-[160px] rounded-[20px] bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center gap-4 text"
         style={{ backgroundImage: "url(/images/welcome-modal/onboarding.png)" }}
       >
-        <Text variant={"body-1-semibold"} className="text-white">
-          Step 1
-        </Text>
-        <Text variant={"headline1"} className="text-white">
-          Onboarding to Compose
-        </Text>
+        <Text variant={"body-1-semibold"}>Step 1</Text>
+        <Text variant={"headline1"}>Onboarding to Compose</Text>
       </div>
 
-      <Text className="text-black w-full">
+      <Text variant={"body-3-medium"} className="text-black w-full">
         <span className="font-bold">Bridge ETH from Hoodi</span>
       </Text>
-      <Text className="text-gray-600 w-full">
+      <Text variant={"body-3-medium"} className="text-gray-600 w-full">
         Start by bridging some ETH from{" "}
         <span className="font-bold">Ethereum’s Hoodi testnet</span> to one of
         the Compose demo rollups. Choose how much ETH to bridge and where to
