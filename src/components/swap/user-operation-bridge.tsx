@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
-import { SwapRoute } from "@/components/swap/swap-route";
 import { TokenInput } from "@/components/swap/token-picker/token-input";
 import type { TransactionModalData } from "@/components/swap/transaction-bridge/transaction-modal.tsx";
 import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal.tsx";
@@ -56,6 +55,7 @@ import { BRIDGE_CONFIG } from "@/wagmi/bridge.ts";
 import { getErrorMessage } from "@/lib/utils/wagmi.ts";
 import type { ComposeRpcSchema } from "@/components/swap/utils/core.ts";
 import { safeStringify } from "@/lib/utils/bigint.ts";
+import ActionRoute from "@/components/swap/actionRoute.tsx";
 
 const schema = z.object({
   token: z.string().refine(isAddress),
@@ -716,16 +716,12 @@ export const UserOperationBridge: FC = () => {
             />
           </div>
           <Divider />
-          <SwapRoute
-            action="bridge"
-            fromToken={{
-              address: values.token,
-              chainId: values.from.chainId,
-            }}
-            toToken={{
-              address: values.token,
-              chainId: values.to.chainId,
-            }}
+          <ActionRoute
+            type="bridge"
+            from={values.token}
+            fromChainId={values.from.chainId}
+            to={values.token}
+            toChainId={values.to.chainId}
           />
           {eoa.isConnected ? (
             <Button

@@ -1,5 +1,4 @@
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
-import { SwapRoute } from "@/components/swap/swap-route";
 import { TokenInput } from "@/components/swap/token-picker/token-input";
 import type { TransactionModalData } from "@/components/swap/transaction-bridge/transaction-modal";
 import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal";
@@ -49,6 +48,7 @@ import { useLocalStorage } from "react-use";
 import { isAddress, parseEther, zeroAddress } from "viem";
 import { useSendTransaction, useSwitchChain } from "wagmi";
 import { z } from "zod";
+import ActionRoute from "@/components/swap/actionRoute.tsx";
 
 const schema = z.object({
   fromChainId: z
@@ -781,13 +781,13 @@ export const Swap: FC = () => {
             />
           </div>
           <Divider />
-          <SwapRoute
-            action="swap"
-            fromToken={{
-              address: values.fromToken,
-              chainId: values.fromChainId,
-            }}
-            toToken={{ address: values.toToken, chainId: values.toChainId }}
+
+          <ActionRoute
+            type="swap"
+            from={values.fromToken}
+            fromChainId={values.fromChainId}
+            to={values.toToken}
+            toChainId={values.toChainId}
           />
           {isConnected ? (
             <Button
