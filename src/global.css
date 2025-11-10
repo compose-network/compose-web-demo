@@ -1,3 +1,5 @@
+@import './assets/fonts/general-sans.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -175,7 +177,7 @@ body {
   background: var(--gray-200);
 }
 #root {
-  font-family: "Manrope", sans-serif;
+  font-family: "GeneralSans-Variable", "GeneralSans-Regular", sans-serif;
   font-optical-sizing: auto;
   font-style: normal;
   height: 100vh;
