@@ -105,7 +105,9 @@ const SwapArrow = forwardRef<HTMLDivElement, SwapArrowProps>(
             style={{
               borderRightColor: customArrowHead
                 ? arrowHeadColor
-                : leftArrowHeadColors[variant as keyof typeof leftArrowHeadColors] || leftArrowHeadColors.default,
+                : leftArrowHeadColors[
+                    variant as keyof typeof leftArrowHeadColors
+                  ] || leftArrowHeadColors.default,
               borderTopColor: "transparent",
             }}
           />
@@ -141,7 +143,8 @@ const SwapArrow = forwardRef<HTMLDivElement, SwapArrowProps>(
             style={{
               borderLeftColor: customArrowHead
                 ? arrowHeadColor
-                : arrowHeadColors[variant as keyof typeof arrowHeadColors] || arrowHeadColors.default,
+                : arrowHeadColors[variant as keyof typeof arrowHeadColors] ||
+                  arrowHeadColors.default,
               borderBottomColor: "transparent",
             }}
           />

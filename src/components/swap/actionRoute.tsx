@@ -16,33 +16,33 @@ import type { ComponentPropsWithoutRef, FC } from "react";
 // }
 
 export type ActionRouteProps = {
-  type: string,
-  from: Address
+  type: string;
+  from: Address;
   fromChainId: number;
-  to: Address,
+  to: Address;
   toChainId: number;
-
 };
 type RouteFC = FC<
-  Omit<ComponentPropsWithoutRef<"div">, keyof ActionRouteProps> & ActionRouteProps
+  Omit<ComponentPropsWithoutRef<"div">, keyof ActionRouteProps> &
+    ActionRouteProps
 >;
 
-const Token = ({ token, chainId }: { token: Address, chainId: number }) =>
+const Token = ({ token, chainId }: { token: Address; chainId: number }) => (
   <div className="flex flex-col items-center size-20 justify-between">
-    <AssetLogo
-      tokenAddress={token}
-      chainId={chainId}
-    />
+    <AssetLogo tokenAddress={token} chainId={chainId} />
     <Text variant="body-3-medium" className="text-gray-600">
       {chainsMap[chainId as keyof typeof chainsMap].name}
     </Text>
-  </div>;
+  </div>
+);
 
 const prepareAction = (action: ActionRouteProps) => {
-  const actions: { token?: Address, chainId?: number, type?: string }[] = [{
-    token: action.from,
-    chainId: action.fromChainId
-  }];
+  const actions: { token?: Address; chainId?: number; type?: string }[] = [
+    {
+      token: action.from,
+      chainId: action.fromChainId,
+    },
+  ];
   if (action.type === "swap") {
     if (action.fromChainId !== rollupB.id) {
       actions.push({ type: "bridge" });
@@ -67,53 +67,67 @@ const prepareAction = (action: ActionRouteProps) => {
 };
 
 const ActionRoute: RouteFC = ({
-                                className,
-                                type,
-                                from,
-                                fromChainId,
-                                to,
-                                toChainId,
-                                ...props
-                              }) => {
-
+  className,
+  type,
+  from,
+  fromChainId,
+  to,
+  toChainId,
+  ...props
+}) => {
   const actions = prepareAction({
     type,
     from,
     fromChainId,
     to,
-    toChainId
+    toChainId,
   });
 
   return (
-    <div className={cn("flex select-none w-full justify-center", className)} {...props}>
+    <div
+      className={cn("flex select-none w-full justify-center", className)}
+      {...props}
+    >
       {actions.map((preparedAction) => {
-          if (preparedAction.type === "swap") {
-            return <div className="flex flex-col w-[30%] items-center flex-nowrap ">
-              <Text variant="caption-medium" className="capitalize text-gray-500">
+        if (preparedAction.type === "swap") {
+          return (
+            <div className="flex flex-col w-[30%] items-center flex-nowrap ">
+              <Text
+                variant="caption-medium"
+                className="capitalize text-gray-500"
+              >
                 Swap
               </Text>
-              <SwapArrow
-              />
-            </div>;
-          }
-          if (preparedAction.type === "bridge") {
-            return <div
-              className={`flex flex-col ${type === "bridge" ? "w-full" : "w-[30%]"} items-center flex-nowrap`}>
-              <Text variant="caption-medium" className="capitalize text-gray-500">
+              <SwapArrow />
+            </div>
+          );
+        }
+        if (preparedAction.type === "bridge") {
+          return (
+            <div
+              className={`flex flex-col ${type === "bridge" ? "w-full" : "w-[30%]"} items-center flex-nowrap`}
+            >
+              <Text
+                variant="caption-medium"
+                className="capitalize text-gray-500"
+              >
                 Bridge
               </Text>
-              <Arrow
-              />
-            </div>;
-          }
-          return <div className="flex justify-center items-center"><Token token={preparedAction?.token || "0x"}
-                                                                          chainId={preparedAction?.chainId || -1} />
-          </div>;
+              <Arrow />
+            </div>
+          );
         }
-      )
-      }
-
-    </div>);
+        return (
+          <div className="flex justify-center items-center">
+            <Token
+              token={preparedAction?.token || "0x"}
+              chainId={preparedAction?.chainId || -1}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
 };
 
 export default ActionRoute;
