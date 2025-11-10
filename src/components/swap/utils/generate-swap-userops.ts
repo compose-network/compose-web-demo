@@ -1,24 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getBridgeAddress, WETH_ADDRESS } from "@/wagmi/addresses";
-import {
-  type Address,
-  createPublicClient,
-  encodeFunctionData,
-  type Hex,
-  rpcSchema,
-  zeroAddress,
-} from "viem";
-import {
-  chainsMap,
-  rollupA,
-  rollupB,
-  rollupBSwapContract,
-} from "@/wagmi/config";
+import { type Address, encodeFunctionData, type Hex, zeroAddress } from "viem";
+import { rollupA, rollupB, rollupBSwapContract } from "@/wagmi/config";
 import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
 import { TokenABI } from "@/lib/abi/token";
 import type { CreateKernelAccountReturnType } from "@zerodev/sdk";
-import type { ComposeRpcSchema } from "@/components/swap/utils/core";
 import {
+  createRollupPublicClient,
   createRollupPublicClients,
   createUserOp,
 } from "@/components/swap/utils/core";
@@ -38,7 +26,6 @@ import type { AllEvents } from "@/lib/contract-interactions/utils/useWaitForTran
 import { globals } from "@/config";
 import { omit } from "lodash-es";
 import { signUserOperations } from "@zerodev/multi-chain-ecdsa-validator/actions";
-import { http } from "@wagmi/core";
 import { safeStringify } from "@/lib/utils/bigint.ts";
 
 type UserOpSwapOptions = {
@@ -1443,11 +1430,7 @@ export const createSwapUserOpsFrom_B_to_B = async (
 ) => {
   const rollupBChainId = rollupB.id;
 
-  const rollupBPublicClient = createPublicClient({
-    chain: chainsMap[rollupBChainId],
-    transport: http(chainsMap[rollupBChainId].rpcUrls.default.http[0]),
-    rpcSchema: rpcSchema<ComposeRpcSchema>(),
-  });
+  const rollupBPublicClient = createRollupPublicClient(rollupBChainId);
 
   const isSwappingToETH = isAddressEqual(toToken, zeroAddress);
   const isSwappingFromETH = isAddressEqual(fromToken, zeroAddress);
