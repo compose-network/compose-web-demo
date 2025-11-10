@@ -1,10 +1,10 @@
 import { Text } from "@/components/ui/text";
 import type { ComponentPropsWithoutRef, FC } from "react";
-import { SwapRoute } from "@/components/swap/swap-route.tsx";
 import { zeroAddress } from "viem";
-import { rollupA, rollupB } from "@/wagmi/config.ts";
+import { rollupA } from "@/wagmi/config.ts";
 import { USDC_ADDRESS } from "@/wagmi/addresses.ts";
 import { ProgressIndicator } from "./progress-indicator";
+import ActionRoute from "@/components/swap/actionRoute.tsx";
 
 export type FinalStepProps = {
   onComplete: () => void;
@@ -40,18 +40,13 @@ export const FinalStep: FCProps = ({ onComplete, onBack }) => {
       Our demo DEX lives on Rollup B, but swapping from Rollup A will automatically route through Rollup B using
       Compose’s atomic interop.
     </Text>
-
-      <div className="w-full">
-        <SwapRoute
-          action="swap"
-          fromToken={{
-            address: zeroAddress,
-            chainId: rollupA.id
-          }}
-          toToken={{ address: USDC_ADDRESS, chainId: rollupB.id }}
-        />
-      </div>
-      {/* Action Buttons */}
+      <ActionRoute action={{
+        type: "swap",
+        from: zeroAddress,
+        fromChainId: rollupA.id,
+        to: USDC_ADDRESS,
+        toChainId: rollupA.id
+      }} />
       <div className="w-full flex justify-between">
         <button
           onClick={onBack}

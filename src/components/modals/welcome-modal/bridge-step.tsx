@@ -1,9 +1,9 @@
 import { Text } from "@/components/ui/text";
 import type { ComponentPropsWithoutRef, FC } from "react";
-import { SwapRoute } from "@/components/swap/swap-route.tsx";
 import { zeroAddress } from "viem";
 import { rollupA, rollupB } from "@/wagmi/config.ts";
 import { ProgressIndicator } from "./progress-indicator";
+import ActionRoute from "@/components/swap/actionRoute.tsx";
 
 export type BridgeStepProps = {
   onComplete: () => void;
@@ -42,14 +42,13 @@ export const BridgeStep: FCProps = ({ onComplete, onBack }) => {
       </Text>
 
       <div className='w-full'>
-        <SwapRoute
-          action="bridge"
-          fromToken={{
-            address: zeroAddress,
-            chainId: rollupB.id,
-          }}
-          toToken={{ address: zeroAddress, chainId: rollupA.id }}
-        />
+        <ActionRoute action={{
+          type: "bridge",
+          from: zeroAddress,
+          fromChainId: rollupB.id,
+          to: zeroAddress,
+          toChainId: rollupA.id
+        }} />
       </div>
       {/* Action Buttons */}
       <div className="w-full flex justify-between">

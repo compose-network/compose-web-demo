@@ -1,5 +1,4 @@
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
-import { SwapRoute } from "@/components/swap/swap-route";
 import { TokenInput } from "@/components/swap/token-picker/token-input";
 import type { TransactionModalData } from "@/components/swap/transaction-bridge/transaction-modal";
 import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal";
@@ -10,7 +9,7 @@ import {
   createSwapETHtoERC20UserOpsFrom_A_to_A_2ops,
   createSwapUserOpsFrom_A_to_A_2ops,
   createSwapUserOpsFrom_A_to_B,
-  createSwapUserOpsFrom_B_to_A,
+  createSwapUserOpsFrom_B_to_A
 } from "@/components/swap/utils/generate-swap-userops";
 import { Button } from "@/components/ui/button";
 import { Divider } from "@/components/ui/divider";
@@ -35,7 +34,7 @@ import {
   optimismChain,
   rollupA,
   rollupB,
-  rollupBSwapContract,
+  rollupBSwapContract
 } from "@/wagmi/config";
 import { SWAP_CONFIG } from "@/wagmi/swap.ts";
 import { getToken, isAddressEqual } from "@/wagmi/tokens";
@@ -49,26 +48,27 @@ import { useLocalStorage } from "react-use";
 import { isAddress, parseEther, zeroAddress } from "viem";
 import { useSendTransaction, useSwitchChain } from "wagmi";
 import { z } from "zod";
+import ActionRoute from "@/components/swap/actionRoute.tsx";
 
 const schema = z.object({
   fromChainId: z
     .number()
     .default(rollupA.id)
     .refine((id) => id === rollupA.id || id === rollupB.id, {
-      message: "Chain ID must be rollupA or rollupB",
+      message: "Chain ID must be rollupA or rollupB"
     }),
   fromToken: z.string().refine(isAddress),
   fromAmount: z.bigint().min(parseEther("0.000001"), {
-    message: "Amount must be greater than 0.000001",
+    message: "Amount must be greater than 0.000001"
   }),
   toChainId: z
     .number()
     .default(rollupA.id)
     .refine((id) => id === rollupA.id || id === rollupB.id, {
-      message: "Chain ID must be rollupA or rollupB",
+      message: "Chain ID must be rollupA or rollupB"
     }),
   toToken: z.string().refine(isAddress),
-  slippage: z.number(),
+  slippage: z.number()
 });
 
 export const Swap: FC = () => {
@@ -89,7 +89,7 @@ export const Swap: FC = () => {
       toChainId: rollupB.id,
       toToken: SWAP_CONFIG.find(({ chainId }) => rollupB.id === chainId)!
         .tokens![1],
-      slippage: 0.5,
+      slippage: 0.5
     },
     {
       raw: false,
@@ -101,7 +101,7 @@ export const Swap: FC = () => {
         parsed.fromAmount = BigInt(parsed.fromAmount);
         const isValidSchema = schema.safeParse({
           ...parsed,
-          fromAmount: parseEther("1"),
+          fromAmount: parseEther("1")
         });
         if (!isValidSchema.success) {
           return {
@@ -111,18 +111,18 @@ export const Swap: FC = () => {
             toChainId: rollupB.id,
             toToken: SWAP_CONFIG.find(({ chainId }) => rollupB.id === chainId)!
               .tokens![1],
-            slippage: 0.5,
+            slippage: 0.5
           };
         }
         parsed.fromAmount = 0n;
         return parsed;
-      },
-    },
+      }
+    }
   );
 
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: prevSwapValues,
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema)
   });
 
   const values = form.watch();
@@ -136,7 +136,7 @@ export const Swap: FC = () => {
 
   const swap = useSwap({
     contract: contracts[rollupB.id].swap,
-    chainId: rollupB.id,
+    chainId: rollupB.id
   });
 
   const kernel = useSmartAccount();
@@ -145,26 +145,26 @@ export const Swap: FC = () => {
     {
       tokenIn: getToken(values.fromToken)?.id ?? 0,
       tokenOut: getToken(values.toToken)?.id ?? 0,
-      amountIn: values.fromAmount,
+      amountIn: values.fromAmount
     },
     {
       placeholderData: values.fromAmount ? keepPreviousData : undefined,
       chainId: rollupB.id,
       contract: contracts[rollupB.id].swap,
-      enabled: !!values.fromToken && !!values.toToken,
-    },
+      enabled: !!values.fromToken && !!values.toToken
+    }
   );
 
   const isSameToken = values.fromToken === values.toToken;
 
   const fromToken = useAsset({
     tokenAddress: values.fromToken,
-    chainId: values.fromChainId,
+    chainId: values.fromChainId
   });
 
   const toToken = useAsset({
     tokenAddress: values.toToken,
-    chainId: values.toChainId,
+    chainId: values.toChainId
   });
 
   const approve = useApprove();
@@ -191,36 +191,36 @@ export const Swap: FC = () => {
     if (prices.data?.[0] === 0n) {
       return toast({
         title: "No price found for the selected tokens",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
 
     if (!kernel.kernel.data?.accounts) {
       return toast({
         title: "Kernel A account not found",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
 
     const kernelAllowance = is_eth_to_erc20
       ? globals.MAX_WEI_AMOUNT
       : await (
-          values.fromChainId === rollupA.id
-            ? rollupAPublicClient
-            : rollupBPublicClient
-        ).readContract({
-          abi: TokenABI,
-          functionName: "allowance",
-          args: [
-            address!,
-            is_from_B_to_B
-              ? rollupBSwapContract
-              : values.fromChainId === rollupA.id
-                ? kernel.kernel.data?.accounts.A.address
-                : kernel.kernel.data?.accounts.B.address,
-          ],
-          address: values.fromToken,
-        });
+        values.fromChainId === rollupA.id
+          ? rollupAPublicClient
+          : rollupBPublicClient
+      ).readContract({
+        abi: TokenABI,
+        functionName: "allowance",
+        args: [
+          address!,
+          is_from_B_to_B
+            ? rollupBSwapContract
+            : values.fromChainId === rollupA.id
+              ? kernel.kernel.data?.accounts.A.address
+              : kernel.kernel.data?.accounts.B.address
+        ],
+        address: values.fromToken
+      });
 
     const needsApproval =
       !is_eth_to_erc20 && kernelAllowance < values.fromAmount;
@@ -243,7 +243,7 @@ export const Swap: FC = () => {
         await approve.write(
           {
             address: values.fromToken,
-            chainId: values.fromChainId,
+            chainId: values.fromChainId
           },
           {
             spender: is_from_B_to_B
@@ -251,7 +251,7 @@ export const Swap: FC = () => {
               : values.fromChainId === rollupA.id
                 ? kernel.kernel.data?.accounts.A.address!
                 : kernel.kernel.data?.accounts.B.address!,
-            amount: globals.MAX_WEI_AMOUNT,
+            amount: globals.MAX_WEI_AMOUNT
           },
           {
             onConfirmed: (hash) => {
@@ -276,7 +276,7 @@ export const Swap: FC = () => {
                 variant: "destructive",
                 description: (
                   <Span className="whitespace-pre-wrap">{errMes}</Span>
-                ),
+                )
               });
             },
             onMined: (receipt) => {
@@ -293,7 +293,7 @@ export const Swap: FC = () => {
                 toast({
                   variant: "destructive",
                   title: "Swap failed",
-                  description: errMes,
+                  description: errMes
                 });
                 return;
               }
@@ -303,8 +303,8 @@ export const Swap: FC = () => {
                 clone.actions[0].status = "success";
                 return clone;
               });
-            },
-          },
+            }
+          }
         );
       };
     }
@@ -322,7 +322,7 @@ export const Swap: FC = () => {
           {
             to: kernel.getKernelByChainId(values.fromChainId)!.address,
             value: values.fromAmount,
-            chainId: values.fromChainId,
+            chainId: values.fromChainId
           },
           {
             onError: (error) => {
@@ -339,10 +339,10 @@ export const Swap: FC = () => {
                 variant: "destructive",
                 description: (
                   <Span className="whitespace-pre-wrap">{errMes}</Span>
-                ),
+                )
               });
-            },
-          },
+            }
+          }
         );
         if (!hash) return;
         setTransactionData((prev) => {
@@ -371,7 +371,7 @@ export const Swap: FC = () => {
           toast({
             variant: "destructive",
             title: "Swap failed",
-            description: errMes,
+            description: errMes
           });
           return;
         }
@@ -409,7 +409,7 @@ export const Swap: FC = () => {
           eoaAddress: address!,
           kernelA: kernel.kernel.data!.accounts.A,
           kernelB: kernel.kernel.data!.accounts.B,
-          amountOut: prices.data?.[0] ?? 0n,
+          amountOut: prices.data?.[0] ?? 0n
         },
         {
           onSignedUserOps() {
@@ -426,7 +426,7 @@ export const Swap: FC = () => {
               const clone = cloneDeep(prev);
               clone.actions[userOpIndex].hash = builds.map((build) => ({
                 chainId: build.chainId,
-                hash: build.hash,
+                hash: build.hash
               }));
               return clone;
             });
@@ -445,7 +445,7 @@ export const Swap: FC = () => {
               toast({
                 variant: "destructive",
                 title: "Swap failed",
-                description: errMes,
+                description: errMes
               });
               return;
             }
@@ -462,11 +462,11 @@ export const Swap: FC = () => {
               fromAmount: 0n,
               toChainId: values.toChainId,
               toToken: values.toToken,
-              slippage: values.slippage,
+              slippage: values.slippage
             });
             form.clearErrors();
-          },
-        },
+          }
+        }
       ).catch((error) => {
         setTransactionData((prev) => {
           if (!prev) return null;
@@ -479,7 +479,7 @@ export const Swap: FC = () => {
         toast({
           title: "Swap failed",
           variant: "destructive",
-          description: <Span className="whitespace-pre-wrap">{errMes}</Span>,
+          description: <Span className="whitespace-pre-wrap">{errMes}</Span>
         });
         throw error;
       });
@@ -497,7 +497,7 @@ export const Swap: FC = () => {
           toast({
             title: "Swap failed",
             variant: "destructive",
-            description: <Span className="whitespace-pre-wrap">{errMes}</Span>,
+            description: <Span className="whitespace-pre-wrap">{errMes}</Span>
           });
           throw error;
         });
@@ -509,12 +509,12 @@ export const Swap: FC = () => {
         clone.actions[userOpIndex].userOpData = [
           {
             chainId: values.fromChainId,
-            data: safeStringify(preparedOps.source),
+            data: safeStringify(preparedOps.source)
           },
           {
             chainId: values.toChainId,
-            data: safeStringify(preparedOps.destination),
-          },
+            data: safeStringify(preparedOps.destination)
+          }
         ];
         return clone;
       });
@@ -537,7 +537,7 @@ export const Swap: FC = () => {
             amountIn: values.fromAmount,
             recipient: address!,
             tokenIn: getToken(values.fromToken)?.id ?? 0,
-            tokenOut: getToken(values.toToken)?.id ?? 0,
+            tokenOut: getToken(values.toToken)?.id ?? 0
           },
           {
             onConfirmed: (hash) => {
@@ -562,7 +562,7 @@ export const Swap: FC = () => {
                 toast({
                   variant: "destructive",
                   title: "Swap failed",
-                  description: errMes,
+                  description: errMes
                 });
                 return;
               }
@@ -583,13 +583,13 @@ export const Swap: FC = () => {
                 fromAmount: 0n,
                 toChainId: values.toChainId,
                 toToken: values.toToken,
-                slippage: values.slippage,
+                slippage: values.slippage
               });
               form.clearErrors();
 
               toast({
                 title: "Swap completed",
-                description: "Your tokens have been swapped successfully",
+                description: "Your tokens have been swapped successfully"
               });
             },
             onError: (error) => {
@@ -606,10 +606,10 @@ export const Swap: FC = () => {
                 variant: "destructive",
                 description: (
                   <Span className="whitespace-pre-wrap">{errMes}</Span>
-                ),
+                )
               });
-            },
-          },
+            }
+          }
         );
       });
 
@@ -620,19 +620,19 @@ export const Swap: FC = () => {
       actions: [
         ...(needsApproval || is_eth_to_erc20
           ? [
-              {
-                name: `${is_eth_to_erc20 ? `Send ${formatCurrency(values.fromAmount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${fromToken.symbol}`} `,
-                chainId: values.fromChainId,
-                status: "idle" as const,
-                tooltip: is_eth_to_erc20
-                  ? "ETH must first be transferred to your Smart Account before initiating a cross-chain transaction."
-                  : undefined,
-                signAndSend: async () => {
-                  setErrorMessage(undefined);
-                  await prereqFn!();
-                },
-              },
-            ]
+            {
+              name: `${is_eth_to_erc20 ? `Send ${formatCurrency(values.fromAmount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${fromToken.symbol}`} `,
+              chainId: values.fromChainId,
+              status: "idle" as const,
+              tooltip: is_eth_to_erc20
+                ? "ETH must first be transferred to your Smart Account before initiating a cross-chain transaction."
+                : undefined,
+              signAndSend: async () => {
+                setErrorMessage(undefined);
+                await prereqFn!();
+              }
+            }
+          ]
           : []),
         {
           name: `Swap ${formatCurrency(values.fromAmount, fromToken.decimals || 18)} ${fromToken.symbol} for ${formatCurrency(prices.data?.[0] ?? 0n, toToken.decimals || 18)} ${toToken.symbol}`,
@@ -647,9 +647,9 @@ export const Swap: FC = () => {
             } else {
               console.warn("MISSIGN ACTION FN");
             }
-          },
-        },
-      ],
+          }
+        }
+      ]
     });
 
     await prereqFn?.();
@@ -677,15 +677,15 @@ export const Swap: FC = () => {
                   chainId: rollupA.id,
                   tokens: [zeroAddress, USDC_ADDRESS, SSV_ADDRESS],
                   notSupportedReason:
-                    " - Swapping from Rollup A to Rollup A is not supported",
+                    " - Swapping from Rollup A to Rollup A is not supported"
                 },
                 {
                   chainId: rollupB.id,
-                  tokens: [zeroAddress, USDC_ADDRESS, SSV_ADDRESS],
+                  tokens: [zeroAddress, USDC_ADDRESS, SSV_ADDRESS]
                 },
                 { chainId: baseChain.id, isNotSupported: true },
                 { chainId: arbitrumChain.id, isNotSupported: true },
-                { chainId: optimismChain.id, isNotSupported: true },
+                { chainId: optimismChain.id, isNotSupported: true }
               ]}
               value={values.fromAmount}
               tokenAddress={values.fromToken}
@@ -693,22 +693,22 @@ export const Swap: FC = () => {
               onSelectToken={(token) => {
                 if (isAddressEqual(token, values.toToken)) {
                   form.setValue("toToken", values.fromToken, {
-                    shouldValidate: true,
+                    shouldValidate: true
                   });
                 }
                 return form.setValue("fromToken", token, {
-                  shouldValidate: true,
+                  shouldValidate: true
                 });
               }}
               onChainSelect={(chainId) =>
                 form.setValue(
                   "fromChainId",
-                  chainId as typeof rollupA.id | typeof rollupB.id,
+                  chainId as typeof rollupA.id | typeof rollupB.id
                 )
               }
               onChange={(amount) => {
                 form.setValue("fromAmount", amount, {
-                  shouldValidate: true,
+                  shouldValidate: true
                 });
               }}
             />
@@ -724,7 +724,7 @@ export const Swap: FC = () => {
                 size="icon"
                 className="size-12 rounded-xl"
                 style={{
-                  boxShadow: "0px 4px 8px -3px rgba(11, 42, 60, 0.08)",
+                  boxShadow: "0px 4px 8px -3px rgba(11, 42, 60, 0.08)"
                 }}
                 onClick={() => {
                   form.reset({
@@ -733,7 +733,7 @@ export const Swap: FC = () => {
                     fromAmount: prices.data?.[0] ?? 0n,
                     toChainId: values.fromChainId,
                     toToken: values.fromToken,
-                    slippage: values.slippage,
+                    slippage: values.slippage
                   });
                 }}
               >
@@ -745,21 +745,21 @@ export const Swap: FC = () => {
               chains={[
                 {
                   chainId: rollupA.id,
-                  tokens: [zeroAddress, USDC_ADDRESS, SSV_ADDRESS],
+                  tokens: [zeroAddress, USDC_ADDRESS, SSV_ADDRESS]
                   // isNotSupported: values.fromChainId === rollupA.id,
                 },
                 {
                   chainId: rollupB.id,
-                  tokens: [zeroAddress, USDC_ADDRESS, SSV_ADDRESS],
+                  tokens: [zeroAddress, USDC_ADDRESS, SSV_ADDRESS]
                 },
                 { chainId: baseChain.id, isNotSupported: true },
                 { chainId: arbitrumChain.id, isNotSupported: true },
-                { chainId: optimismChain.id, isNotSupported: true },
+                { chainId: optimismChain.id, isNotSupported: true }
               ]}
               onChainSelect={(chainId) =>
                 form.setValue(
                   "toChainId",
-                  chainId as typeof rollupA.id | typeof rollupB.id,
+                  chainId as typeof rollupA.id | typeof rollupB.id
                 )
               }
               value={isSameToken ? values.fromAmount : (prices.data?.[0] ?? 0n)}
@@ -774,21 +774,22 @@ export const Swap: FC = () => {
                   });
                 }
                 return form.setValue("toToken", token, {
-                  shouldValidate: true,
+                  shouldValidate: true
                 });
               }}
-              onChange={() => {}}
+              onChange={() => {
+              }}
             />
           </div>
           <Divider />
-          <SwapRoute
-            action="swap"
-            fromToken={{
-              address: values.fromToken,
-              chainId: values.fromChainId,
-            }}
-            toToken={{ address: values.toToken, chainId: values.toChainId }}
-          />
+
+          <ActionRoute action={{
+            type: "swap",
+            from: values.fromToken,
+            fromChainId: values.fromChainId,
+            to: values.toToken,
+            toChainId: values.toChainId
+          }} />
           {isConnected ? (
             <Button
               size="xl"

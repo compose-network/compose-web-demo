@@ -27,7 +27,6 @@ import { Form } from "@/components/ui/form";
 import { useAsset } from "@/hooks/use-asset";
 import { cloneDeep, merge } from "lodash-es";
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
-import { SwapRoute } from "@/components/swap/swap-route";
 import { useBridgeContract } from "@/lib/contract-interactions/core/create-write-hooks";
 import { l2StandardBridgeABI } from "@/lib/abi/swap/bridge";
 import { formatCurrency } from "@/lib/utils/number";
@@ -35,6 +34,7 @@ import type { TransactionModalData } from "@/components/swap/transaction-bridge/
 import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal";
 import { BRIDGE_CONFIG } from "@/wagmi/bridge.ts";
 import { getErrorMessage } from "@/lib/utils/wagmi.ts";
+import ActionRoute from "@/components/swap/actionRoute.tsx";
 
 const schema = z.object({
   from: z.object({
@@ -312,11 +312,13 @@ export const TransactionBridge: FC = () => {
             />
           </div>
           <Divider />
-          <SwapRoute
-            action="bridge"
-            fromToken={{ address: values.from.token, chainId: hoodi.id }}
-            toToken={{ address: values.from.token, chainId: values.to.chainId }}
-          />
+          <ActionRoute action={{
+            type: "bridge",
+            from: values.from.token,
+            fromChainId: hoodi.id,
+            to: values.from.token,
+            toChainId: values.to.chainId
+          }} />
           {isConnected ? (
             <Button
               size="xl"
