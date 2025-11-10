@@ -783,13 +783,13 @@ export const Swap: FC = () => {
           </div>
           <Divider />
 
-          <ActionRoute action={{
-            type: "swap",
-            from: values.fromToken,
-            fromChainId: values.fromChainId,
-            to: values.toToken,
-            toChainId: values.toChainId
-          }} />
+          <ActionRoute
+            type="swap"
+            from={values.fromToken}
+            fromChainId={values.fromChainId}
+            to={values.toToken}
+            toChainId={values.toChainId}
+          />
           {isConnected ? (
             <Button
               size="xl"

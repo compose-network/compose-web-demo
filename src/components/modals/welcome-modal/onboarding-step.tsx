@@ -40,13 +40,13 @@ export const OnboardingStep: FCProps = ({ onNext, onBack }) => {
       </Text>
 
       <div className='w-full'>
-        <ActionRoute action={{
-          type: "bridge",
-          from: zeroAddress,
-          fromChainId: hoodi.id,
-          to: zeroAddress,
-          toChainId: rollupB.id
-        }} />
+        <ActionRoute
+          type="bridge"
+          from={zeroAddress}
+          fromChainId={hoodi.id}
+          to={zeroAddress}
+          toChainId={rollupB.id}
+        />
       </div>
       {/* Action Buttons */}
       <div className="w-full flex justify-between">

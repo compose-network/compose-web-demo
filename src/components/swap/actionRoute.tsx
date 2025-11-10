@@ -7,19 +7,24 @@ import { SwapArrow } from "@/components/ui/swap-arrow.tsx";
 import { Arrow } from "@/components/ui/arrow.tsx";
 import type { ComponentPropsWithoutRef, FC } from "react";
 
-type Action = {
+// type Action = {
+//   type: string,
+//   from: Address
+//   fromChainId: number;
+//   to: Address,
+//   toChainId: number;
+// }
+
+export type ActionRouteProps = {
   type: string,
   from: Address
   fromChainId: number;
   to: Address,
   toChainId: number;
-}
 
-export type RouteProps = {
-  action: Action
 };
 type RouteFC = FC<
-  Omit<ComponentPropsWithoutRef<"div">, keyof RouteProps> & RouteProps
+  Omit<ComponentPropsWithoutRef<"div">, keyof ActionRouteProps> & ActionRouteProps
 >;
 
 const Token = ({ token, chainId }: { token: Address, chainId: number }) =>
@@ -33,7 +38,7 @@ const Token = ({ token, chainId }: { token: Address, chainId: number }) =>
     </Text>
   </div>;
 
-const prepareAction = (action: Action) => {
+const prepareAction = (action: ActionRouteProps) => {
   const actions: { token?: Address, chainId?: number, type?: string }[] = [{
     token: action.from,
     chainId: action.fromChainId
@@ -62,11 +67,22 @@ const prepareAction = (action: Action) => {
 };
 
 const ActionRoute: RouteFC = ({
-                          className,
-                          action,
-                          ...props
-                        }) => {
-  const actions = prepareAction(action);
+                                className,
+                                type,
+                                from,
+                                fromChainId,
+                                to,
+                                toChainId,
+                                ...props
+                              }) => {
+
+  const actions = prepareAction({
+    type,
+    from,
+    fromChainId,
+    to,
+    toChainId
+  });
 
   return (
     <div className={cn("flex select-none w-full justify-center", className)} {...props}>
@@ -81,7 +97,8 @@ const ActionRoute: RouteFC = ({
             </div>;
           }
           if (preparedAction.type === "bridge") {
-            return <div className={`flex flex-col ${action.type === "bridge" ? "w-full" : "w-[30%]"} items-center flex-nowrap`}>
+            return <div
+              className={`flex flex-col ${type === "bridge" ? "w-full" : "w-[30%]"} items-center flex-nowrap`}>
               <Text variant="caption-medium" className="capitalize text-gray-500">
                 Bridge
               </Text>
@@ -89,7 +106,9 @@ const ActionRoute: RouteFC = ({
               />
             </div>;
           }
-        return<div className="flex justify-center items-center"> <Token token={preparedAction?.token || "0x"} chainId={preparedAction?.chainId || -1} /> </div>;
+          return <div className="flex justify-center items-center"><Token token={preparedAction?.token || "0x"}
+                                                                          chainId={preparedAction?.chainId || -1} />
+          </div>;
         }
       )
       }

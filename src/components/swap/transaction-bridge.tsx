@@ -312,13 +312,13 @@ export const TransactionBridge: FC = () => {
             />
           </div>
           <Divider />
-          <ActionRoute action={{
-            type: "bridge",
-            from: values.from.token,
-            fromChainId: hoodi.id,
-            to: values.from.token,
-            toChainId: values.to.chainId
-          }} />
+          <ActionRoute
+            type="bridge"
+            from={values.from.token}
+            fromChainId={hoodi.id}
+            to={values.from.token}
+            toChainId={values.to.chainId}
+          />
           {isConnected ? (
             <Button
               size="xl"

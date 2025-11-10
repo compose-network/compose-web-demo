@@ -716,13 +716,13 @@ export const UserOperationBridge: FC = () => {
             />
           </div>
           <Divider />
-          <ActionRoute action={{
-            type: "bridge",
-            from: values.token,
-            fromChainId: values.from.chainId,
-            to: values.token,
-            toChainId: values.to.chainId
-          }} />
+          <ActionRoute
+            type="bridge"
+            from={values.token}
+            fromChainId={values.from.chainId}
+            to={values.token}
+            toChainId={values.to.chainId}
+          />
           {eoa.isConnected ? (
             <Button
               size="xl"

@@ -40,13 +40,13 @@ export const FinalStep: FCProps = ({ onComplete, onBack }) => {
       Our demo DEX lives on Rollup B, but swapping from Rollup A will automatically route through Rollup B using
       Compose’s atomic interop.
     </Text>
-      <ActionRoute action={{
-        type: "swap",
-        from: zeroAddress,
-        fromChainId: rollupA.id,
-        to: USDC_ADDRESS,
-        toChainId: rollupA.id
-      }} />
+      <ActionRoute
+        type="swap"
+        from={zeroAddress}
+        fromChainId={rollupA.id}
+        to={USDC_ADDRESS}
+        toChainId={rollupA.id}
+      />
       <div className="w-full flex justify-between">
         <button
           onClick={onBack}

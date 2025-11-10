@@ -42,13 +42,13 @@ export const BridgeStep: FCProps = ({ onComplete, onBack }) => {
       </Text>
 
       <div className='w-full'>
-        <ActionRoute action={{
-          type: "bridge",
-          from: zeroAddress,
-          fromChainId: rollupB.id,
-          to: zeroAddress,
-          toChainId: rollupA.id
-        }} />
+        <ActionRoute
+          type="bridge"
+          from={zeroAddress}
+          fromChainId={rollupB.id}
+          to={zeroAddress}
+          toChainId={rollupA.id}
+        />
       </div>
       {/* Action Buttons */}
       <div className="w-full flex justify-between">
