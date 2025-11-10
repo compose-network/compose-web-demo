@@ -1,10 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getBridgeAddress, WETH_ADDRESS } from "@/wagmi/addresses";
-import { type Address, encodeFunctionData, type Hex, zeroAddress } from "viem";
-import { rollupA, rollupB, rollupBSwapContract } from "@/wagmi/config";
+import {
+  type Address,
+  createPublicClient,
+  encodeFunctionData,
+  type Hex,
+  rpcSchema,
+  zeroAddress,
+} from "viem";
+import {
+  chainsMap,
+  rollupA,
+  rollupB,
+  rollupBSwapContract,
+} from "@/wagmi/config";
 import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
 import { TokenABI } from "@/lib/abi/token";
 import type { CreateKernelAccountReturnType } from "@zerodev/sdk";
+import type { ComposeRpcSchema } from "@/components/swap/utils/core";
 import {
   createRollupPublicClients,
   createUserOp,
@@ -25,6 +38,8 @@ import type { AllEvents } from "@/lib/contract-interactions/utils/useWaitForTran
 import { globals } from "@/config";
 import { omit } from "lodash-es";
 import { signUserOperations } from "@zerodev/multi-chain-ecdsa-validator/actions";
+import { http } from "@wagmi/core";
+import { safeStringify } from "@/lib/utils/bigint.ts";
 
 type UserOpSwapOptions = {
   onSignedUserOps?: (userOps: PrepareUserOperationReturnType[]) => void;
@@ -275,10 +290,11 @@ export const createSwapUserOpsFrom_A_to_B = async (
         explorerUrls,
       };
     },
-    preparedOps: {
-      source: preparedSourceUserOps,
-      destination: preparedDestUserOps,
-    },
+
+    preparedOps: [
+      { chainId: sourceChainId, data: safeStringify(preparedSourceUserOps) },
+      { chainId: destChainId, data: safeStringify(preparedDestUserOps) },
+    ],
   };
 };
 
@@ -501,10 +517,10 @@ export const createSwapUserOpsFrom_B_to_A = async (
         explorerUrls,
       };
     },
-    preparedOps: {
-      source: preparedSourceUserOps,
-      destination: preparedDestUserOps,
-    },
+    preparedOps: [
+      { chainId: sourceChainId, data: safeStringify(preparedSourceUserOps) },
+      { chainId: destChainId, data: safeStringify(preparedDestUserOps) },
+    ],
   };
 };
 
@@ -706,10 +722,10 @@ export const createSwapETHForERC20UserOps_B_to_A = async (
         explorerUrls,
       };
     },
-    preparedOps: {
-      source: preparedSourceUserOps,
-      destination: preparedDestUserOps,
-    },
+    preparedOps: [
+      { chainId: sourceChainId, data: safeStringify(preparedSourceUserOps) },
+      { chainId: destChainId, data: safeStringify(preparedDestUserOps) },
+    ],
   };
 };
 
@@ -910,14 +926,14 @@ export const createSwapETHForERC20UserOps_A_to_B = async (
         explorerUrls,
       };
     },
-    preparedOps: {
-      source: preparedSourceUserOps,
-      destination: preparedDestUserOps,
-    },
+    preparedOps: [
+      { chainId: sourceChainId, data: safeStringify(preparedSourceUserOps) },
+      { chainId: destChainId, data: safeStringify(preparedDestUserOps) },
+    ],
   };
 };
 
-export const createSwapUserOpsFrom_A_to_A_2ops = async (
+export const createSwapUserOpsFrom_A_to_A = async (
   {
     eoaAddress,
     kernelA,
@@ -1169,14 +1185,14 @@ export const createSwapUserOpsFrom_A_to_A_2ops = async (
         explorerUrls,
       };
     },
-    preparedOps: {
-      source: preparedUserOps1,
-      destination: preparedUserOps2,
-    },
+    preparedOps: [
+      { chainId: rollupAChainId, data: safeStringify(preparedUserOps1) },
+      { chainId: rollupBChainId, data: safeStringify(preparedUserOps2) },
+    ],
   };
 };
 
-export const createSwapETHtoERC20UserOpsFrom_A_to_A_2ops = async (
+export const createSwapETHtoERC20UserOpsFrom_A_to_A = async (
   {
     eoaAddress,
     kernelA,
@@ -1232,35 +1248,6 @@ export const createSwapETHtoERC20UserOpsFrom_A_to_A_2ops = async (
             ],
           }),
         },
-
-        //
-        //
-        // {
-        //   to: fromToken,
-        //   value: 0n,
-        //   data: encodeFunctionData({
-        //     abi: TokenABI,
-        //     functionName: "transferFrom",
-        //     args: [eoaAddress, kernelA.address, amountIn],
-        //   }),
-        // },
-        // {
-        //   to: rollupABridgeContract,
-        //   value: 0n,
-        //   data: encodeFunctionData({
-        //     abi: UserOperationBridgeAbi,
-        //     functionName: "send",
-        //     args: [
-        //       BigInt(rollupBChainId),
-        //       fromToken,
-        //       kernelA.address,
-        //       kernelB.address,
-        //       amountIn,
-        //       firstBridgeSessionId,
-        //       rollupBBridgeContract,
-        //     ],
-        //   }),
-        // },
         {
           to: rollupABridgeContract,
           value: 0n,
@@ -1435,9 +1422,169 @@ export const createSwapETHtoERC20UserOpsFrom_A_to_A_2ops = async (
         explorerUrls,
       };
     },
-    preparedOps: {
-      source: preparedUserOps1,
-      destination: preparedUserOps2,
+    preparedOps: [
+      { chainId: rollupAChainId, data: safeStringify(preparedUserOps1) },
+      { chainId: rollupBChainId, data: safeStringify(preparedUserOps2) },
+    ],
+  };
+};
+
+export const createSwapUserOpsFrom_B_to_B = async (
+  {
+    eoaAddress,
+    kernelA,
+    kernelB,
+    fromToken,
+    toToken,
+    amountIn,
+    amountOut,
+  }: GenerateERC20SwapUserOpsParams,
+  options: UserOpSwapOptions = {},
+) => {
+  const rollupBChainId = rollupB.id;
+
+  const rollupBPublicClient = createPublicClient({
+    chain: chainsMap[rollupBChainId],
+    transport: http(chainsMap[rollupBChainId].rpcUrls.default.http[0]),
+    rpcSchema: rpcSchema<ComposeRpcSchema>(),
+  });
+
+  const isSwappingToETH = isAddressEqual(toToken, zeroAddress);
+  const isSwappingFromETH = isAddressEqual(fromToken, zeroAddress);
+
+  const op = await createUserOp({
+    account: kernelB,
+    chainId: rollupBChainId,
+    calls: [
+      ...(isSwappingFromETH
+        ? [
+            {
+              to: WETH_ADDRESS,
+              value: amountIn,
+              data: encodeFunctionData({
+                abi: WETHAbi,
+                functionName: "deposit",
+                args: [],
+              }),
+            },
+          ]
+        : [
+            {
+              to: fromToken,
+              value: 0n,
+              data: encodeFunctionData({
+                abi: TokenABI,
+                functionName: "transferFrom",
+                args: [eoaAddress, kernelA.address, amountIn],
+              }),
+            },
+          ]),
+
+      {
+        to: isSwappingFromETH ? WETH_ADDRESS : fromToken,
+        value: 0n,
+        data: encodeFunctionData({
+          abi: TokenABI,
+          functionName: "approve",
+          args: [rollupBSwapContract, globals.MAX_WEI_AMOUNT],
+        }),
+      },
+      {
+        to: rollupBSwapContract,
+        value: 0n,
+        data: encodeFunctionData({
+          abi: SwapABI,
+          functionName: "swap",
+          args: [
+            kernelB.address,
+            getToken(isSwappingFromETH ? WETH_ADDRESS : fromToken)?.id ?? 0,
+            getToken(isSwappingToETH ? WETH_ADDRESS : toToken)?.id ?? 0,
+            amountIn,
+          ],
+        }),
+      },
+      ...(isSwappingToETH
+        ? [
+            {
+              to: WETH_ADDRESS,
+              value: 0n,
+              data: encodeFunctionData({
+                abi: WETHAbi,
+                functionName: "withdraw",
+                args: [amountOut],
+              }),
+            },
+            {
+              to: eoaAddress,
+              value: amountOut,
+              data: "0x" as Hex,
+            },
+          ]
+        : [
+            {
+              to: toToken,
+              value: 0n,
+              data: encodeFunctionData({
+                abi: TokenABI,
+                functionName: "transfer",
+                args: [eoaAddress, amountOut],
+              }),
+            },
+          ]),
+    ],
+  });
+
+  const preparedUserOps = omit(
+    await prepareUserOperation(rollupBPublicClient, op),
+    "account",
+  );
+
+  return {
+    sign: async () => {
+      const [signed] = await signUserOperations(rollupBPublicClient as any, {
+        userOperations: [preparedUserOps],
+        account: kernelB, // it uses it to get the Entrypoint address and version
+      });
+      options.onSignedUserOps?.([signed]);
+
+      const userOpB = toRpcUserOpCanonical(signed);
+
+      const buildB = await rollupBPublicClient.request({
+        method: "compose_buildSignedUserOpsTx",
+        params: [[userOpB], { chainId: rollupBChainId }],
+      });
+
+      const explorerUrls = [
+        new URL(
+          `tx/${buildB.hash}`,
+          rollupBPublicClient.chain.blockExplorers?.default?.url,
+        ).toString(),
+      ];
+
+      options.onBuildUserOps?.([buildB], explorerUrls);
+
+      options.onPayloadEncoded?.(buildB.raw);
+
+      await rollupBPublicClient.request({
+        method: "eth_sendRawTransaction",
+        params: [buildB.raw],
+      });
+
+      const receiptB = await rollupBPublicClient.waitForTransactionReceipt({
+        hash: buildB.hash,
+      });
+      options.onUserOpsMined?.([
+        addDecodedEventsToReceipt<AllEvents>(receiptB),
+      ]);
+
+      return {
+        signedUserOps: [signed],
+        userOps: [userOpB],
+        explorerUrls,
+      };
     },
+    preparedOps: [
+      { chainId: rollupBChainId, data: safeStringify(preparedUserOps) },
+    ],
   };
 };

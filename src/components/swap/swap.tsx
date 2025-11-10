@@ -6,15 +6,16 @@ import { createRollupPublicClients } from "@/components/swap/utils/core";
 import {
   createSwapETHForERC20UserOps_A_to_B,
   createSwapETHForERC20UserOps_B_to_A,
-  createSwapETHtoERC20UserOpsFrom_A_to_A_2ops,
-  createSwapUserOpsFrom_A_to_A_2ops,
+  createSwapETHtoERC20UserOpsFrom_A_to_A,
+  createSwapUserOpsFrom_A_to_A,
   createSwapUserOpsFrom_A_to_B,
   createSwapUserOpsFrom_B_to_A,
+  createSwapUserOpsFrom_B_to_B,
 } from "@/components/swap/utils/generate-swap-userops";
 import { Button } from "@/components/ui/button";
 import { Divider } from "@/components/ui/divider";
 import { Form } from "@/components/ui/form";
-import { Span, Text } from "@/components/ui/text";
+import { Text } from "@/components/ui/text";
 import { toast } from "@/components/ui/use-toast";
 import { globals } from "@/config";
 import { useAccount } from "@/hooks/account/use-account";
@@ -23,7 +24,7 @@ import { TokenABI } from "@/lib/abi/token";
 import { useSwapContract } from "@/lib/contract-interactions/core/create-write-hooks";
 import { useApprove } from "@/lib/contract-interactions/erc-20/write/use-approve";
 import { useSmartAccount } from "@/lib/smart-account/kernel";
-import { safeStringify, stringifyBigints } from "@/lib/utils/bigint";
+import { stringifyBigints } from "@/lib/utils/bigint";
 import { formatCurrency } from "@/lib/utils/number";
 import { getErrorMessage } from "@/lib/utils/wagmi";
 import { SSV_ADDRESS, USDC_ADDRESS } from "@/wagmi/addresses";
@@ -132,12 +133,7 @@ export const Swap: FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.fromToken, values.toToken, values.fromChainId, values.toChainId]);
 
-  const { useGetSwapPrice, useSwap } = useSwapContract();
-
-  const swap = useSwap({
-    contract: contracts[rollupB.id].swap,
-    chainId: rollupB.id,
-  });
+  const { useGetSwapPrice } = useSwapContract();
 
   const kernel = useSmartAccount();
 
@@ -176,9 +172,6 @@ export const Swap: FC = () => {
 
     const is_from_A_to_B =
       values.fromChainId === rollupA.id && values.toChainId === rollupB.id;
-
-    const is_from_B_to_A =
-      values.fromChainId === rollupB.id && values.toChainId === rollupA.id;
 
     const is_from_A_to_A =
       values.fromChainId === rollupA.id && values.toChainId === rollupA.id;
@@ -274,9 +267,7 @@ export const Swap: FC = () => {
               toast({
                 title: "Transaction failed",
                 variant: "destructive",
-                description: (
-                  <Span className="whitespace-pre-wrap">{errMes}</Span>
-                ),
+                description: errMes,
               });
             },
             onMined: (receipt) => {
@@ -337,9 +328,7 @@ export const Swap: FC = () => {
               toast({
                 title: "Transaction failed",
                 variant: "destructive",
-                description: (
-                  <Span className="whitespace-pre-wrap">{errMes}</Span>
-                ),
+                description: errMes,
               });
             },
           },
@@ -385,14 +374,12 @@ export const Swap: FC = () => {
       };
     }
 
-    let actionFn: (() => Promise<void>) | undefined = undefined;
-
-    // Is Swapping from A -> B
-    if (is_from_A_to_B || is_from_B_to_A || is_from_A_to_A) {
-      const createSwapUserOps = is_from_A_to_A
-        ? is_eth_to_erc20
-          ? createSwapETHtoERC20UserOpsFrom_A_to_A_2ops
-          : createSwapUserOpsFrom_A_to_A_2ops
+    const createSwapUserOps = is_from_A_to_A
+      ? is_eth_to_erc20
+        ? createSwapETHtoERC20UserOpsFrom_A_to_A
+        : createSwapUserOpsFrom_A_to_A
+      : is_from_B_to_B
+        ? createSwapUserOpsFrom_B_to_B
         : is_from_A_to_B
           ? is_eth_to_erc20
             ? createSwapETHForERC20UserOps_A_to_B
@@ -401,73 +388,91 @@ export const Swap: FC = () => {
             ? createSwapETHForERC20UserOps_B_to_A
             : createSwapUserOpsFrom_B_to_A;
 
-      const { sign, preparedOps } = await createSwapUserOps(
-        {
-          amountIn: values.fromAmount,
-          fromToken: values.fromToken,
-          toToken: values.toToken,
-          eoaAddress: address!,
-          kernelA: kernel.kernel.data!.accounts.A,
-          kernelB: kernel.kernel.data!.accounts.B,
-          amountOut: prices.data?.[0] ?? 0n,
+    const { sign, preparedOps } = await createSwapUserOps(
+      {
+        amountIn: values.fromAmount,
+        fromToken: values.fromToken,
+        toToken: values.toToken,
+        eoaAddress: address!,
+        kernelA: kernel.kernel.data!.accounts.A,
+        kernelB: kernel.kernel.data!.accounts.B,
+        amountOut: prices.data?.[0] ?? 0n,
+      },
+      {
+        onSignedUserOps() {
+          setTransactionData((prev) => {
+            if (!prev) return null;
+            const clone = cloneDeep(prev);
+            clone.actions[userOpIndex].status = "pending";
+            return clone;
+          });
         },
-        {
-          onSignedUserOps() {
-            setTransactionData((prev) => {
-              if (!prev) return null;
-              const clone = cloneDeep(prev);
-              clone.actions[userOpIndex].status = "pending";
-              return clone;
-            });
-          },
-          onBuildUserOps(builds) {
-            setTransactionData((prev) => {
-              if (!prev) return null;
-              const clone = cloneDeep(prev);
-              clone.actions[userOpIndex].hash = builds.map((build) => ({
-                chainId: build.chainId,
-                hash: build.hash,
-              }));
-              return clone;
-            });
-          },
-          onUserOpsMined: (receipts) => {
-            if (receipts.some((r) => r.status !== "success")) {
-              setTransactionData((prev) => {
-                if (!prev) return null;
-                const clone = cloneDeep(prev);
-                clone.actions[0].status = "failed";
-                return clone;
-              });
-
-              const errMes = "Transaction was reverted by the contract.";
-              setErrorMessage(errMes);
-              toast({
-                variant: "destructive",
-                title: "Swap failed",
-                description: errMes,
-              });
-              return;
-            }
-
-            setTransactionData((prev) => {
-              if (!prev) return null;
-              const clone = cloneDeep(prev);
-              clone.actions[userOpIndex].status = "success";
-              return clone;
-            });
-            form.reset({
-              fromChainId: values.fromChainId,
-              fromToken: values.fromToken,
-              fromAmount: 0n,
-              toChainId: values.toChainId,
-              toToken: values.toToken,
-              slippage: values.slippage,
-            });
-            form.clearErrors();
-          },
+        onBuildUserOps(builds) {
+          setTransactionData((prev) => {
+            if (!prev) return null;
+            const clone = cloneDeep(prev);
+            clone.actions[userOpIndex].hash = builds.map((build) => ({
+              chainId: build.chainId,
+              hash: build.hash,
+            }));
+            return clone;
+          });
         },
-      ).catch((error) => {
+        onUserOpsMined: (receipts) => {
+          if (receipts.some((r) => r.status !== "success")) {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              clone.actions[0].status = "failed";
+              return clone;
+            });
+
+            const errMes = "Transaction was reverted by the contract.";
+            setErrorMessage(errMes);
+            toast({
+              variant: "destructive",
+              title: "Swap failed",
+              description: errMes,
+            });
+            return;
+          }
+
+          setTransactionData((prev) => {
+            if (!prev) return null;
+            const clone = cloneDeep(prev);
+            clone.actions[userOpIndex].status = "success";
+            return clone;
+          });
+          form.reset({
+            fromChainId: values.fromChainId,
+            fromToken: values.fromToken,
+            fromAmount: 0n,
+            toChainId: values.toChainId,
+            toToken: values.toToken,
+            slippage: values.slippage,
+          });
+          form.clearErrors();
+        },
+      },
+    ).catch((error) => {
+      setTransactionData((prev) => {
+        if (!prev) return null;
+        const clone = cloneDeep(prev);
+        clone.actions[userOpIndex].status = "failed";
+        return clone;
+      });
+      const errMes = getErrorMessage(error);
+      setErrorMessage(errMes);
+      toast({
+        title: "Swap failed",
+        variant: "destructive",
+        description: errMes,
+      });
+      throw error;
+    });
+
+    const actionFn = async () => {
+      await sign().catch((error) => {
         setTransactionData((prev) => {
           if (!prev) return null;
           const clone = cloneDeep(prev);
@@ -479,139 +484,11 @@ export const Swap: FC = () => {
         toast({
           title: "Swap failed",
           variant: "destructive",
-          description: <Span className="whitespace-pre-wrap">{errMes}</Span>,
+          description: errMes,
         });
         throw error;
       });
-
-      actionFn = async () => {
-        await sign().catch((error) => {
-          setTransactionData((prev) => {
-            if (!prev) return null;
-            const clone = cloneDeep(prev);
-            clone.actions[userOpIndex].status = "failed";
-            return clone;
-          });
-          const errMes = getErrorMessage(error);
-          setErrorMessage(errMes);
-          toast({
-            title: "Swap failed",
-            variant: "destructive",
-            description: <Span className="whitespace-pre-wrap">{errMes}</Span>,
-          });
-          throw error;
-        });
-      };
-
-      setTransactionData((prev) => {
-        if (!prev) return null;
-        const clone = cloneDeep(prev);
-        clone.actions[userOpIndex].userOpData = [
-          {
-            chainId: values.fromChainId,
-            data: safeStringify(preparedOps.source),
-          },
-          {
-            chainId: values.toChainId,
-            data: safeStringify(preparedOps.destination),
-          },
-        ];
-        return clone;
-      });
-    }
-
-    // \/ SWAPPING
-    actionFn =
-      actionFn ||
-      (async () => {
-        setTransactionData((prev) => {
-          if (!prev) return null;
-          const clone = cloneDeep(prev);
-          clone.actions[userOpIndex].status = "pending";
-          return clone;
-        });
-
-        // Execute swap
-        await swap.write(
-          {
-            amountIn: values.fromAmount,
-            recipient: address!,
-            tokenIn: getToken(values.fromToken)?.id ?? 0,
-            tokenOut: getToken(values.toToken)?.id ?? 0,
-          },
-          {
-            onConfirmed: (hash) => {
-              setTransactionData((prev) => {
-                if (!prev) return null;
-                const clone = cloneDeep(prev);
-                clone.actions[userOpIndex].hash = hash;
-                return clone;
-              });
-            },
-            onMined: (receipt) => {
-              if (receipt.status !== "success") {
-                setTransactionData((prev) => {
-                  if (!prev) return null;
-                  const clone = cloneDeep(prev);
-                  clone.actions[userOpIndex].status = "failed";
-                  return clone;
-                });
-
-                const errMes = "Transaction was reverted by the contract.";
-                setErrorMessage(errMes);
-                toast({
-                  variant: "destructive",
-                  title: "Swap failed",
-                  description: errMes,
-                });
-                return;
-              }
-
-              setTransactionData((prev) => {
-                if (!prev) return null;
-                const clone = cloneDeep(prev);
-                clone.actions[userOpIndex].status = "success";
-                return clone;
-              });
-
-              fromToken.refreshBalance();
-              toToken.refreshBalance();
-
-              form.reset({
-                fromChainId: values.fromChainId,
-                fromToken: values.fromToken,
-                fromAmount: 0n,
-                toChainId: values.toChainId,
-                toToken: values.toToken,
-                slippage: values.slippage,
-              });
-              form.clearErrors();
-
-              toast({
-                title: "Swap completed",
-                description: "Your tokens have been swapped successfully",
-              });
-            },
-            onError: (error) => {
-              setTransactionData((prev) => {
-                if (!prev) return null;
-                const clone = cloneDeep(prev);
-                clone.actions[userOpIndex].status = "failed";
-                return clone;
-              });
-              const errMes = getErrorMessage(error);
-              setErrorMessage(errMes);
-              toast({
-                title: "Transaction failed",
-                variant: "destructive",
-                description: (
-                  <Span className="whitespace-pre-wrap">{errMes}</Span>
-                ),
-              });
-            },
-          },
-        );
-      });
+    };
 
     setErrorMessage(undefined);
 
@@ -640,6 +517,7 @@ export const Swap: FC = () => {
           toChainId: values.toChainId,
           toTokenAddress: values.toToken,
           status: "idle" as const,
+          userOpData: preparedOps,
           signAndSend: async () => {
             setErrorMessage(undefined);
             if (actionFn) {
