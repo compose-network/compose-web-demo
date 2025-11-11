@@ -22,7 +22,6 @@ import { wait } from "@/lib/utils/promise";
 import type { MaybePromise } from "@tanstack/react-query-persist-client";
 import { isFunction } from "lodash-es";
 import { getErrorMessage } from "@/lib/utils/wagmi";
-import { Span } from "@/components/ui/text";
 import { isContractWallet } from "@/hooks/account/use-account";
 import type { DecodedReceipt } from "@/lib/utils/viem";
 import { addDecodedEventsToReceipt } from "@/lib/utils/viem";
@@ -108,9 +107,7 @@ export const withTransactionModal = <
 
       toast({
         title: "Transaction failed",
-        description: (
-          <Span className="whitespace-pre-wrap">{getErrorMessage(error)}</Span>
-        ),
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     },

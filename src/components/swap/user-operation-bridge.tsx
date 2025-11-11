@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Divider } from "@/components/ui/divider";
 import { Form } from "@/components/ui/form";
-import { Span, Text } from "@/components/ui/text";
+import { Text } from "@/components/ui/text";
 import { toast } from "@/components/ui/use-toast";
 import { globals } from "@/config";
 import { useAccount } from "@/hooks/account/use-account";
@@ -219,9 +219,7 @@ export const UserOperationBridge: FC = () => {
               toast({
                 title: "Transaction failed",
                 variant: "destructive",
-                description: (
-                  <Span className="whitespace-pre-wrap">{errMes}</Span>
-                ),
+                description: errMes,
               });
             },
           },
@@ -293,9 +291,7 @@ export const UserOperationBridge: FC = () => {
               toast({
                 title: "Transaction failed",
                 variant: "destructive",
-                description: (
-                  <Span className="whitespace-pre-wrap">{errMes}</Span>
-                ),
+                description: errMes,
               });
             },
             onConfirmed: (hash) => {
@@ -371,7 +367,7 @@ export const UserOperationBridge: FC = () => {
       toast({
         title: "Transaction failed",
         variant: "destructive",
-        description: <Span className="whitespace-pre-wrap">{errMes}</Span>,
+        description: errMes,
       });
       throw error;
     });
@@ -442,7 +438,7 @@ export const UserOperationBridge: FC = () => {
         toast({
           title: "Transaction failed",
           variant: "destructive",
-          description: <Span className="whitespace-pre-wrap">{errMes}</Span>,
+          description: errMes,
         });
         throw error;
       });
@@ -475,7 +471,7 @@ export const UserOperationBridge: FC = () => {
         toast({
           title: "Transaction failed",
           variant: "destructive",
-          description: <Span className="whitespace-pre-wrap">{errMes}</Span>,
+          description: errMes,
         });
 
         throw errs;
@@ -578,7 +574,7 @@ export const UserOperationBridge: FC = () => {
         toast({
           title: "Transaction failed",
           variant: "destructive",
-          description: <Span className="whitespace-pre-wrap">{errMes}</Span>,
+          description: errMes,
         });
       }
 
