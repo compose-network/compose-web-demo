@@ -585,7 +585,7 @@ export const UserOperationBridge: FC = () => {
     };
 
     await prereqFn?.();
-    // await actionFn();
+    await actionFn();
   });
 
   const mint = useMint();
