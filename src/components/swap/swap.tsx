@@ -531,7 +531,7 @@ export const Swap: FC = () => {
     });
 
     await prereqFn?.();
-    // await actionFn();
+    await actionFn();
   });
 
   return (
