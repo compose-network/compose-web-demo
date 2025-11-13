@@ -20,13 +20,17 @@ export const FinalStep: FCProps = ({ onComplete, onBack }) => {
     <>
       {/* Final Step Icon */}
       <div
-        className="w-[600px] h-[160px] rounded-[20px] bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center gap-4 text"
+        className="w-[600px] h-[160px] rounded-[20px] bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center gap-4"
         style={{ backgroundImage: "url(/images/welcome-modal/final.png)" }}
       >
-        <Text variant={"body-1-semibold"}>Step 3</Text>
-        <Text variant={"headline1"}>Try a Cross-Rollup Swap</Text>
+        <Text className={"text-[#FCFFFF]"} variant={"body-1-semibold"}>
+          Step 3
+        </Text>
+        <Text className={"text-[#FCFFFF]"} variant={"headline1"}>
+          Try a Cross-Rollup Swap
+        </Text>
       </div>
-      <Text variant={"body-3-bold"} className="text-black w-full">
+      <Text variant={"body-3-bold"} className="text-white w-full">
         Cross-Swap ETH to USDC
       </Text>
       <Text variant={"body-3-medium"} className="text-gray-600 w-full">

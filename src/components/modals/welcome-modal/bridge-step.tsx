@@ -19,11 +19,15 @@ export const BridgeStep: FCProps = ({ onComplete, onBack }) => {
     <>
       {/* Bridge Step Icon */}
       <div
-        className="w-[600px] rounded-[20px]  h-[160px] bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center gap-4 text"
+        className="w-[600px] rounded-[20px]  h-[160px] bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center gap-4"
         style={{ backgroundImage: "url(/images/welcome-modal/bridge.png)" }}
       >
-        <Text variant={"body-1-semibold"}>Step 2</Text>
-        <Text variant={"headline1"}>Bridge Instantly</Text>
+        <Text className={"text-[#FCFFFF]"} variant={"body-1-semibold"}>
+          Step 2
+        </Text>
+        <Text className={"text-[#FCFFFF]"} variant={"headline1"}>
+          Bridge Instantly
+        </Text>
       </div>
 
       <Text variant={"body-3-bold"} className="text-black w-full">
