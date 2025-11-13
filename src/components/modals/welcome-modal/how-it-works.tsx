@@ -28,13 +28,17 @@ const HowItWorksContent = ({
     <div className="flex flex-col items-center gap-6">
       {/* Final Step Icon */}
       <div
-        className="w-[600px] h-[160px] rounded-[20px] bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center gap-4 text"
+        className="w-[600px] h-[160px] rounded-[20px] bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center gap-4"
         style={{
           backgroundImage: "url(/images/welcome-modal/how-it-works.svg)",
         }}
       >
-        <Text variant={"headline1"}>How It Works</Text>
-        <Text variant={"body-1-semibold"}>Behind the Scenes</Text>
+        <Text className={"text-[#FCFFFF]"} variant={"headline1"}>
+          How It Works
+        </Text>
+        <Text className={"text-[#FCFFFF]"} variant={"body-1-semibold"}>
+          Behind the Scenes
+        </Text>
       </div>
       <Text variant={"body-3-medium"} className="text-gray-600 w-full">
         This demo runs on two OP Stack + Succinct rollups, each with its own
