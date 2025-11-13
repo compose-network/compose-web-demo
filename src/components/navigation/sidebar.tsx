@@ -31,7 +31,7 @@ const ITEMS = [
     isFlowInProgress: true,
   },
   {
-    label: "NFT bridging",
+    label: "NFT Bridging",
     isFlowInProgress: true,
   },
 ];
