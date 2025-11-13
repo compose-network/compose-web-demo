@@ -242,11 +242,8 @@ export const TransactionModal: FCProps = ({
                 className="flex items-center gap-3 text-xs bg-[#18B5B8]/10 text-primary-500 h-8 rounded-xl"
                 title="Add token to wallet"
               >
-                <span>Add {asset?.symbol} to Metamask</span>
-                <img
-                  src="/public/images/wallets/metamask.svg"
-                  className="size-4"
-                />
+              <span>Add {asset?.symbol} to Metamask</span>
+              <img src="/images/wallets/metamask.svg" className="size-4" />
               </Button>
             )}
           </div>
