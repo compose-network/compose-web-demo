@@ -100,6 +100,7 @@ export const UserOperationBridge: FC = () => {
   );
 
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Force false on first load
   if (advancedMode === undefined || advancedMode === null) {
@@ -149,6 +150,8 @@ export const UserOperationBridge: FC = () => {
   const approve = useApprove();
 
   const submit = form.handleSubmit(async (values) => {
+    setIsLoading(true);
+    try {
     const id: Hex = `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`;
 
     if (!eoa.address || !kernel.kernel.data)
@@ -586,6 +589,11 @@ export const UserOperationBridge: FC = () => {
 
     await prereqFn?.();
     await actionFn();
+    } catch (error) {
+      console.error('Bridge error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   });
 
   const mint = useMint();
@@ -726,7 +734,7 @@ export const UserOperationBridge: FC = () => {
               type="submit"
               disabled={
                 !form.formState.isValid ||
-                form.formState.isSubmitting ||
+                isLoading ||
                 kernel.isLoading ||
                 (fromToken.balance !== undefined &&
                   values.from.amount > fromToken.balance)

@@ -61,6 +61,7 @@ export const TransactionBridge: FC = () => {
   const switchChain = useSwitchChain();
 
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
@@ -140,6 +141,8 @@ export const TransactionBridge: FC = () => {
   }, [transactionData, rollupAClient, rollupBClient]);
 
   const submit = form.handleSubmit(async (values) => {
+    setIsLoading(true);
+    try {
     await switchChain.switchChainAsync({ chainId: hoodi.id });
     const id: Hex = `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`;
 
@@ -255,6 +258,11 @@ export const TransactionBridge: FC = () => {
     });
 
     actionFn();
+    } catch (error) {
+      console.error('Bridge error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   });
 
   return (
@@ -326,6 +334,7 @@ export const TransactionBridge: FC = () => {
               type="submit"
               disabled={
                 !form.formState.isValid ||
+                isLoading ||
                 (fromToken.balance !== undefined &&
                   values.from.amount > fromToken.balance)
               }
