@@ -1,11 +1,11 @@
 import { queryClient } from "@/lib/react-query";
 import type { DecodedReceipt } from "@/lib/utils/viem";
+import { addDecodedEventsToReceipt } from "@/lib/utils/viem";
 import { config } from "@/wagmi/config";
 import { getPublicClient } from "@wagmi/core";
 import type { ReactNode } from "react";
 import type { Hash } from "viem";
-import { setup, fromPromise, assign } from "xstate";
-import { addDecodedEventsToReceipt } from "@/lib/utils/viem";
+import { assign, fromPromise, setup } from "xstate";
 import { set } from "lodash-es";
 import type {
   AllEvents,
@@ -13,7 +13,6 @@ import type {
 } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
 import { toast } from "@/components/ui/use-toast";
 import { getErrorMessage } from "@/lib/utils/wagmi";
-import { Span } from "@/components/ui/text";
 
 type Writer = {
   name: string;
@@ -203,11 +202,7 @@ export const machine = setup({
           "error" in event &&
             toast({
               title: "Transaction failed",
-              description: (
-                <Span className="whitespace-pre-wrap">
-                  {getErrorMessage(event.error)}
-                </Span>
-              ),
+              description: getErrorMessage(event.error),
               variant: "destructive",
             });
         },

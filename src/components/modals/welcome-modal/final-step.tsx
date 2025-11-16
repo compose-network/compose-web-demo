@@ -1,10 +1,10 @@
 import { Text } from "@/components/ui/text";
 import type { ComponentPropsWithoutRef, FC } from "react";
-import { SwapRoute } from "@/components/swap/swap-route.tsx";
 import { zeroAddress } from "viem";
-import { rollupA, rollupB } from "@/wagmi/config.ts";
+import { rollupA } from "@/wagmi/config.ts";
 import { USDC_ADDRESS } from "@/wagmi/addresses.ts";
 import { ProgressIndicator } from "./progress-indicator";
+import ActionRoute from "@/components/swap/actionRoute.tsx";
 
 export type FinalStepProps = {
   onComplete: () => void;
@@ -12,8 +12,7 @@ export type FinalStepProps = {
 };
 
 type FCProps = FC<
-  Omit<ComponentPropsWithoutRef<"div">, keyof FinalStepProps> &
-  FinalStepProps
+  Omit<ComponentPropsWithoutRef<"div">, keyof FinalStepProps> & FinalStepProps
 >;
 
 export const FinalStep: FCProps = ({ onComplete, onBack }) => {
@@ -21,37 +20,33 @@ export const FinalStep: FCProps = ({ onComplete, onBack }) => {
     <>
       {/* Final Step Icon */}
       <div
-        className="w-[600px] h-[240px] rounded-[20px] bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center gap-4 text"
+        className="w-[600px] h-[160px] rounded-[20px] bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center gap-4"
         style={{ backgroundImage: "url(/images/welcome-modal/final.png)" }}
       >
-        <Text variant={"body-1-semibold"} className="text-white">
+        <Text className={"text-[#FCFFFF]"} variant={"body-1-semibold"}>
           Step 3
         </Text>
-        <Text variant={"headline1"} className="text-white">
+        <Text className={"text-[#FCFFFF]"} variant={"headline1"}>
           Try a Cross-Rollup Swap
-        </Text></div>
-
-      <Text className="text-black w-full font-bold">
+        </Text>
+      </div>
+      <Text variant={"body-3-bold"} className="text-white w-full">
         Cross-Swap ETH to USDC
       </Text>
-      <Text className="text-gray-600 w-full">
+      <Text variant={"body-3-medium"} className="text-gray-600 w-full">
         Head to the Swap tab to trade your bridged ETH for another token.
-      </Text> <Text className="text-gray-600 w-full">
-      Our demo DEX lives on Rollup B, but swapping from Rollup A will automatically route through Rollup B using
-      Compose’s atomic interop.
-    </Text>
-
-      <div className="w-full">
-        <SwapRoute
-          action="swap"
-          fromToken={{
-            address: zeroAddress,
-            chainId: rollupA.id
-          }}
-          toToken={{ address: USDC_ADDRESS, chainId: rollupB.id }}
-        />
-      </div>
-      {/* Action Buttons */}
+      </Text>{" "}
+      <Text variant={"body-3-medium"} className="text-gray-600 w-full">
+        Our demo DEX lives on Rollup B, but swapping from Rollup A will
+        automatically route through Rollup B using Compose’s atomic interop.
+      </Text>
+      <ActionRoute
+        type="swap"
+        from={zeroAddress}
+        fromChainId={rollupA.id}
+        to={USDC_ADDRESS}
+        toChainId={rollupA.id}
+      />
       <div className="w-full flex justify-between">
         <button
           onClick={onBack}
@@ -64,7 +59,7 @@ export const FinalStep: FCProps = ({ onComplete, onBack }) => {
           onClick={onComplete}
           className="h-[60px] w-[160px] rounded-[20px] border border-[#14B5C0] bg-gradient-to-r from-[rgba(20,181,192,0.08)] via-[rgba(36,185,121,0.08)] to-[rgba(230,135,19,0.08)] text-[#14B5C0] font-semibold hover:bg-gradient-to-r hover:from-[rgba(20,181,192,0.12)] hover:via-[rgba(36,185,121,0.12)] hover:to-[rgba(230,135,19,0.12)] transition-all duration-200 cursor-pointer"
         >
-          Close
+          Next
         </button>
       </div>
     </>

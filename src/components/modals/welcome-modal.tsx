@@ -4,10 +4,11 @@ import { WelcomeStep } from "./welcome-modal/welcome-step";
 import { OnboardingStep } from "./welcome-modal/onboarding-step";
 import { BridgeStep } from "./welcome-modal/bridge-step";
 import { FinalStep } from "./welcome-modal/final-step";
+import HowItWorks from "@/components/modals/welcome-modal/how-it-works.tsx";
 
 export type WelcomeModalProps = {
   isOpen: boolean;
-  step: 1 | 2 | 3 | 4;
+  step: 1 | 2 | 3 | 4 | 5;
   onClose: () => void;
   onNext: () => void;
   onBack: () => void;
@@ -44,6 +45,7 @@ export const WelcomeModal: FCProps = ({ isOpen, step, onClose, onNext, onBack })
           {step === 2 && <OnboardingStep onNext={onNext} onBack={onBack} />}
           {step === 3 && <BridgeStep onComplete={onNext} onBack={onBack} />}
           {step === 4 && <FinalStep onComplete={onNext} onBack={onBack} />}
+          {step === 5 && <HowItWorks onlyContent onComplete={onClose} onClose={onClose} onBack={onBack} />}
         </div>
       </div>
     </div>

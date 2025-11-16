@@ -53,7 +53,7 @@ export const BigNumberInput: BigNumberInputFC = forwardRef<
       decimals = 18,
       allowNegative = false,
       onChange,
-      displayDecimals = 7,
+      displayDecimals = 18,
       tooltipPlacement = "left",
       render,
       ...props
@@ -127,6 +127,12 @@ export const BigNumberInput: BigNumberInputFC = forwardRef<
 
     const onInput = (ev: React.FormEvent<HTMLInputElement>) => {
       const input = ev.currentTarget.value;
+
+      // Limit input to maximum 30 characters
+      if (input.length > 30) {
+        return;
+      }
+
       const [, op = "", zero, d, dec = ""] = input.match(capture) || [];
       if (!allowNegative && op === "-") return;
 
@@ -214,7 +220,7 @@ export const NumberInput: NumberInputFC = forwardRef<
       max,
       min,
       className,
-      decimals = 6,
+      decimals = 18,
       allowNegative = false,
       onChange,
       render,
@@ -296,6 +302,12 @@ export const NumberInput: NumberInputFC = forwardRef<
 
     const onInput = (ev: React.FormEvent<HTMLInputElement>) => {
       const input = ev.currentTarget.value;
+
+      // Limit input to maximum 30 characters
+      if (input.length > 30) {
+        return;
+      }
+
       const [, op = "", zero, d, dec = ""] = input.match(capture) || [];
       if (!allowNegative && op === "-") return;
 

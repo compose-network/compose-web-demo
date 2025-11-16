@@ -10,6 +10,7 @@ const badgeVariants = cva(
       variant: {
         error: "bg-error-100 text-error-500",
         uncoloredError: "bg-gray-300 text-error-500",
+        errorOutline: "bg-error-50 border-error-500 border",
         success: "bg-success-100 text-success-700",
 
         warning:

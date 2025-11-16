@@ -97,7 +97,7 @@ export const createUserOp = async ({
   };
 };
 
-type ComposeRpcSchema = [
+export type ComposeRpcSchema = [
   {
     Method: "eth_sendXTransaction";
     Parameters: [string];
@@ -113,6 +113,16 @@ type ComposeRpcSchema = [
   },
 ];
 
+export const createRollupPublicClient = (
+  sourceChainId: keyof typeof chainsMap,
+) => {
+  return createPublicClient({
+    chain: chainsMap[sourceChainId],
+    transport: http(chainsMap[sourceChainId].rpcUrls.default.http[0]),
+    rpcSchema: rpcSchema<ComposeRpcSchema>(),
+  });
+};
+
 /**
  * Creates public clients for both rollup A and rollup B chains with Compose RPC schema support.
  *
@@ -124,17 +134,9 @@ export const createRollupPublicClients = (
   sourceChainId: keyof typeof chainsMap = rollupA.id,
   destChainId: keyof typeof chainsMap = rollupB.id,
 ) => {
-  const rollupAPublicClient = createPublicClient({
-    chain: chainsMap[sourceChainId],
-    transport: http(chainsMap[sourceChainId].rpcUrls.default.http[0]),
-    rpcSchema: rpcSchema<ComposeRpcSchema>(),
-  });
+  const rollupAPublicClient = createRollupPublicClient(sourceChainId);
 
-  const rollupBPublicClient = createPublicClient({
-    chain: chainsMap[destChainId],
-    transport: http(chainsMap[destChainId].rpcUrls.default.http[0]),
-    rpcSchema: rpcSchema<ComposeRpcSchema>(),
-  });
+  const rollupBPublicClient = createRollupPublicClient(destChainId);
 
   return [rollupAPublicClient, rollupBPublicClient];
 };

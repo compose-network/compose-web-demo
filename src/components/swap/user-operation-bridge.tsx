@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
-import { SwapRoute } from "@/components/swap/swap-route";
 import { TokenInput } from "@/components/swap/token-picker/token-input";
-import type { TransactionModalProps } from "@/components/swap/transaction-bridge/transaction-modal.tsx";
+import type { TransactionModalData } from "@/components/swap/transaction-bridge/transaction-modal.tsx";
 import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal.tsx";
 import {
   createAndSignBridgeERC20UserOps,
@@ -24,7 +23,6 @@ import { useApprove } from "@/lib/contract-interactions/erc-20/write/use-approve
 import { useMint } from "@/lib/contract-interactions/erc-20/write/use-mint";
 import { withTransactionModal } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
 import { useSmartAccount } from "@/lib/smart-account/kernel";
-import type { ComposedSignedUserOpsTxReturnType } from "@/lib/smart-account/user-op";
 import {
   decodeUserOperationLogs,
   toRpcUserOpCanonical,
@@ -36,7 +34,7 @@ import { type BRIDGE_ADDRESSES, BRIDGE_TOKEN } from "@/wagmi/addresses";
 import { chainsMap, hoodi, rollupA, rollupB } from "@/wagmi/config";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cloneDeep } from "lodash-es";
-import { type ComponentPropsWithoutRef, type FC, useState } from "react";
+import { type FC, useState } from "react";
 import { useForm } from "react-hook-form";
 import { FaArrowDown } from "react-icons/fa6";
 import { useLocalStorage } from "react-use";
@@ -54,30 +52,10 @@ import { useSendTransaction, useSwitchChain } from "wagmi";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { BRIDGE_CONFIG } from "@/wagmi/bridge.ts";
-
-export type SwapProps = {
-  // TODO: Add props or remove this type
-};
-
-type SwapFC = FC<
-  Omit<ComponentPropsWithoutRef<"div">, keyof SwapProps> & SwapProps
->;
-
-type ComposeRpcSchema = [
-  {
-    Method: "eth_sendXTransaction";
-    Parameters: [string];
-    ReturnType: null;
-  },
-  {
-    Method: "compose_buildSignedUserOpsTx";
-    Parameters: [
-      ReturnType<typeof toRpcUserOpCanonical>[],
-      { chainId: number },
-    ];
-    ReturnType: ComposedSignedUserOpsTxReturnType;
-  },
-];
+import { getErrorMessage } from "@/lib/utils/wagmi.ts";
+import type { ComposeRpcSchema } from "@/components/swap/utils/core.ts";
+import { safeStringify } from "@/lib/utils/bigint.ts";
+import ActionRoute from "@/components/swap/actionRoute.tsx";
 
 const schema = z.object({
   token: z.string().refine(isAddress),
@@ -103,24 +81,26 @@ const schema = z.object({
   slippage: z.number(),
 });
 
-export const UserOperationBridge: SwapFC = () => {
+export const UserOperationBridge: FC = () => {
   const eoa = useAccount();
   const sendTx = useSendTransaction();
+
   const [lastSelectedToken, setLastSelectedToken] = useLocalStorage<Address>(
     "lastSelectedToken",
     zeroAddress,
   );
-  console.log("ops");
   const queryClient = useQueryClient();
 
-  const [transactionData, setTransactionData] = useState<
-    TransactionModalProps["data"] | null
-  >(null);
+  const [transactionData, setTransactionData] =
+    useState<TransactionModalData | null>(null);
 
   const [advancedMode, setAdvancedMode] = useLocalStorage(
     "advancedMode",
     false,
   );
+
+  const [errorMessage, setErrorMessage] = useState<string>();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Force false on first load
   if (advancedMode === undefined || advancedMode === null) {
@@ -145,6 +125,7 @@ export const UserOperationBridge: SwapFC = () => {
   const values = form.watch();
 
   const { switchChainAsync } = useSwitchChain();
+
   const kernel = useSmartAccount();
 
   const fromToken = useAsset({
@@ -169,6 +150,8 @@ export const UserOperationBridge: SwapFC = () => {
   const approve = useApprove();
 
   const submit = form.handleSubmit(async (values) => {
+    setIsLoading(true);
+    try {
     const id: Hex = `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`;
 
     if (!eoa.address || !kernel.kernel.data)
@@ -192,31 +175,6 @@ export const UserOperationBridge: SwapFC = () => {
 
     const userOpIndex = needsApprove || isNative ? 1 : 0;
 
-    setTransactionData({
-      id,
-      actions: [
-        ...(needsApprove || isNative
-          ? [
-              {
-                name: `${isNative ? `Send ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${symbol}`}`,
-                chainId: values.from.chainId,
-                status: "pending" as const,
-                description: `${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
-                tooltip: isNative
-                  ? "ETH must first be transferred to your Smart Account before initiating a cross-chain transaction."
-                  : undefined,
-              },
-            ]
-          : []),
-        {
-          name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${symbol}`,
-          chainId: values.from.chainId,
-          toChainId: values.to.chainId,
-          status: "idle",
-        },
-      ],
-    });
-
     const sourcePublicClient = createPublicClient({
       chain: chainsMap[values.from.chainId as keyof typeof chainsMap],
       transport: http(
@@ -235,83 +193,150 @@ export const UserOperationBridge: SwapFC = () => {
       rpcSchema: rpcSchema<ComposeRpcSchema>(),
     });
 
+    let prereqFn: (() => Promise<void>) | undefined = undefined;
+
     if (isNative) {
-      const hash = await sendTx
-        .sendTransactionAsync({
-          to: kernel.getKernelByChainId(values.from.chainId)!.address,
-          value: values.from.amount,
-          chainId: values.from.chainId,
-        })
-        .catch((err) => {
+      prereqFn = async () => {
+        setTransactionData((prev) => {
+          if (!prev) return null;
+          const clone = cloneDeep(prev);
+          clone.actions[0].status = "pending";
+          return clone;
+        });
+        const hash = await sendTx.sendTransactionAsync(
+          {
+            to: kernel.getKernelByChainId(values.from.chainId)!.address,
+            value: values.from.amount,
+            chainId: values.from.chainId,
+          },
+          {
+            onError: (error) => {
+              setTransactionData((prev) => {
+                if (!prev) return null;
+                const clone = cloneDeep(prev);
+                clone.actions[0].status = "failed";
+                return clone;
+              });
+              const errMes = getErrorMessage(error);
+              setErrorMessage(errMes);
+              toast({
+                title: "Transaction failed",
+                variant: "destructive",
+                description: errMes,
+              });
+            },
+          },
+        );
+
+        setTransactionData((prev) => {
+          if (!prev) return null;
+          const clone = cloneDeep(prev);
+          clone.actions[0].hash = hash;
+          return clone;
+        });
+
+        const receipt = await sourcePublicClient.waitForTransactionReceipt({
+          hash,
+        });
+
+        if (receipt.status !== "success") {
           setTransactionData((prev) => {
             if (!prev) return null;
             const clone = cloneDeep(prev);
             clone.actions[0].status = "failed";
             return clone;
           });
-          throw err;
+
+          const errMes = "Transaction was reverted by the contract.";
+          setErrorMessage(errMes);
+          toast({
+            variant: "destructive",
+            title: "Bridge failed",
+            description: errMes,
+          });
+          return;
+        }
+
+        setTransactionData((prev) => {
+          if (!prev) return null;
+          const clone = cloneDeep(prev);
+          clone.actions[0].status = "success";
+          return clone;
         });
-      setTransactionData((prev) => {
-        if (!prev) return null;
-        const clone = cloneDeep(prev);
-        clone.actions[0].hash = hash;
-        return clone;
-      });
-      await sourcePublicClient.waitForTransactionReceipt({ hash });
-      setTransactionData((prev) => {
-        if (!prev) return null;
-        const clone = cloneDeep(prev);
-        clone.actions[0].status = "success";
-        return clone;
-      });
+      };
     } else if (needsApprove) {
-      await approve.write(
-        {
-          address: values.token,
-          chainId: values.from.chainId,
-        },
-        {
-          spender: kernel.kernel.data?.accounts.A.address || zeroAddress,
-          amount: globals.MAX_WEI_AMOUNT,
-        },
-        {
-          onError: () => {
-            setTransactionData((prev) => {
-              if (!prev) return null;
-              const clone = cloneDeep(prev);
-              clone.actions[0].status = "failed";
-              return clone;
-            });
+      prereqFn = async () => {
+        setTransactionData((prev) => {
+          if (!prev) return null;
+          const clone = cloneDeep(prev);
+          clone.actions[0].status = "pending";
+          return clone;
+        });
+        await approve.write(
+          {
+            address: values.token,
+            chainId: values.from.chainId,
           },
-          onConfirmed: (hash) => {
-            setTransactionData((prev) => {
-              if (!prev) return null;
-              const clone = cloneDeep(prev);
-              clone.actions[0].hash = hash;
-              return clone;
-            });
+          {
+            spender: kernel.kernel.data?.accounts.A.address || zeroAddress,
+            amount: globals.MAX_WEI_AMOUNT,
           },
-          onMined: () => {
-            setTransactionData((prev) => {
-              if (!prev) return null;
-              const clone = cloneDeep(prev);
-              clone.actions[0].status = "success";
-              return clone;
-            });
+          {
+            onError: (error) => {
+              setTransactionData((prev) => {
+                if (!prev) return null;
+                const clone = cloneDeep(prev);
+                clone.actions[0].status = "failed";
+                return clone;
+              });
+              const errMes = getErrorMessage(error);
+              setErrorMessage(errMes);
+              toast({
+                title: "Transaction failed",
+                variant: "destructive",
+                description: errMes,
+              });
+            },
+            onConfirmed: (hash) => {
+              setTransactionData((prev) => {
+                if (!prev) return null;
+                const clone = cloneDeep(prev);
+                clone.actions[0].hash = hash;
+                return clone;
+              });
+            },
+            onMined: (receipt) => {
+              if (receipt.status !== "success") {
+                setTransactionData((prev) => {
+                  if (!prev) return null;
+                  const clone = cloneDeep(prev);
+                  clone.actions[0].status = "failed";
+                  return clone;
+                });
+
+                const errMes = "Transaction was reverted by the contract.";
+                setErrorMessage(errMes);
+                toast({
+                  variant: "destructive",
+                  title: "Bridge failed",
+                  description: errMes,
+                });
+                return;
+              }
+              setTransactionData((prev) => {
+                if (!prev) return null;
+                const clone = cloneDeep(prev);
+                clone.actions[0].status = "success";
+                return clone;
+              });
+            },
           },
-        },
-      );
+        );
+      };
     } else {
       console.log("Kernel has enough balance of the selected token to bridge");
       console.log("Skipping transfer transaction");
     }
-
-    setTransactionData((prev) => {
-      if (!prev) return null;
-      const clone = cloneDeep(prev);
-      clone.actions[userOpIndex].status = "pending";
-      return clone;
-    });
 
     const sourceKernel = kernel.getKernelByChainId(values.from.chainId);
 
@@ -324,7 +349,7 @@ export const UserOperationBridge: SwapFC = () => {
       : createAndSignBridgeERC20UserOps;
 
     // Create and sign user operations for bridge
-    const [signedA, signedB] = await createOps({
+    const { sign, preparedOps } = await createOps({
       eoaAddress: eoa.address!,
       sourceKernelAccount: sourceKernel!,
       destKernelAccount: destKernel!,
@@ -333,169 +358,242 @@ export const UserOperationBridge: SwapFC = () => {
       sessionId,
       sourceChainId: values.from.chainId as keyof typeof BRIDGE_ADDRESSES,
       destChainId: values.to.chainId as keyof typeof BRIDGE_ADDRESSES,
-    }).catch((errs) => {
+    }).catch((error) => {
       setTransactionData((prev) => {
         if (!prev) return null;
         const clone = cloneDeep(prev);
         clone.actions[userOpIndex].status = "failed";
         return clone;
       });
-      throw errs;
-    });
-
-    const userOpA = toRpcUserOpCanonical(signedA);
-    const userOpB = toRpcUserOpCanonical(signedB);
-
-    console.log("signedA:", signedA);
-    console.log("signedB:", signedB);
-
-    // Update transactionData with userOp data
-    setTransactionData((prev) => {
-      if (!prev) return null;
-      const clone = cloneDeep(prev);
-      clone.actions[userOpIndex].userOpData = [
-        { chainId: values.from.chainId, data: JSON.stringify(userOpA) },
-        { chainId: values.to.chainId, data: JSON.stringify(userOpB) },
-      ];
-      return clone;
-    });
-
-    const [buildA, buildB] = await Promise.all([
-      sourcePublicClient.request({
-        method: "compose_buildSignedUserOpsTx",
-        params: [[userOpA], { chainId: values.from.chainId }],
-      }),
-      destPublicClient.request({
-        method: "compose_buildSignedUserOpsTx",
-        params: [[userOpB], { chainId: values.to.chainId }],
-      }),
-    ]).catch((errs) => {
-      console.log("errors", errs);
-      setTransactionData((prev) => {
-        if (!prev) return null;
-        const clone = cloneDeep(prev);
-        clone.actions[userOpIndex].status = "failed";
-        // clone.actions[2].status = "failed";
-        return clone;
+      const errMes = getErrorMessage(error);
+      setErrorMessage(errMes);
+      toast({
+        title: "Transaction failed",
+        variant: "destructive",
+        description: errMes,
       });
-      throw errs;
+      throw error;
     });
 
-    setTransactionData((prev) => {
-      if (!prev) return null;
-      const clone = cloneDeep(prev);
-      clone.actions[userOpIndex].hash = [
-        { chainId: buildA.chainId, hash: buildA.hash },
-        { chainId: buildB.chainId, hash: buildB.hash },
-      ];
-      return clone;
-    });
+    setErrorMessage(undefined);
 
-    const hashA = buildA.hash;
-    const hashB = buildB.hash;
-
-    const explorerAURL = new URL(
-      `tx/${hashA}`,
-      sourcePublicClient.chain.blockExplorers?.default?.url,
-    ).toString();
-
-    const explorerBURL = new URL(
-      `tx/${hashB}`,
-      destPublicClient.chain.blockExplorers?.default?.url,
-    ).toString();
-
-    setTransactionData((prev) => {
-      if (!prev) return null;
-      const clone = cloneDeep(prev);
-      clone.actions[userOpIndex].hash = [
-        { chainId: values.from.chainId, hash: hashA },
-        { chainId: values.to.chainId, hash: hashB },
-      ];
-      // clone.actions[2].hash = hashB;
-      return clone;
-    });
-
-    console.log("buildA:", buildA, explorerAURL);
-    console.log("buildB ", buildB, explorerBURL);
-
-    const payload = encodeXtMessage({
-      senderId: "client",
-      entries: [
-        { chainId: values.from.chainId, rawTx: buildA.raw as `0x${string}` },
-        { chainId: values.to.chainId, rawTx: buildB.raw as `0x${string}` },
+    setTransactionData({
+      id,
+      actions: [
+        ...(needsApprove || isNative
+          ? [
+              {
+                name: `${isNative ? `Send ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol} to Smart Account` : `Approve ${symbol}`}`,
+                chainId: values.from.chainId,
+                status: "idle" as const,
+                description: `${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
+                tooltip: isNative
+                  ? "ETH must first be transferred to your Smart Account before initiating a cross-chain transaction."
+                  : undefined,
+                signAndSend: async () => {
+                  setErrorMessage(undefined);
+                  await prereqFn!();
+                },
+              },
+            ]
+          : []),
+        {
+          name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${symbol}`,
+          chainId: values.from.chainId,
+          toChainId: values.to.chainId,
+          toTokenAddress: values.token,
+          status: "idle" as const,
+          userOpData: [
+            {
+              chainId: values.from.chainId,
+              data: safeStringify(preparedOps.source),
+            },
+            {
+              chainId: values.to.chainId,
+              data: safeStringify(preparedOps.destination),
+            },
+          ],
+          signAndSend: async () => {
+            setErrorMessage(undefined);
+            await actionFn();
+          },
+        },
       ],
     });
-    console.log("payload:", payload);
 
-    const res = await sourcePublicClient.request({
-      method: "eth_sendXTransaction",
-      params: [payload],
-    });
-
-    console.log("RAW eth_sendXTransaction res for Rollup A", res);
-
-    // const [hashA, hashB] = await Promise.all([
-    //   publicClientFrom.request({
-    //     method: "eth_sendRawTransaction",
-    //     params: [buildA.raw],
-    //   }),
-    //   publicClientTo.request({
-    //     method: "eth_sendRawTransaction",
-    //     params: [buildB.raw],
-    //   }),
-    // ]);
-
-    const [receiptA, receiptB] = await Promise.all([
-      sourcePublicClient.waitForTransactionReceipt({
-        hash: hashA,
-      }),
-      destPublicClient.waitForTransactionReceipt({
-        hash: hashB,
-      }),
-    ]);
-
-    // TODO(kjesien) find a better way to refresh balances
-    await queryClient.invalidateQueries();
-
-    setTransactionData((prev) => {
-      if (!prev) return null;
-      const clone = cloneDeep(prev);
-      clone.actions[userOpIndex].status = "success";
-      return clone;
-    });
-
-    const decodedA = decodeUserOperationLogs(receiptA.logs);
-    console.log("decoded logs for Rollup A:", decodedA);
-    const decodedB = decodeUserOperationLogs(receiptB.logs);
-    console.log("decoded logs for Rollup B:", decodedB);
-
-    const revertedA = decodedA.find(
-      (log) => log?.args && "success" in log.args && !log.args.success,
-    );
-
-    const revertedB = decodedB.find(
-      (log) => log?.args && "success" in log.args && !log.args.success,
-    );
-
-    if (revertedA || revertedB) {
+    const actionFn = async () => {
       setTransactionData((prev) => {
         if (!prev) return null;
         const clone = cloneDeep(prev);
-        clone.actions[userOpIndex].status = "failed";
+        clone.actions[userOpIndex].status = "pending";
         return clone;
       });
 
-      return toast({
-        variant: "destructive",
-        title: "User operation failed",
+      const [signedA, signedB] = await sign().catch((error) => {
+        setTransactionData((prev) => {
+          if (!prev) return null;
+          const clone = cloneDeep(prev);
+          clone.actions[userOpIndex].status = "failed";
+          return clone;
+        });
+        const errMes = getErrorMessage(error);
+        setErrorMessage(errMes);
+        toast({
+          title: "Transaction failed",
+          variant: "destructive",
+          description: errMes,
+        });
+        throw error;
+      });
+
+      const userOpA = toRpcUserOpCanonical(signedA);
+      const userOpB = toRpcUserOpCanonical(signedB);
+
+      console.log("signedA:", signedA);
+      console.log("signedB:", signedB);
+
+      const [buildA, buildB] = await Promise.all([
+        sourcePublicClient.request({
+          method: "compose_buildSignedUserOpsTx",
+          params: [[userOpA], { chainId: values.from.chainId }],
+        }),
+        destPublicClient.request({
+          method: "compose_buildSignedUserOpsTx",
+          params: [[userOpB], { chainId: values.to.chainId }],
+        }),
+      ]).catch((errs) => {
+        setTransactionData((prev) => {
+          if (!prev) return null;
+          const clone = cloneDeep(prev);
+          clone.actions[userOpIndex].status = "failed";
+          return clone;
+        });
+
+        const errMes = "Compose transactions failed.";
+        setErrorMessage(errMes);
+        toast({
+          title: "Transaction failed",
+          variant: "destructive",
+          description: errMes,
+        });
+
+        throw errs;
+      });
+
+      setTransactionData((prev) => {
+        if (!prev) return null;
+        const clone = cloneDeep(prev);
+        clone.actions[userOpIndex].hash = [
+          { chainId: buildA.chainId, hash: buildA.hash },
+          { chainId: buildB.chainId, hash: buildB.hash },
+        ];
+        return clone;
+      });
+
+      const hashA = buildA.hash;
+      const hashB = buildB.hash;
+
+      const explorerAURL = new URL(
+        `tx/${hashA}`,
+        sourcePublicClient.chain.blockExplorers?.default?.url,
+      ).toString();
+
+      const explorerBURL = new URL(
+        `tx/${hashB}`,
+        destPublicClient.chain.blockExplorers?.default?.url,
+      ).toString();
+
+      setTransactionData((prev) => {
+        if (!prev) return null;
+        const clone = cloneDeep(prev);
+        clone.actions[userOpIndex].hash = [
+          { chainId: values.from.chainId, hash: hashA },
+          { chainId: values.to.chainId, hash: hashB },
+        ];
+        return clone;
+      });
+
+      console.log("buildA:", buildA, explorerAURL);
+      console.log("buildB ", buildB, explorerBURL);
+
+      const payload = encodeXtMessage({
+        senderId: "client",
+        entries: [
+          { chainId: values.from.chainId, rawTx: buildA.raw as `0x${string}` },
+          { chainId: values.to.chainId, rawTx: buildB.raw as `0x${string}` },
+        ],
+      });
+      console.log("payload:", payload);
+
+      const res = await sourcePublicClient.request({
+        method: "eth_sendXTransaction",
+        params: [payload],
+      });
+
+      console.log("RAW eth_sendXTransaction res for Rollup A", res);
+
+      const [receiptA, receiptB] = await Promise.all([
+        sourcePublicClient.waitForTransactionReceipt({
+          hash: hashA,
+        }),
+        destPublicClient.waitForTransactionReceipt({
+          hash: hashB,
+        }),
+      ]);
+
+      // TODO(kjesien) find a better way to refresh balances
+      await queryClient.invalidateQueries();
+
+      setTransactionData((prev) => {
+        if (!prev) return null;
+        const clone = cloneDeep(prev);
+        clone.actions[userOpIndex].status = "success";
+        return clone;
+      });
+
+      const decodedA = decodeUserOperationLogs(receiptA.logs);
+      console.log("decoded logs for Rollup A:", decodedA);
+      const decodedB = decodeUserOperationLogs(receiptB.logs);
+      console.log("decoded logs for Rollup B:", decodedB);
+
+      const revertedA = decodedA.find(
+        (log) => log?.args && "success" in log.args && !log.args.success,
+      );
+
+      const revertedB = decodedB.find(
+        (log) => log?.args && "success" in log.args && !log.args.success,
+      );
+
+      if (revertedA || revertedB) {
+        setTransactionData((prev) => {
+          if (!prev) return null;
+          const clone = cloneDeep(prev);
+          clone.actions[userOpIndex].status = "failed";
+          return clone;
+        });
+
+        const errMes = "Compose transactions failed.";
+        setErrorMessage(errMes);
+        toast({
+          title: "Transaction failed",
+          variant: "destructive",
+          description: errMes,
+        });
+      }
+
+      toast({
+        title: "Transaction sent",
         description: "Check your wallet to confirm the transaction",
       });
-    }
+    };
 
-    toast({
-      title: "Transaction sent",
-      description: "Check your wallet to confirm the transaction",
-    });
+    await prereqFn?.();
+    await actionFn();
+    } catch (error) {
+      console.error('Bridge error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   });
 
   const mint = useMint();
@@ -525,6 +623,7 @@ export const UserOperationBridge: SwapFC = () => {
       <TransactionModal
         title={"Bridge"}
         data={transactionData}
+        errorMessage={errorMessage}
         isOpen={!!transactionData}
         onOpenChange={(open) => {
           if (open) return;
@@ -621,23 +720,25 @@ export const UserOperationBridge: SwapFC = () => {
             />
           </div>
           <Divider />
-          <SwapRoute
-            action="bridge"
-            fromToken={{
-              address: values.token,
-              chainId: values.from.chainId,
-            }}
-            toToken={{
-              address: values.token,
-              chainId: values.to.chainId,
-            }}
+          <ActionRoute
+            type="bridge"
+            from={values.token}
+            fromChainId={values.from.chainId}
+            to={values.token}
+            toChainId={values.to.chainId}
           />
           {eoa.isConnected ? (
             <Button
               size="xl"
               className="w-full"
               type="submit"
-              disabled={!form.formState.isValid || kernel.isLoading}
+              disabled={
+                !form.formState.isValid ||
+                isLoading ||
+                kernel.isLoading ||
+                (fromToken.balance !== undefined &&
+                  values.from.amount > fromToken.balance)
+              }
               loadingText="Bridging..."
             >
               Bridge

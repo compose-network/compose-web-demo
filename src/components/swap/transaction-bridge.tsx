@@ -1,22 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {
-  type FC,
-  type ComponentPropsWithoutRef,
-  useState,
-  useEffect,
-} from "react";
+import { type FC, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { RollupChainId } from "@/wagmi/config";
 import {
-  rollupB,
-  hoodi,
-  rollupA,
-  bridgeContracts,
-  baseChain,
   arbitrumChain,
+  baseChain,
+  bridgeContracts,
+  hoodi,
+  l2StandardBridgeProxyAddress,
   optimismChain,
+  rollupA,
+  rollupB,
 } from "@/wagmi/config";
 import type { Hex } from "viem";
 import { isAddress, parseEther, zeroAddress } from "viem";
@@ -31,21 +27,14 @@ import { Form } from "@/components/ui/form";
 import { useAsset } from "@/hooks/use-asset";
 import { cloneDeep, merge } from "lodash-es";
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
-import { SwapRoute } from "@/components/swap/swap-route";
 import { useBridgeContract } from "@/lib/contract-interactions/core/create-write-hooks";
 import { l2StandardBridgeABI } from "@/lib/abi/swap/bridge";
 import { formatCurrency } from "@/lib/utils/number";
-import type { TransactionModalProps } from "@/components/swap/transaction-bridge/transaction-modal";
+import type { TransactionModalData } from "@/components/swap/transaction-bridge/transaction-modal";
 import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal";
 import { BRIDGE_CONFIG } from "@/wagmi/bridge.ts";
-
-export type SwapProps = {
-  // TODO: Add props or remove this type
-};
-
-type SwapFC = FC<
-  Omit<ComponentPropsWithoutRef<"div">, keyof SwapProps> & SwapProps
->;
+import { getErrorMessage } from "@/lib/utils/wagmi.ts";
+import ActionRoute from "@/components/swap/actionRoute.tsx";
 
 const schema = z.object({
   from: z.object({
@@ -65,11 +54,15 @@ const schema = z.object({
   }),
   slippage: z.number(),
 });
-export const TransactionBridge: SwapFC = () => {
+
+export const TransactionBridge: FC = () => {
   const { chainId, isConnected } = useAccount();
   const isHoodi = chainId === hoodi.id;
   const switchChain = useSwitchChain();
-  console.log("tx");
+
+  const [errorMessage, setErrorMessage] = useState<string>();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: {
       from: {
@@ -90,7 +83,6 @@ export const TransactionBridge: SwapFC = () => {
     form.setValue("from.chainId", chainId);
   };
 
-  console.log("form.formState.isValid:", form.formState.isValid);
   const values = form.watch();
 
   const fromToken = useAsset({
@@ -105,11 +97,8 @@ export const TransactionBridge: SwapFC = () => {
     contract: bridgeContracts[hoodi.id][values.to.chainId].bridge,
   });
 
-  const [transactionData, setTransactionData] = useState<
-    TransactionModalProps["data"] | null
-  >(null);
-
-  console.log("transactionData:", transactionData);
+  const [transactionData, setTransactionData] =
+    useState<TransactionModalData | null>(null);
 
   const rollupAClient = usePublicClient({
     chainId: rollupA.id,
@@ -119,27 +108,28 @@ export const TransactionBridge: SwapFC = () => {
   });
 
   useEffect(() => {
-    if (!transactionData?.id || transactionData.actions[1].status === "success") return;
+    if (!transactionData?.id || transactionData.actions[1].status === "success")
+      return;
     const endTransaction = transactionData.actions.at(-1);
     console.log("endTransaction:", endTransaction);
     const client =
       endTransaction?.chainId === rollupB.id ? rollupBClient : rollupAClient;
 
     const unwatch = client?.watchContractEvent({
-      address: "0x4200000000000000000000000000000000000010",
+      address: l2StandardBridgeProxyAddress,
       abi: l2StandardBridgeABI,
       eventName: "ETHBridgeFinalized",
-        onLogs: (logs) => {
-          const log = logs.find((l) => l.args.extraData === transactionData.id);
-          if (log) {
-            setTransactionData((prev) => {
-              if (!prev) return null;
-              const clone = cloneDeep(prev);
-              clone.actions[1].status = "success";
-              clone.actions[1].hash = log.transactionHash;
-              return clone;
-            });
-          }
+      onLogs: (logs) => {
+        const log = logs.find((l) => l.args.extraData === transactionData.id);
+        if (log) {
+          setTransactionData((prev) => {
+            if (!prev) return null;
+            const clone = cloneDeep(prev);
+            clone.actions[1].status = "success";
+            clone.actions[1].hash = log.transactionHash;
+            return clone;
+          });
+        }
       },
     });
 
@@ -151,99 +141,128 @@ export const TransactionBridge: SwapFC = () => {
   }, [transactionData, rollupAClient, rollupBClient]);
 
   const submit = form.handleSubmit(async (values) => {
+    setIsLoading(true);
+    try {
     await switchChain.switchChainAsync({ chainId: hoodi.id });
     const id: Hex = `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`;
 
-    bridgeETH.write(
-      {
-        _minGasLimit: 0,
-        value: values.from.amount,
-        _extraData: id,
-      },
-      {
-        onInitiated: () => {
-          toast({
-            title: "Bridge initiated",
-            description: "Check your wallet to confirm the transaction",
-          });
+    const actionFn = () => {
+      bridgeETH.write(
+        {
+          _minGasLimit: 0,
+          value: values.from.amount,
+          _extraData: id,
+        },
+        {
+          onInitiated: () => {
+            toast({
+              title: "Bridge initiated",
+              description: "Check your wallet to confirm the transaction",
+            });
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              clone.actions[0].status = "pending";
+              return clone;
+            });
+          },
+          onConfirmed: (hash) => {
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              clone.actions[0].hash = hash;
+              return clone;
+            });
+          },
+          onMined: (receipt) => {
+            console.log("receipt:", receipt);
+            if (receipt.status !== "success") {
+              setTransactionData((prev) => {
+                if (!prev) return null;
+                const clone = cloneDeep(prev);
+                clone.actions[0].status = "failed";
+                return clone;
+              });
 
-          setTransactionData({
-            id,
-            actions: [
+              const errMes = "Transaction was reverted by the contract.";
+              setErrorMessage(errMes);
+              toast({
+                variant: "destructive",
+                title: "Bridge failed",
+                description: errMes,
+              });
+
+              throw new Error("Bridge failed");
+            }
+            setTransactionData((prev) => {
+              if (!prev) return null;
+              const clone = cloneDeep(prev);
+              clone.actions[0].status = "success";
+              clone.actions[1].status = "pending";
+              clone.actions[1].name = `${clone.actions[1].name} (in ~2 minutes)`;
+              return clone;
+            });
+            fromToken.refreshBalance();
+            form.reset(
+              merge({}, values, {
+                from: { amount: 0n },
+                to: { amount: 0n },
+              }),
               {
-                name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
-                chainId: values.from.chainId,
-                status: "pending",
+                keepIsValid: true,
               },
-              {
-                name: `Get ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
-                chainId: values.to.chainId,
-                status: "idle",
-              },
-            ],
-          });
-        },
-        onConfirmed: (hash) => {
-          setTransactionData((prev) => {
-            if (!prev) return null;
-            const clone = cloneDeep(prev);
-            clone.actions[0].hash = hash;
-            return clone;
-          });
-        },
-        onMined: (receipt) => {
-          console.log("receipt:", receipt);
-          if (receipt.status !== "success") {
+            );
+            form.clearErrors();
+          },
+          onError: (error) => {
             setTransactionData((prev) => {
               if (!prev) return null;
               const clone = cloneDeep(prev);
               clone.actions[0].status = "failed";
               return clone;
             });
+
+            const errMes = getErrorMessage(error);
+            setErrorMessage(errMes);
             toast({
               variant: "destructive",
               title: "Bridge failed",
-              description: "Transaction was reverted by the contract.",
+              description: errMes,
             });
-
-            throw new Error("Bridge failed");
-          }
-          setTransactionData((prev) => {
-            if (!prev) return null;
-            const clone = cloneDeep(prev);
-            clone.actions[0].status = "success";
-            clone.actions[1].status = "pending";
-            clone.actions[1].name = `${clone.actions[1].name} (in ~2 minutes)`;
-            return clone;
-          });
-          fromToken.refreshBalance();
-          form.reset(
-            merge({}, values, {
-              from: { amount: 0n },
-              to: { amount: 0n },
-            }),
-            {
-              keepIsValid: true,
-            },
-          );
-          form.clearErrors();
+          },
         },
-        onError: (error) => {
-          toast({
-            variant: "destructive",
-            title: "Bridge failed",
-            description: error.message,
-          });
+      );
+    };
 
-          setTransactionData((prev) => {
-            if (!prev) return null;
-            const clone = cloneDeep(prev);
-            clone.actions[0].status = "failed";
-            return clone;
-          });
+    setErrorMessage(undefined);
+
+    setTransactionData({
+      id,
+      actions: [
+        {
+          name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
+          chainId: values.from.chainId,
+          status: "idle",
+          signAndSend: () => {
+            setErrorMessage(undefined);
+            actionFn();
+          },
         },
-      },
-    );
+        {
+          name: `Get ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
+          chainId: values.to.chainId,
+          status: "idle",
+          signAndSend: undefined,
+        },
+      ],
+    });
+
+    actionFn();
+    } catch (error) {
+      console.error('Bridge error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   });
 
   return (
@@ -252,6 +271,7 @@ export const TransactionBridge: SwapFC = () => {
         title={"Bridge"}
         data={transactionData}
         isOpen={!!transactionData || bridgeETH.isPending}
+        errorMessage={errorMessage}
         onOpenChange={(open) => {
           if (open || bridgeETH.isPending) return;
           return setTransactionData(null);
@@ -300,17 +320,24 @@ export const TransactionBridge: SwapFC = () => {
             />
           </div>
           <Divider />
-          <SwapRoute
-            action="bridge"
-            fromToken={{ address: values.from.token, chainId: hoodi.id }}
-            toToken={{ address: values.from.token, chainId: values.to.chainId }}
+          <ActionRoute
+            type="bridge"
+            from={values.from.token}
+            fromChainId={hoodi.id}
+            to={values.from.token}
+            toChainId={values.to.chainId}
           />
           {isConnected ? (
             <Button
               size="xl"
               className="w-full"
               type="submit"
-              disabled={!form.formState.isValid}
+              disabled={
+                !form.formState.isValid ||
+                isLoading ||
+                (fromToken.balance !== undefined &&
+                  values.from.amount > fromToken.balance)
+              }
               isLoading={bridgeETH.isPending}
               loadingText="Bridging..."
             >
