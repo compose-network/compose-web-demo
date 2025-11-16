@@ -20,7 +20,8 @@ const ITEMS = [
   },
   {
     label: "Cross Chain Flashloans",
-    isFlowInProgress: true,
+    isFlowInProgress: false,
+    route: "flashloans",
   },
   {
     label: "Atomic Arbitrage",

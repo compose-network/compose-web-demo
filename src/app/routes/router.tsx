@@ -13,26 +13,43 @@ import { Bridge } from "@/components/swap/bridge";
 import { Navigate } from "react-router";
 import { Accounts } from "@/app/routes/accounts";
 import { Container } from "@/components/ui/container";
+import Flashloans from "@/components/flashloans/flashloans.tsx";
 
 const routes = [
   {
     path: "",
     element: (
       <DashboardLayout>
-        <MainPage>
-          <Outlet />
-        </MainPage>
+        {/*<MainPage>*/}
+        <Outlet />
+        {/*</MainPage>*/}
       </DashboardLayout>
     ),
     children: [
       { index: true, element: <Navigate to="bridge" replace /> },
       {
         path: "bridge",
-        element: <Bridge />,
+        element: (
+          <MainPage>
+            <Bridge />
+          </MainPage>
+        ),
       },
       {
         path: "swap",
-        element: <Swap />,
+        element: (
+          <MainPage>
+            <Swap />
+          </MainPage>
+        ),
+      },
+      {
+        path: "flashloans",
+        element: (
+          <MainPage isHidedTabs>
+            <Flashloans />{" "}
+          </MainPage>
+        ),
       },
     ],
   },
