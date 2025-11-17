@@ -5,7 +5,7 @@ import { rollupA, rollupB } from "@/wagmi/config.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { FaArrowDown } from "react-icons/fa6";
 
-const KakietoTokeni = () => {
+const FlahLoansTokens = () => {
   return (
     <div className="flex relative items-center gap-6">
       {/*<div className="rounded-[20px]">*/}
@@ -66,4 +66,4 @@ const KakietoTokeni = () => {
   );
 };
 
-export default KakietoTokeni;
+export default FlahLoansTokens;

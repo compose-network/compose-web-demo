@@ -17,7 +17,7 @@ import {
 } from "@/wagmi/config.ts";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import KakietoTokeni from "@/components/flashloans/kakieto-tokeni.tsx";
+import FlahLoansTokens from "@/components/flashloans/flah-loans-tokens.tsx";
 import FlashloansRoute from "@/components/flashloans/flashloans-route.tsx";
 
 const schema = z.object({
@@ -110,7 +110,7 @@ const Flashloans = () => {
               </Text>
             )}
             <Divider className="flex-1" />
-            <KakietoTokeni />
+            <FlahLoansTokens />
             <Divider className="flex-1" />
             <div className="flex justify-between items-center">
               <Text variant="body-3-medium" className={"text-gray-600"}>
