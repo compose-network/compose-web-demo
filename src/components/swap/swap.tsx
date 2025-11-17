@@ -1,4 +1,5 @@
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
+import ActionRoute from "@/components/swap/actionRoute.tsx";
 import { TokenInput } from "@/components/swap/token-picker/token-input";
 import type { TransactionModalData } from "@/components/swap/transaction-bridge/transaction-modal";
 import { TransactionModal } from "@/components/swap/transaction-bridge/transaction-modal";
@@ -21,26 +22,26 @@ import { globals } from "@/config";
 import { useAccount } from "@/hooks/account/use-account";
 import { useAsset } from "@/hooks/use-asset";
 import { TokenABI } from "@/lib/abi/token";
-import { useSwapContract } from "@/lib/contract-interactions/core/create-write-hooks";
 import { useApprove } from "@/lib/contract-interactions/erc-20/write/use-approve";
+import {
+  useUniswapV3QuoterContractHooks,
+} from "@/lib/contract-interactions/uniswap-v3/pool";
 import { useSmartAccount } from "@/lib/smart-account/kernel";
 import { stringifyBigints } from "@/lib/utils/bigint";
 import { formatCurrency } from "@/lib/utils/number";
 import { getErrorMessage } from "@/lib/utils/wagmi";
-import { SSV_ADDRESS, USDC_ADDRESS } from "@/wagmi/addresses";
+import { SSV_ADDRESS, UNISWAP_V3, USDC_ADDRESS } from "@/wagmi/addresses";
 import {
   arbitrumChain,
   baseChain,
-  contracts,
   optimismChain,
   rollupA,
   rollupB,
   rollupBSwapContract,
 } from "@/wagmi/config";
 import { SWAP_CONFIG } from "@/wagmi/swap.ts";
-import { getToken, isAddressEqual } from "@/wagmi/tokens";
+import { isAddressEqual } from "@/wagmi/tokens";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { keepPreviousData } from "@tanstack/react-query";
 import { cloneDeep } from "lodash-es";
 import { type FC, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -49,7 +50,6 @@ import { useLocalStorage } from "react-use";
 import { isAddress, parseEther, zeroAddress } from "viem";
 import { useSendTransaction, useSwitchChain } from "wagmi";
 import { z } from "zod";
-import ActionRoute from "@/components/swap/actionRoute.tsx";
 
 const schema = z.object({
   fromChainId: z
@@ -122,6 +122,8 @@ export const Swap: FC = () => {
     },
   );
 
+  const { useQuoteExactInputSingle } = useUniswapV3QuoterContractHooks();
+
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: prevSwapValues,
     resolver: zodResolver(schema),
@@ -129,28 +131,31 @@ export const Swap: FC = () => {
 
   const values = form.watch();
 
+  const quoteExactInputSingle = useQuoteExactInputSingle(
+    {
+      params: {
+        amountIn: values.fromAmount,
+        fee: values.fromChainId === rollupA.id ? 500 : 100, // I don't know what is this, please ask Taylor
+        sqrtPriceLimitX96: 0n,
+        tokenIn: values.fromToken,
+        tokenOut: values.toToken,
+      },
+    },
+    {
+      contract:
+        UNISWAP_V3[values.fromChainId as keyof typeof UNISWAP_V3]
+          ?.QUOTER_V2_ADDRESS,
+      chainId: values.fromChainId as number,
+      enabled: isConnected && !!values.fromChainId,
+    },
+  );
+
   useEffect(() => {
     persistPrevSwapValues(values);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.fromToken, values.toToken, values.fromChainId, values.toChainId]);
 
-  const { useGetSwapPrice } = useSwapContract();
-
   const kernel = useSmartAccount();
-
-  const prices = useGetSwapPrice(
-    {
-      tokenIn: getToken(values.fromToken)?.id ?? 0,
-      tokenOut: getToken(values.toToken)?.id ?? 0,
-      amountIn: values.fromAmount,
-    },
-    {
-      placeholderData: values.fromAmount ? keepPreviousData : undefined,
-      chainId: rollupB.id,
-      contract: contracts[rollupB.id].swap,
-      enabled: !!values.fromToken && !!values.toToken,
-    },
-  );
 
   const isSameToken = values.fromToken === values.toToken;
 
@@ -184,7 +189,7 @@ export const Swap: FC = () => {
 
       const is_eth_to_erc20 = isAddressEqual(values.fromToken, zeroAddress);
 
-      if (prices.data?.[0] === 0n) {
+      if (quoteExactInputSingle.data?.[0] === 0n) {
         return toast({
           title: "No price found for the selected tokens",
           variant: "destructive",
@@ -245,7 +250,9 @@ export const Swap: FC = () => {
               spender: is_from_B_to_B
                 ? rollupBSwapContract
                 : values.fromChainId === rollupA.id
+                  // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
                   ? kernel.kernel.data?.accounts.A.address!
+                  // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
                   : kernel.kernel.data?.accounts.B.address!,
               amount: globals.MAX_WEI_AMOUNT,
             },
@@ -399,7 +406,7 @@ export const Swap: FC = () => {
           eoaAddress: address!,
           kernelA: kernel.kernel.data!.accounts.A,
           kernelB: kernel.kernel.data!.accounts.B,
-          amountOut: prices.data?.[0] ?? 0n,
+          amountOut: quoteExactInputSingle.data?.[0] ?? 0n,
         },
         {
           onSignedUserOps() {
@@ -515,7 +522,7 @@ export const Swap: FC = () => {
               ]
             : []),
           {
-            name: `Swap ${formatCurrency(values.fromAmount, fromToken.decimals || 18)} ${fromToken.symbol} for ${formatCurrency(prices.data?.[0] ?? 0n, toToken.decimals || 18)} ${toToken.symbol}`,
+            name: `Swap ${formatCurrency(values.fromAmount, fromToken.decimals || 18)} ${fromToken.symbol} for ${formatCurrency(quoteExactInputSingle.data?.[0] ?? 0n, toToken.decimals || 18)} ${toToken.symbol}`,
             chainId: values.fromChainId,
             toChainId: values.toChainId,
             toTokenAddress: values.toToken,
@@ -617,7 +624,7 @@ export const Swap: FC = () => {
                   form.reset({
                     fromChainId: values.toChainId,
                     fromToken: values.toToken,
-                    fromAmount: prices.data?.[0] ?? 0n,
+                    fromAmount: quoteExactInputSingle.data?.[0] ?? 0n,
                     toChainId: values.fromChainId,
                     toToken: values.fromToken,
                     slippage: values.slippage,
@@ -649,10 +656,14 @@ export const Swap: FC = () => {
                   chainId as typeof rollupA.id | typeof rollupB.id,
                 )
               }
-              value={isSameToken ? values.fromAmount : (prices.data?.[0] ?? 0n)}
+              value={
+                isSameToken
+                  ? values.fromAmount
+                  : (quoteExactInputSingle.data?.[0] ?? 0n)
+              }
               tokenAddress={values.toToken}
               chainId={values.toChainId}
-              isLoading={prices.isPending}
+              isLoading={quoteExactInputSingle.isPending}
               readOnly
               onSelectToken={(token) => {
                 if (isAddressEqual(token, values.fromToken)) {

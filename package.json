@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "live-server build",
+    "dev:local": "vite",
     "dev": "vite --mode stage",
     "dev:prod": "vite --mode prod",
     "watch": "vite build --watch",
