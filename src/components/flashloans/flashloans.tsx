@@ -18,7 +18,7 @@ import {
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import KakietoTokeni from "@/components/flashloans/kakieto-tokeni.tsx";
-import ActionRoute from "@/components/swap/actionRoute.tsx";
+import FlashloansRoute from "@/components/flashloans/flashloans-route.tsx";
 
 const schema = z.object({
   fromChainId: z
@@ -122,13 +122,15 @@ const Flashloans = () => {
             </div>
           </div>
           <Divider />
-          <ActionRoute
-            type={"swap"}
-            from={zeroAddress}
-            fromChainId={rollupB.id}
-            to={zeroAddress}
-            toChainId={rollupB.id}
-          />
+          <FlashloansRoute />
+          {/*<DashedArrow />*/}
+          {/*<ActionRoute*/}
+          {/*  type={"swap"}*/}
+          {/*  from={zeroAddress}*/}
+          {/*  fromChainId={rollupB.id}*/}
+          {/*  to={zeroAddress}*/}
+          {/*  toChainId={rollupB.id}*/}
+          {/*/>*/}
           {isConnected ? (
             <Button
               size="xl"

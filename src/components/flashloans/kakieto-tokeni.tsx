@@ -7,9 +7,9 @@ import { FaArrowDown } from "react-icons/fa6";
 
 const KakietoTokeni = () => {
   return (
-    <div className="flex items-center gap-6">
+    <div className="flex relative items-center gap-6">
       {/*<div className="rounded-[20px]">*/}
-      <div className="w-full flex flex-col py-5 px-6 rounded-[20px] border border-gray-300 gap-3 bg-gray-100">
+      <div className="w-full relative flex flex-col py-5 px-6 rounded-[20px] border border-gray-300 gap-3 bg-gray-100">
         <div className="flex gap-2.5">
           <AssetLogo
             tokenAddress={USDC_ADDRESS}
@@ -33,7 +33,7 @@ const KakietoTokeni = () => {
       <Button
         variant="white"
         size="icon"
-        className="size-12 rounded-xl absolute left-[59.30%] cursor-default"
+        className="size-12 rounded-xl absolute left-[46%] cursor-default"
         style={{
           boxShadow: "0px 4px 8px -3px rgba(11, 42, 60, 0.08)",
         }}
