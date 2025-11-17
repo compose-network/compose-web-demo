@@ -33,7 +33,7 @@ const schema = z.object({
   }),
 });
 
-const Flashloans = () => {
+export const Flashloans = () => {
   const { isConnected } = useAccount();
 
   const form = useForm<z.infer<typeof schema>>({
@@ -53,16 +53,6 @@ const Flashloans = () => {
 
   return (
     <>
-      {/*<TransactionModal*/}
-      {/*  title={"Flashloan"}*/}
-      {/*  data={transactionData}*/}
-      {/*  errorMessage={errorMessage}*/}
-      {/*  isOpen={!!transactionData}*/}
-      {/*  onOpenChange={(open) => {*/}
-      {/*    if (open) return;*/}
-      {/*    return setTransactionData(null);*/}
-      {/*  }}*/}
-      {/*/>*/}
       <Form {...form}>
         <Text variant={"headline4"} className="font-normal">
           Cross Chain Flashloans
@@ -123,14 +113,6 @@ const Flashloans = () => {
           </div>
           <Divider />
           <FlashloansRoute />
-          {/*<DashedArrow />*/}
-          {/*<ActionRoute*/}
-          {/*  type={"swap"}*/}
-          {/*  from={zeroAddress}*/}
-          {/*  fromChainId={rollupB.id}*/}
-          {/*  to={zeroAddress}*/}
-          {/*  toChainId={rollupB.id}*/}
-          {/*/>*/}
           {isConnected ? (
             <Button
               size="xl"
@@ -149,4 +131,4 @@ const Flashloans = () => {
   );
 };
 
-export default Flashloans;
+Flashloans.displayName = "Flashloans";

@@ -41,7 +41,8 @@ export const AssetLogo: AssetLogoFC = ({
         <HiOutlineDocumentText
           className="size-full"
           style={{
-            filter: "drop-shadow(0 0 15px #F49E34) drop-shadow(0 0 30px #F49E34)",
+            filter:
+              "drop-shadow(0 0 15px #F49E34) drop-shadow(0 0 30px #F49E34)",
             textShadow: "0 0 15px #F49E34, 0 0 30px #F49E34",
           }}
         />
@@ -49,7 +50,6 @@ export const AssetLogo: AssetLogoFC = ({
         <img {...props} className={cn("rounded-md size-full")} src={logoSrc} />
       )}
 
-      {/*<img {...props} className={cn("rounded-md size-full")} src={logoSrc} />*/}
       <ChainIcon
         chainId={chainId}
         className="absolute -bottom-1 -right-1 pointer-events-none"

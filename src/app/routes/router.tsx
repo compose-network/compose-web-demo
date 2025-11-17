@@ -13,16 +13,14 @@ import { Bridge } from "@/components/swap/bridge";
 import { Navigate } from "react-router";
 import { Accounts } from "@/app/routes/accounts";
 import { Container } from "@/components/ui/container";
-import Flashloans from "@/components/flashloans/flashloans.tsx";
+import { Flashloans } from "@/components/flashloans/flashloans.tsx";
 
 const routes = [
   {
     path: "",
     element: (
       <DashboardLayout>
-        {/*<MainPage>*/}
         <Outlet />
-        {/*</MainPage>*/}
       </DashboardLayout>
     ),
     children: [
