@@ -205,3 +205,30 @@ body {
   background-color: var(--gray-400);
   border-radius: 100px;
 }
+
+
+.animated-gradient-text {
+  background: linear-gradient(
+    to right,
+    rgba(20, 181, 192, 0.6) 0%,
+    rgba(42, 190, 201, 0.6) 25%,
+    rgba(36, 185, 121, 0.6) 50%,
+    rgba(242, 148, 34, 0.6) 75%,
+    rgba(230, 135, 19, 0.6) 100%
+  );
+  background-size: 500% auto; /* Significantly larger background */
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-fill-color: transparent;
+  animation: textShine 900ms linear infinite alternate; /* Apply animation */
+}
+
+@keyframes textShine {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}

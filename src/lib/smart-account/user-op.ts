@@ -3,21 +3,23 @@ import { MailboxABI } from "@/lib/abi/swap/mailbox";
 import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
 import { TokenABI } from "@/lib/abi/token";
 import { tryCatch } from "@/lib/utils/tryCatch";
-import {
+import type {
   Address,
+  DecodeEventLogReturnType,
+  Hex,
+  Log} from "viem";
+import {
   concatHex,
   decodeErrorResult,
   decodeEventLog,
-  DecodeEventLogReturnType,
   erc20Abi,
-  Hex,
   isHex,
-  Log,
   toHex,
   zeroAddress,
 } from "viem";
 import type { PrepareUserOperationReturnType } from "viem/account-abstraction";
 import { WETHAbi } from "../abi/weth";
+import { UniswapV3SwapRouterV2ABI } from "@/lib/abi/uniswapv3/swap-router-v2";
 
 export function toRpcUserOpCanonical(op: PrepareUserOperationReturnType) {
   const hx = (v: string | bigint) =>
@@ -77,6 +79,7 @@ const abis = [
   erc20Abi,
   MailboxABI,
   WETHAbi,
+  UniswapV3SwapRouterV2ABI,
 ];
 export const decodeUserOperationLogs = (logs: Log[]) => {
   console.log("abis:", abis);

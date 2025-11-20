@@ -59,7 +59,7 @@ export const TokenInput: TokenInputFC = ({
           // max={account.isConnected ? asset.balance : undefined}
           className={cn("border-none text-3xl px-0 h-full", {
             "text-gray-500": readOnly,
-            "animate-pulse opacity-50": isLoading,
+            "animate-pulse opacity-50 animated-gradient-text": isLoading,
           })}
         />
         <TokenPicker

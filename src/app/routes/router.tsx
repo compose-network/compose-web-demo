@@ -12,6 +12,7 @@ import { MainPage } from "@/components/swap/main";
 import { Bridge } from "@/components/swap/bridge";
 import { Navigate } from "react-router";
 import { Accounts } from "@/app/routes/accounts";
+import { Playground } from "@/app/routes/playground";
 import { Container } from "@/components/ui/container";
 
 const routes = [
@@ -51,6 +52,16 @@ const routes = [
     element: (
       <DashboardLayout>
         <Compliance />
+      </DashboardLayout>
+    ),
+  },
+  {
+    path: "/playground",
+    element: (
+      <DashboardLayout>
+        <MainPage>
+          <Playground />
+        </MainPage>
       </DashboardLayout>
     ),
   },

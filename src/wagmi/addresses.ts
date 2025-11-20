@@ -3,6 +3,7 @@ import { getEntryPoint } from "@zerodev/sdk/constants";
 import type { Address } from "viem";
 import { parseContractAddress } from "./rpc-env";
 
+export * from "./uniswap";
 export const ENTRYPOINT_WITH_VERSION = getEntryPoint("0.7");
 export const ENTRYPOINT_ADDRESS = ENTRYPOINT_WITH_VERSION.address;
 
@@ -117,3 +118,5 @@ export const SSV_ADDRESS: Address = parseContractAddress(
   "VITE_SSV_ADDRESS",
   DEFAULT_SSV_ADDRESS,
 );
+
+
