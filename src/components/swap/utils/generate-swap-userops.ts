@@ -1,23 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { getBridgeAddress, WETH_ADDRESS } from "@/wagmi/addresses";
-import { type Address, encodeFunctionData, type Hex, zeroAddress } from "viem";
-import { rollupA, rollupB, rollupBSwapContract } from "@/wagmi/config";
-import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
-import { TokenABI } from "@/lib/abi/token";
+import { getBridgeAddress, UNISWAP_V3, WETH_ADDRESS } from "@/wagmi/addresses";
+import { type Address, type Hex, zeroAddress } from "viem";
+import { rollupA, rollupB } from "@/wagmi/config";
 import type { CreateKernelAccountReturnType } from "@zerodev/sdk";
 import {
   createRollupPublicClient,
   createRollupPublicClients,
   createUserOp,
 } from "@/components/swap/utils/core";
-import { SwapABI } from "@/lib/abi/swap/swap";
-import { getToken, isAddressEqual } from "@/wagmi/tokens";
+import { isAddressEqual } from "@/wagmi/tokens";
 import type { ComposedSignedUserOpsTxReturnType } from "@/lib/smart-account/user-op";
 import { toRpcUserOpCanonical } from "@/lib/smart-account/user-op";
 import type { PrepareUserOperationReturnType } from "viem/account-abstraction";
 import { prepareUserOperation } from "viem/account-abstraction";
 import { encodeXtMessage } from "@/lib/smart-account/xt";
-import { WETHAbi } from "@/lib/abi/weth";
 import {
   addDecodedEventsToReceipt,
   type DecodedReceipt,
@@ -27,6 +23,14 @@ import { globals } from "@/config";
 import { omit } from "lodash-es";
 import { signUserOperations } from "@zerodev/multi-chain-ecdsa-validator/actions";
 import { safeStringify } from "@/lib/utils/bigint.ts";
+import {
+  erc20Encoder,
+  rollupBridgeEncoder,
+  uniswapEncoders,
+  wethEncoder,
+} from "@/lib/contract-interactions/encoders";
+
+const routerV2RollupBContract = UNISWAP_V3[rollupB.id].SWAP_ROUTER02;
 
 type UserOpSwapOptions = {
   onSignedUserOps?: (userOps: PrepareUserOperationReturnType[]) => void;
@@ -72,7 +76,6 @@ export const createSwapUserOpsFrom_A_to_B = async (
   const sourceChainId = rollupA.id;
   const destChainId = rollupB.id;
 
-  console.log("amountOut:", amountOut);
   const [sourcePublicClient, destPublicClient] = createRollupPublicClients(
     sourceChainId,
     destChainId,
@@ -93,27 +96,23 @@ export const createSwapUserOpsFrom_A_to_B = async (
         {
           to: fromToken,
           value: 0n,
-          data: encodeFunctionData({
-            abi: TokenABI,
-            functionName: "transferFrom",
-            args: [eoaAddress, kernelA.address, amountIn],
+          data: erc20Encoder.transferFrom({
+            sender: eoaAddress,
+            recipient: kernelA.address,
+            amount: amountIn,
           }),
         },
         {
           to: sourceBridgeContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: UserOperationBridgeAbi,
-            functionName: "send",
-            args: [
-              BigInt(destChainId),
-              fromToken,
-              kernelA.address,
-              kernelB.address,
-              amountIn,
-              sessionId,
-              destBridgeContract,
-            ],
+          data: rollupBridgeEncoder.send({
+            otherChainId: BigInt(destChainId),
+            token: fromToken,
+            sender: kernelA.address,
+            receiver: kernelB.address,
+            amount: amountIn,
+            sessionId: sessionId,
+            destBridge: destBridgeContract,
           }),
         },
       ],
@@ -125,39 +124,35 @@ export const createSwapUserOpsFrom_A_to_B = async (
         {
           to: destBridgeContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: UserOperationBridgeAbi,
-            functionName: "receiveTokens",
-            args: [
-              BigInt(sourceChainId),
-              kernelA.address,
-              kernelB.address,
-              sessionId,
-              sourceBridgeContract,
-            ],
+          data: rollupBridgeEncoder.receiveTokens({
+            otherChainId: BigInt(sourceChainId),
+            sender: kernelA.address,
+            receiver: kernelB.address,
+            sessionId: sessionId,
+            srcBridge: sourceBridgeContract,
           }),
         },
         {
           to: fromToken,
           value: 0n,
-          data: encodeFunctionData({
-            abi: TokenABI,
-            functionName: "approve",
-            args: [rollupBSwapContract, globals.MAX_WEI_AMOUNT],
+          data: erc20Encoder.approve({
+            spender: routerV2RollupBContract,
+            amount: globals.MAX_WEI_AMOUNT,
           }),
         },
         {
-          to: rollupBSwapContract,
+          to: routerV2RollupBContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: SwapABI,
-            functionName: "swap",
-            args: [
-              kernelB.address,
-              getToken(fromToken)?.id ?? 0,
-              getToken(isSwappingToETH ? WETH_ADDRESS : toToken)?.id ?? 0,
-              amountIn,
-            ],
+          data: uniswapEncoders.routerV2.exactInputSingle({
+            params: {
+              tokenIn: fromToken,
+              tokenOut: isSwappingToETH ? WETH_ADDRESS : toToken,
+              amountIn: amountIn,
+              amountOutMinimum: amountOut,
+              sqrtPriceLimitX96: 0n,
+              fee: 100,
+              recipient: kernelB.address,
+            },
           }),
         },
         ...(isSwappingToETH
@@ -165,11 +160,7 @@ export const createSwapUserOpsFrom_A_to_B = async (
               {
                 to: WETH_ADDRESS,
                 value: 0n,
-                data: encodeFunctionData({
-                  abi: WETHAbi,
-                  functionName: "withdraw",
-                  args: [amountOut],
-                }),
+                data: wethEncoder.withdraw({ wad: amountOut }),
               },
               {
                 to: eoaAddress,
@@ -181,10 +172,9 @@ export const createSwapUserOpsFrom_A_to_B = async (
               {
                 to: toToken,
                 value: 0n,
-                data: encodeFunctionData({
-                  abi: TokenABI,
-                  functionName: "transfer",
-                  args: [eoaAddress, amountOut],
+                data: erc20Encoder.transfer({
+                  recipient: eoaAddress,
+                  amount: amountOut,
                 }),
               },
             ]),
@@ -320,50 +310,46 @@ export const createSwapUserOpsFrom_B_to_A = async (
         {
           to: fromToken,
           value: 0n,
-          data: encodeFunctionData({
-            abi: TokenABI,
-            functionName: "transferFrom",
-            args: [eoaAddress, kernelB.address, amountIn],
+          data: erc20Encoder.transferFrom({
+            sender: eoaAddress,
+            recipient: kernelB.address,
+            amount: amountIn,
           }),
         },
         {
           to: fromToken,
           value: 0n,
-          data: encodeFunctionData({
-            abi: TokenABI,
-            functionName: "approve",
-            args: [rollupBSwapContract, amountIn],
+          data: erc20Encoder.approve({
+            spender: routerV2RollupBContract,
+            amount: amountIn,
           }),
         },
         {
-          to: rollupBSwapContract,
+          to: routerV2RollupBContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: SwapABI,
-            functionName: "swap",
-            args: [
-              kernelB.address,
-              getToken(fromToken)?.id ?? 0,
-              getToken(isSwappingToETH ? WETH_ADDRESS : toToken)?.id ?? 0,
-              amountIn,
-            ],
+          data: uniswapEncoders.routerV2.exactInputSingle({
+            params: {
+              tokenIn: fromToken,
+              tokenOut: isSwappingToETH ? WETH_ADDRESS : toToken,
+              amountIn: amountIn,
+              amountOutMinimum: amountOut,
+              sqrtPriceLimitX96: 0n,
+              fee: 100,
+              recipient: kernelB.address,
+            },
           }),
         },
         {
           to: sourceBridgeContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: UserOperationBridgeAbi,
-            functionName: "send",
-            args: [
-              BigInt(destChainId),
-              isSwappingToETH ? WETH_ADDRESS : toToken,
-              kernelB.address,
-              kernelA.address,
-              amountOut,
-              sessionId,
-              destBridgeContract,
-            ],
+          data: rollupBridgeEncoder.send({
+            otherChainId: BigInt(destChainId),
+            token: isSwappingToETH ? WETH_ADDRESS : toToken,
+            sender: kernelB.address,
+            receiver: kernelA.address,
+            amount: amountOut,
+            sessionId: sessionId,
+            destBridge: destBridgeContract,
           }),
         },
       ],
@@ -375,16 +361,12 @@ export const createSwapUserOpsFrom_B_to_A = async (
         {
           to: destBridgeContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: UserOperationBridgeAbi,
-            functionName: "receiveTokens",
-            args: [
-              BigInt(sourceChainId),
-              kernelB.address,
-              kernelA.address,
-              sessionId,
-              sourceBridgeContract,
-            ],
+          data: rollupBridgeEncoder.receiveTokens({
+            otherChainId: BigInt(sourceChainId),
+            sender: kernelB.address,
+            receiver: kernelA.address,
+            sessionId: sessionId,
+            srcBridge: sourceBridgeContract,
           }),
         },
         ...(isSwappingToETH
@@ -392,11 +374,7 @@ export const createSwapUserOpsFrom_B_to_A = async (
               {
                 to: WETH_ADDRESS,
                 value: 0n,
-                data: encodeFunctionData({
-                  abi: WETHAbi,
-                  functionName: "withdraw",
-                  args: [amountOut],
-                }),
+                data: wethEncoder.withdraw({ wad: amountOut }),
               },
               {
                 to: eoaAddress,
@@ -408,10 +386,9 @@ export const createSwapUserOpsFrom_B_to_A = async (
               {
                 to: toToken,
                 value: 0n,
-                data: encodeFunctionData({
-                  abi: TokenABI,
-                  functionName: "transfer",
-                  args: [eoaAddress, amountOut],
+                data: erc20Encoder.transfer({
+                  recipient: eoaAddress,
+                  amount: amountOut,
                 }),
               },
             ]),
@@ -544,50 +521,42 @@ export const createSwapETHForERC20UserOps_B_to_A = async (
         {
           to: WETH_ADDRESS,
           value: amountIn,
-          data: encodeFunctionData({
-            abi: WETHAbi,
-            functionName: "deposit",
-            args: [],
-          }),
+          data: wethEncoder.deposit(),
         },
         {
           to: WETH_ADDRESS,
           value: 0n,
-          data: encodeFunctionData({
-            abi: TokenABI,
-            functionName: "approve",
-            args: [rollupBSwapContract, amountIn],
+          data: erc20Encoder.approve({
+            spender: routerV2RollupBContract,
+            amount: amountIn,
           }),
         },
         {
-          to: rollupBSwapContract,
+          to: routerV2RollupBContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: SwapABI,
-            functionName: "swap",
-            args: [
-              kernelB.address,
-              getToken(WETH_ADDRESS)?.id ?? 0,
-              getToken(toToken)?.id ?? 0,
-              amountIn,
-            ],
+          data: uniswapEncoders.routerV2.exactInputSingle({
+            params: {
+              tokenIn: WETH_ADDRESS,
+              tokenOut: toToken,
+              amountIn: amountIn,
+              amountOutMinimum: amountOut,
+              sqrtPriceLimitX96: 0n,
+              fee: 100,
+              recipient: kernelB.address,
+            },
           }),
         },
         {
           to: sourceBridgeContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: UserOperationBridgeAbi,
-            functionName: "send",
-            args: [
-              BigInt(destChainId),
-              toToken,
-              kernelB.address,
-              kernelA.address,
-              amountOut,
-              sessionId,
-              destBridgeContract,
-            ],
+          data: rollupBridgeEncoder.send({
+            otherChainId: BigInt(destChainId),
+            token: toToken,
+            sender: kernelB.address,
+            receiver: kernelA.address,
+            amount: amountOut,
+            sessionId: sessionId,
+            destBridge: destBridgeContract,
           }),
         },
       ],
@@ -599,25 +568,20 @@ export const createSwapETHForERC20UserOps_B_to_A = async (
         {
           to: destBridgeContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: UserOperationBridgeAbi,
-            functionName: "receiveTokens",
-            args: [
-              BigInt(sourceChainId),
-              kernelB.address,
-              kernelA.address,
-              sessionId,
-              sourceBridgeContract,
-            ],
+          data: rollupBridgeEncoder.receiveTokens({
+            otherChainId: BigInt(sourceChainId),
+            sender: kernelB.address,
+            receiver: kernelA.address,
+            sessionId: sessionId,
+            srcBridge: sourceBridgeContract,
           }),
         },
         {
           to: toToken,
           value: 0n,
-          data: encodeFunctionData({
-            abi: TokenABI,
-            functionName: "transfer",
-            args: [eoaAddress, amountOut],
+          data: erc20Encoder.transfer({
+            recipient: eoaAddress,
+            amount: amountOut,
           }),
         },
       ],
@@ -748,27 +712,19 @@ export const createSwapETHForERC20UserOps_A_to_B = async (
         {
           to: WETH_ADDRESS,
           value: amountIn,
-          data: encodeFunctionData({
-            abi: WETHAbi,
-            functionName: "deposit",
-            args: [],
-          }),
+          data: wethEncoder.deposit(),
         },
         {
           to: sourceBridgeContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: UserOperationBridgeAbi,
-            functionName: "send",
-            args: [
-              BigInt(destChainId),
-              WETH_ADDRESS,
-              kernelA.address,
-              kernelB.address,
-              amountIn,
-              sessionId,
-              destBridgeContract,
-            ],
+          data: rollupBridgeEncoder.send({
+            otherChainId: BigInt(destChainId),
+            token: WETH_ADDRESS,
+            sender: kernelA.address,
+            receiver: kernelB.address,
+            amount: amountIn,
+            sessionId: sessionId,
+            destBridge: destBridgeContract,
           }),
         },
       ],
@@ -780,48 +736,35 @@ export const createSwapETHForERC20UserOps_A_to_B = async (
         {
           to: destBridgeContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: UserOperationBridgeAbi,
-            functionName: "receiveTokens",
-            args: [
-              BigInt(sourceChainId),
-              kernelA.address,
-              kernelB.address,
-              sessionId,
-              sourceBridgeContract,
-            ],
+          data: rollupBridgeEncoder.receiveTokens({
+            otherChainId: BigInt(sourceChainId),
+            sender: kernelA.address,
+            receiver: kernelB.address,
+            sessionId: sessionId,
+            srcBridge: sourceBridgeContract,
           }),
         },
         {
           to: WETH_ADDRESS,
           value: 0n,
-          data: encodeFunctionData({
-            abi: TokenABI,
-            functionName: "approve",
-            args: [rollupBSwapContract, globals.MAX_WEI_AMOUNT],
+          data: erc20Encoder.approve({
+            spender: routerV2RollupBContract,
+            amount: globals.MAX_WEI_AMOUNT,
           }),
         },
         {
-          to: rollupBSwapContract,
+          to: routerV2RollupBContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: SwapABI,
-            functionName: "swap",
-            args: [
-              kernelB.address,
-              getToken(WETH_ADDRESS)?.id ?? 0,
-              getToken(toToken)?.id ?? 0,
-              amountIn,
-            ],
-          }),
-        },
-        {
-          to: toToken,
-          value: 0n,
-          data: encodeFunctionData({
-            abi: TokenABI,
-            functionName: "transfer",
-            args: [eoaAddress, amountOut],
+          data: uniswapEncoders.routerV2.exactInputSingle({
+            params: {
+              tokenIn: WETH_ADDRESS,
+              tokenOut: toToken,
+              amountIn: amountIn,
+              amountOutMinimum: amountOut,
+              sqrtPriceLimitX96: 0n,
+              fee: 100,
+              recipient: eoaAddress,
+            },
           }),
         },
       ],
@@ -956,42 +899,34 @@ export const createSwapUserOpsFrom_A_to_A = async (
         {
           to: fromToken,
           value: 0n,
-          data: encodeFunctionData({
-            abi: TokenABI,
-            functionName: "transferFrom",
-            args: [eoaAddress, kernelA.address, amountIn],
+          data: erc20Encoder.transferFrom({
+            sender: eoaAddress,
+            recipient: kernelA.address,
+            amount: amountIn,
           }),
         },
         {
           to: rollupABridgeContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: UserOperationBridgeAbi,
-            functionName: "send",
-            args: [
-              BigInt(rollupBChainId),
-              fromToken,
-              kernelA.address,
-              kernelB.address,
-              amountIn,
-              firstBridgeSessionId,
-              rollupBBridgeContract,
-            ],
+          data: rollupBridgeEncoder.send({
+            otherChainId: BigInt(rollupBChainId),
+            token: fromToken,
+            sender: kernelA.address,
+            receiver: kernelB.address,
+            amount: amountIn,
+            sessionId: firstBridgeSessionId,
+            destBridge: rollupBBridgeContract,
           }),
         },
         {
           to: rollupABridgeContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: UserOperationBridgeAbi,
-            functionName: "receiveTokens",
-            args: [
-              BigInt(rollupBChainId),
-              kernelB.address,
-              kernelA.address,
-              secondBridgeSessionId,
-              rollupBBridgeContract,
-            ],
+          data: rollupBridgeEncoder.receiveTokens({
+            otherChainId: BigInt(rollupBChainId),
+            sender: kernelB.address,
+            receiver: kernelA.address,
+            sessionId: secondBridgeSessionId,
+            srcBridge: rollupBBridgeContract,
           }),
         },
         ...(isSwappingToETH
@@ -999,11 +934,7 @@ export const createSwapUserOpsFrom_A_to_A = async (
               {
                 to: WETH_ADDRESS,
                 value: 0n,
-                data: encodeFunctionData({
-                  abi: WETHAbi,
-                  functionName: "withdraw",
-                  args: [amountOut],
-                }),
+                data: wethEncoder.withdraw({ wad: amountOut }),
               },
               {
                 to: eoaAddress,
@@ -1015,10 +946,9 @@ export const createSwapUserOpsFrom_A_to_A = async (
               {
                 to: toToken,
                 value: 0n,
-                data: encodeFunctionData({
-                  abi: TokenABI,
-                  functionName: "transfer",
-                  args: [eoaAddress, amountOut],
+                data: erc20Encoder.transfer({
+                  recipient: eoaAddress,
+                  amount: amountOut,
                 }),
               },
             ]),
@@ -1031,56 +961,48 @@ export const createSwapUserOpsFrom_A_to_A = async (
         {
           to: rollupBBridgeContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: UserOperationBridgeAbi,
-            functionName: "receiveTokens",
-            args: [
-              BigInt(rollupAChainId),
-              kernelA.address,
-              kernelB.address,
-              firstBridgeSessionId,
-              rollupABridgeContract,
-            ],
+          data: rollupBridgeEncoder.receiveTokens({
+            otherChainId: BigInt(rollupAChainId),
+            sender: kernelA.address,
+            receiver: kernelB.address,
+            sessionId: firstBridgeSessionId,
+            srcBridge: rollupABridgeContract,
           }),
         },
         {
           to: fromToken,
           value: 0n,
-          data: encodeFunctionData({
-            abi: TokenABI,
-            functionName: "approve",
-            args: [rollupBSwapContract, amountIn],
+          data: erc20Encoder.approve({
+            spender: routerV2RollupBContract,
+            amount: amountIn,
           }),
         },
         {
-          to: rollupBSwapContract,
+          to: routerV2RollupBContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: SwapABI,
-            functionName: "swap",
-            args: [
-              kernelB.address,
-              getToken(fromToken)?.id ?? 0,
-              getToken(isSwappingToETH ? WETH_ADDRESS : toToken)?.id ?? 0,
-              amountIn,
-            ],
+          data: uniswapEncoders.routerV2.exactInputSingle({
+            params: {
+              tokenIn: fromToken,
+              tokenOut: isSwappingToETH ? WETH_ADDRESS : toToken,
+              amountIn: amountIn,
+              amountOutMinimum: amountOut,
+              sqrtPriceLimitX96: 0n,
+              fee: 100,
+              recipient: kernelB.address,
+            },
           }),
         },
         {
           to: rollupBBridgeContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: UserOperationBridgeAbi,
-            functionName: "send",
-            args: [
-              BigInt(rollupAChainId),
-              isSwappingToETH ? WETH_ADDRESS : toToken,
-              kernelB.address,
-              kernelA.address,
-              amountOut,
-              secondBridgeSessionId,
-              rollupABridgeContract,
-            ],
+          data: rollupBridgeEncoder.send({
+            otherChainId: BigInt(rollupAChainId),
+            token: isSwappingToETH ? WETH_ADDRESS : toToken,
+            sender: kernelB.address,
+            receiver: kernelA.address,
+            amount: amountOut,
+            sessionId: secondBridgeSessionId,
+            destBridge: rollupABridgeContract,
           }),
         },
       ],
@@ -1212,51 +1134,40 @@ export const createSwapETHtoERC20UserOpsFrom_A_to_A = async (
         {
           to: WETH_ADDRESS,
           value: amountIn,
-          data: encodeFunctionData({
-            abi: WETHAbi,
-            functionName: "deposit",
-            args: [],
+          data: wethEncoder.deposit(),
+        },
+        {
+          // Bridge to B to do the swap
+          to: rollupABridgeContract,
+          value: 0n,
+          data: rollupBridgeEncoder.send({
+            otherChainId: BigInt(rollupBChainId),
+            token: WETH_ADDRESS,
+            sender: kernelA.address,
+            receiver: kernelB.address,
+            amount: amountIn,
+            sessionId: firstBridgeSessionId,
+            destBridge: rollupBBridgeContract,
           }),
         },
         {
+          // [Bridge Back] Receive Tokens from B after the swap is completed on rollup B.
           to: rollupABridgeContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: UserOperationBridgeAbi,
-            functionName: "send",
-            args: [
-              BigInt(rollupBChainId),
-              WETH_ADDRESS,
-              kernelA.address,
-              kernelB.address,
-              amountIn,
-              firstBridgeSessionId,
-              rollupBBridgeContract,
-            ],
-          }),
-        },
-        {
-          to: rollupABridgeContract,
-          value: 0n,
-          data: encodeFunctionData({
-            abi: UserOperationBridgeAbi,
-            functionName: "receiveTokens",
-            args: [
-              BigInt(rollupBChainId),
-              kernelB.address,
-              kernelA.address,
-              secondBridgeSessionId,
-              rollupBBridgeContract,
-            ],
+          data: rollupBridgeEncoder.receiveTokens({
+            otherChainId: BigInt(rollupBChainId),
+            sender: kernelB.address,
+            receiver: kernelA.address,
+            sessionId: secondBridgeSessionId,
+            srcBridge: rollupABridgeContract,
           }),
         },
         {
           to: toToken,
           value: 0n,
-          data: encodeFunctionData({
-            abi: TokenABI,
-            functionName: "transfer",
-            args: [eoaAddress, amountOut],
+          data: erc20Encoder.transfer({
+            recipient: eoaAddress,
+            amount: amountOut,
           }),
         },
       ],
@@ -1268,56 +1179,48 @@ export const createSwapETHtoERC20UserOpsFrom_A_to_A = async (
         {
           to: rollupBBridgeContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: UserOperationBridgeAbi,
-            functionName: "receiveTokens",
-            args: [
-              BigInt(rollupAChainId),
-              kernelA.address,
-              kernelB.address,
-              firstBridgeSessionId,
-              rollupABridgeContract,
-            ],
+          data: rollupBridgeEncoder.receiveTokens({
+            otherChainId: BigInt(rollupAChainId),
+            sender: kernelA.address,
+            receiver: kernelB.address,
+            sessionId: firstBridgeSessionId,
+            srcBridge: rollupABridgeContract,
           }),
         },
         {
           to: WETH_ADDRESS,
           value: 0n,
-          data: encodeFunctionData({
-            abi: TokenABI,
-            functionName: "approve",
-            args: [rollupBSwapContract, amountIn],
+          data: erc20Encoder.approve({
+            spender: routerV2RollupBContract,
+            amount: amountIn,
           }),
         },
         {
-          to: rollupBSwapContract,
+          to: routerV2RollupBContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: SwapABI,
-            functionName: "swap",
-            args: [
-              kernelB.address,
-              getToken(WETH_ADDRESS)?.id ?? 0,
-              getToken(toToken)?.id ?? 0,
+          data: uniswapEncoders.routerV2.exactInputSingle({
+            params: {
+              tokenIn: WETH_ADDRESS,
               amountIn,
-            ],
+              amountOutMinimum: amountOut,
+              tokenOut: toToken,
+              recipient: kernelB.address,
+              fee: 100,
+              sqrtPriceLimitX96: 0n,
+            },
           }),
         },
         {
           to: rollupBBridgeContract,
           value: 0n,
-          data: encodeFunctionData({
-            abi: UserOperationBridgeAbi,
-            functionName: "send",
-            args: [
-              BigInt(rollupAChainId),
-              toToken,
-              kernelB.address,
-              kernelA.address,
-              amountOut,
-              secondBridgeSessionId,
-              rollupABridgeContract,
-            ],
+          data: rollupBridgeEncoder.send({
+            otherChainId: BigInt(rollupAChainId),
+            token: toToken,
+            sender: kernelB.address,
+            receiver: kernelA.address,
+            amount: amountOut,
+            sessionId: secondBridgeSessionId,
+            destBridge: rollupABridgeContract,
           }),
         },
       ],
@@ -1435,6 +1338,9 @@ export const createSwapUserOpsFrom_B_to_B = async (
   const isSwappingToETH = isAddressEqual(toToken, zeroAddress);
   const isSwappingFromETH = isAddressEqual(fromToken, zeroAddress);
 
+  const routerV2Contract =
+    UNISWAP_V3[rollupBChainId as keyof typeof UNISWAP_V3]?.SWAP_ROUTER02;
+
   const op = await createUserOp({
     account: kernelB,
     chainId: rollupBChainId,
@@ -1444,21 +1350,17 @@ export const createSwapUserOpsFrom_B_to_B = async (
             {
               to: WETH_ADDRESS,
               value: amountIn,
-              data: encodeFunctionData({
-                abi: WETHAbi,
-                functionName: "deposit",
-                args: [],
-              }),
+              data: wethEncoder.deposit(),
             },
           ]
         : [
             {
               to: fromToken,
               value: 0n,
-              data: encodeFunctionData({
-                abi: TokenABI,
-                functionName: "transferFrom",
-                args: [eoaAddress, kernelA.address, amountIn],
+              data: erc20Encoder.transferFrom({
+                sender: eoaAddress,
+                recipient: kernelA.address,
+                amount: amountIn,
               }),
             },
           ]),
@@ -1466,24 +1368,24 @@ export const createSwapUserOpsFrom_B_to_B = async (
       {
         to: isSwappingFromETH ? WETH_ADDRESS : fromToken,
         value: 0n,
-        data: encodeFunctionData({
-          abi: TokenABI,
-          functionName: "approve",
-          args: [rollupBSwapContract, globals.MAX_WEI_AMOUNT],
+        data: erc20Encoder.approve({
+          spender: routerV2Contract,
+          amount: globals.MAX_WEI_AMOUNT,
         }),
       },
       {
-        to: rollupBSwapContract,
-        value: 0n,
-        data: encodeFunctionData({
-          abi: SwapABI,
-          functionName: "swap",
-          args: [
-            kernelB.address,
-            getToken(isSwappingFromETH ? WETH_ADDRESS : fromToken)?.id ?? 0,
-            getToken(isSwappingToETH ? WETH_ADDRESS : toToken)?.id ?? 0,
+        to: routerV2Contract,
+        value: isSwappingFromETH ? amountIn : 0n,
+        data: uniswapEncoders.routerV2.exactInputSingle({
+          params: {
+            tokenIn: isSwappingFromETH ? WETH_ADDRESS : fromToken,
+            tokenOut: isSwappingToETH ? WETH_ADDRESS : toToken,
+            fee: 100, // Rollup A is 500, Rollup B is 100
+            recipient: isSwappingToETH ? kernelB.address : eoaAddress,
             amountIn,
-          ],
+            amountOutMinimum: amountOut,
+            sqrtPriceLimitX96: 0n,
+          },
         }),
       },
       ...(isSwappingToETH
@@ -1491,11 +1393,7 @@ export const createSwapUserOpsFrom_B_to_B = async (
             {
               to: WETH_ADDRESS,
               value: 0n,
-              data: encodeFunctionData({
-                abi: WETHAbi,
-                functionName: "withdraw",
-                args: [amountOut],
-              }),
+              data: wethEncoder.withdraw({ wad: amountOut }),
             },
             {
               to: eoaAddress,
@@ -1503,17 +1401,7 @@ export const createSwapUserOpsFrom_B_to_B = async (
               data: "0x" as Hex,
             },
           ]
-        : [
-            {
-              to: toToken,
-              value: 0n,
-              data: encodeFunctionData({
-                abi: TokenABI,
-                functionName: "transfer",
-                args: [eoaAddress, amountOut],
-              }),
-            },
-          ]),
+        : []),
     ],
   });
 

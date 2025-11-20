@@ -23,14 +23,18 @@ import { useAccount } from "@/hooks/account/use-account";
 import { useAsset } from "@/hooks/use-asset";
 import { TokenABI } from "@/lib/abi/token";
 import { useApprove } from "@/lib/contract-interactions/erc-20/write/use-approve";
-import {
-  useUniswapV3QuoterContractHooks,
-} from "@/lib/contract-interactions/uniswap-v3/pool";
+import { useUniswapV3QuoterContractHooks } from "@/lib/contract-interactions/uniswap-v3/hooks";
 import { useSmartAccount } from "@/lib/smart-account/kernel";
 import { stringifyBigints } from "@/lib/utils/bigint";
 import { formatCurrency } from "@/lib/utils/number";
+import { isNativeToken } from "@/lib/utils/token";
 import { getErrorMessage } from "@/lib/utils/wagmi";
-import { SSV_ADDRESS, UNISWAP_V3, USDC_ADDRESS } from "@/wagmi/addresses";
+import {
+  SSV_ADDRESS,
+  UNISWAP_V3,
+  USDC_ADDRESS,
+  WETH_ADDRESS,
+} from "@/wagmi/addresses";
 import {
   arbitrumChain,
   baseChain,
@@ -42,6 +46,7 @@ import {
 import { SWAP_CONFIG } from "@/wagmi/swap.ts";
 import { isAddressEqual } from "@/wagmi/tokens";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { keepPreviousData } from "@tanstack/react-query";
 import { cloneDeep } from "lodash-es";
 import { type FC, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -122,8 +127,6 @@ export const Swap: FC = () => {
     },
   );
 
-  const { useQuoteExactInputSingle } = useUniswapV3QuoterContractHooks();
-
   const form = useForm<z.infer<typeof schema>>({
     defaultValues: prevSwapValues,
     resolver: zodResolver(schema),
@@ -131,14 +134,18 @@ export const Swap: FC = () => {
 
   const values = form.watch();
 
+  const { useQuoteExactInputSingle } = useUniswapV3QuoterContractHooks();
+
   const quoteExactInputSingle = useQuoteExactInputSingle(
     {
       params: {
         amountIn: values.fromAmount,
         fee: values.fromChainId === rollupA.id ? 500 : 100, // I don't know what is this, please ask Taylor
         sqrtPriceLimitX96: 0n,
-        tokenIn: values.fromToken,
-        tokenOut: values.toToken,
+        tokenIn: isNativeToken(values.fromToken)
+          ? WETH_ADDRESS
+          : values.fromToken,
+        tokenOut: isNativeToken(values.toToken) ? WETH_ADDRESS : values.toToken,
       },
     },
     {
@@ -147,6 +154,7 @@ export const Swap: FC = () => {
           ?.QUOTER_V2_ADDRESS,
       chainId: values.fromChainId as number,
       enabled: isConnected && !!values.fromChainId,
+      placeholderData: keepPreviousData,
     },
   );
 
@@ -250,10 +258,10 @@ export const Swap: FC = () => {
               spender: is_from_B_to_B
                 ? rollupBSwapContract
                 : values.fromChainId === rollupA.id
-                  // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-                  ? kernel.kernel.data?.accounts.A.address!
-                  // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-                  : kernel.kernel.data?.accounts.B.address!,
+                  ? // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
+                    kernel.kernel.data?.accounts.A.address!
+                  : // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
+                    kernel.kernel.data?.accounts.B.address!,
               amount: globals.MAX_WEI_AMOUNT,
             },
             {
@@ -657,13 +665,19 @@ export const Swap: FC = () => {
                 )
               }
               value={
-                isSameToken
-                  ? values.fromAmount
-                  : (quoteExactInputSingle.data?.[0] ?? 0n)
+                !values.fromAmount
+                  ? 0n
+                  : isSameToken
+                    ? values.fromAmount
+                    : (quoteExactInputSingle.data?.[0] ?? 0n)
               }
               tokenAddress={values.toToken}
               chainId={values.toChainId}
-              isLoading={quoteExactInputSingle.isPending}
+              isLoading={
+                !!values.fromAmount &&
+                (quoteExactInputSingle.isPending ||
+                  quoteExactInputSingle.isFetching)
+              }
               readOnly
               onSelectToken={(token) => {
                 if (isAddressEqual(token, values.fromToken)) {
