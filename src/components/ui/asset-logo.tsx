@@ -5,11 +5,13 @@ import { onlyTokens } from "@/lib/utils/tokens.ts";
 import { cn } from "@/lib/utils/tw";
 import type { Address } from "abitype";
 import type { ComponentPropsWithoutRef, FC } from "react";
+import { HiOutlineDocumentText } from "react-icons/hi";
 
 export type AssetLogoProps = {
   chainId: number;
   tokenAddress: Address;
   fallbackAssetSrc?: string;
+  isFlashLoan?: boolean;
 };
 
 type AssetLogoFC = FC<
@@ -19,6 +21,7 @@ type AssetLogoFC = FC<
 export const AssetLogo: AssetLogoFC = ({
   chainId,
   tokenAddress,
+  isFlashLoan,
   fallbackAssetSrc = "/images/networks/light.svg",
   className,
   ...props
@@ -34,7 +37,19 @@ export const AssetLogo: AssetLogoFC = ({
 
   return (
     <div className={cn("relative size-10", className)}>
-      <img {...props} className={cn("rounded-md size-full")} src={logoSrc} />
+      {isFlashLoan ? (
+        <HiOutlineDocumentText
+          className="size-full"
+          style={{
+            filter:
+              "drop-shadow(0 0 15px #F49E34) drop-shadow(0 0 30px #F49E34)",
+            textShadow: "0 0 15px #F49E34, 0 0 30px #F49E34",
+          }}
+        />
+      ) : (
+        <img {...props} className={cn("rounded-md size-full")} src={logoSrc} />
+      )}
+
       <ChainIcon
         chainId={chainId}
         className="absolute -bottom-1 -right-1 pointer-events-none"

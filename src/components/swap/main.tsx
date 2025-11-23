@@ -4,7 +4,13 @@ import { textVariants } from "@/components/ui/text";
 import { cn } from "@/lib/utils/tw";
 import { useLocation, useNavigate } from "react-router";
 
-export const MainPage = ({ children }: { children: React.ReactNode }) => {
+export const MainPage = ({
+  children,
+  isHidedTabs,
+}: {
+  children: React.ReactNode;
+  isHidedTabs?: boolean;
+}) => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const isSwap = pathname === "/";
@@ -12,45 +18,47 @@ export const MainPage = ({ children }: { children: React.ReactNode }) => {
   const isAccounts = pathname === "/accounts";
   return (
     <Card className={cn("max-w-[648px] mx-auto gap-8 mt-8 rounded-[40px]")}>
-      <Tabs
-        className="w-full"
-        defaultValue="swap"
-        value={
-          isSwap
-            ? "swap"
-            : isBridge
-              ? "bridge"
-              : isAccounts
-                ? "accounts"
-                : "swap"
-        }
-        onValueChange={(value) => {
-          navigate(`/${value}`);
-        }}
-      >
-        <TabsList className="w-full bg-gray-200">
-          <TabsTrigger
-            className={textVariants({
-              variant: "headline4",
-              className:
-                "flex-1 h-[52px] font-semibold data-[state=inactive]:text-gray-500",
-            })}
-            value="bridge"
-          >
-            Bridge
-          </TabsTrigger>
-          <TabsTrigger
-            className={textVariants({
-              variant: "headline4",
-              className:
-                "flex-1 h-[52px] font-semibold data-[state=inactive]:text-gray-500",
-            })}
-            value="swap"
-          >
-            Swap
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {!isHidedTabs && (
+        <Tabs
+          className="w-full"
+          defaultValue="swap"
+          value={
+            isSwap
+              ? "swap"
+              : isBridge
+                ? "bridge"
+                : isAccounts
+                  ? "accounts"
+                  : "swap"
+          }
+          onValueChange={(value) => {
+            navigate(`/${value}`);
+          }}
+        >
+          <TabsList className="w-full bg-gray-200">
+            <TabsTrigger
+              className={textVariants({
+                variant: "headline4",
+                className:
+                  "flex-1 h-[52px] font-semibold data-[state=inactive]:text-gray-500",
+              })}
+              value="bridge"
+            >
+              Bridge
+            </TabsTrigger>
+            <TabsTrigger
+              className={textVariants({
+                variant: "headline4",
+                className:
+                  "flex-1 h-[52px] font-semibold data-[state=inactive]:text-gray-500",
+              })}
+              value="swap"
+            >
+              Swap
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
       {children}
     </Card>
   );

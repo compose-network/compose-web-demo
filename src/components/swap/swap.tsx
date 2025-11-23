@@ -556,7 +556,11 @@ export const Swap: FC = () => {
       setIsLoading(false);
     }
   });
-
+  console.log(!form.formState.isValid);
+  console.log(isLoading);
+  console.log(
+    fromToken.balance !== undefined && values.fromAmount > fromToken.balance,
+  );
   return (
     <>
       <TransactionModal
