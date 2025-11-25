@@ -143,40 +143,75 @@ export const TransactionBridge: FC = () => {
   const submit = form.handleSubmit(async (values) => {
     setIsLoading(true);
     try {
-    await switchChain.switchChainAsync({ chainId: hoodi.id });
-    const id: Hex = `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`;
+      await switchChain.switchChainAsync({ chainId: hoodi.id });
+      const id: Hex = `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`;
 
-    const actionFn = () => {
-      bridgeETH.write(
-        {
-          _minGasLimit: 0,
-          value: values.from.amount,
-          _extraData: id,
-        },
-        {
-          onInitiated: () => {
-            toast({
-              title: "Bridge initiated",
-              description: "Check your wallet to confirm the transaction",
-            });
-            setTransactionData((prev) => {
-              if (!prev) return null;
-              const clone = cloneDeep(prev);
-              clone.actions[0].status = "pending";
-              return clone;
-            });
+      const actionFn = () => {
+        bridgeETH.write(
+          {
+            _minGasLimit: 0,
+            value: values.from.amount,
+            _extraData: id,
           },
-          onConfirmed: (hash) => {
-            setTransactionData((prev) => {
-              if (!prev) return null;
-              const clone = cloneDeep(prev);
-              clone.actions[0].hash = hash;
-              return clone;
-            });
-          },
-          onMined: (receipt) => {
-            console.log("receipt:", receipt);
-            if (receipt.status !== "success") {
+          {
+            onInitiated: () => {
+              toast({
+                title: "Bridge initiated",
+                description: "Check your wallet to confirm the transaction",
+              });
+              setTransactionData((prev) => {
+                if (!prev) return null;
+                const clone = cloneDeep(prev);
+                clone.actions[0].status = "pending";
+                return clone;
+              });
+            },
+            onConfirmed: (hash) => {
+              setTransactionData((prev) => {
+                if (!prev) return null;
+                const clone = cloneDeep(prev);
+                clone.actions[0].hash = hash;
+                return clone;
+              });
+            },
+            onMined: (receipt) => {
+              console.log("receipt:", receipt);
+              if (receipt.status !== "success") {
+                setTransactionData((prev) => {
+                  if (!prev) return null;
+                  const clone = cloneDeep(prev);
+                  clone.actions[0].status = "failed";
+                  return clone;
+                });
+
+                const errMes = "Transaction was reverted by the contract.";
+                setErrorMessage(errMes);
+                toast({
+                  variant: "destructive",
+                  title: "Bridge failed",
+                  description: errMes,
+                });
+
+                throw new Error("Bridge failed");
+              }
+              setTransactionData((prev) => {
+                if (!prev) return null;
+                const clone = cloneDeep(prev);
+                clone.actions[0].status = "success";
+                clone.actions[1].status = "pending";
+                clone.actions[1].name = `${clone.actions[1].name} (in ~2 minutes)`;
+                return clone;
+              });
+              fromToken.refreshBalance();
+              form.reset(
+                merge({}, values, {
+                  from: { amount: 0n },
+                  to: { amount: 0n },
+                }),
+              );
+              form.clearErrors();
+            },
+            onError: (error) => {
               setTransactionData((prev) => {
                 if (!prev) return null;
                 const clone = cloneDeep(prev);
@@ -184,82 +219,44 @@ export const TransactionBridge: FC = () => {
                 return clone;
               });
 
-              const errMes = "Transaction was reverted by the contract.";
+              const errMes = getErrorMessage(error);
               setErrorMessage(errMes);
               toast({
                 variant: "destructive",
                 title: "Bridge failed",
                 description: errMes,
               });
-
-              throw new Error("Bridge failed");
-            }
-            setTransactionData((prev) => {
-              if (!prev) return null;
-              const clone = cloneDeep(prev);
-              clone.actions[0].status = "success";
-              clone.actions[1].status = "pending";
-              clone.actions[1].name = `${clone.actions[1].name} (in ~2 minutes)`;
-              return clone;
-            });
-            fromToken.refreshBalance();
-            form.reset(
-              merge({}, values, {
-                from: { amount: 0n },
-                to: { amount: 0n },
-              }),
-              {
-                keepIsValid: true,
-              },
-            );
-            form.clearErrors();
+            },
           },
-          onError: (error) => {
-            setTransactionData((prev) => {
-              if (!prev) return null;
-              const clone = cloneDeep(prev);
-              clone.actions[0].status = "failed";
-              return clone;
-            });
+        );
+      };
 
-            const errMes = getErrorMessage(error);
-            setErrorMessage(errMes);
-            toast({
-              variant: "destructive",
-              title: "Bridge failed",
-              description: errMes,
-            });
+      setErrorMessage(undefined);
+
+      setTransactionData({
+        id,
+        actions: [
+          {
+            name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
+            chainId: values.from.chainId,
+            status: "idle",
+            signAndSend: () => {
+              setErrorMessage(undefined);
+              actionFn();
+            },
           },
-        },
-      );
-    };
-
-    setErrorMessage(undefined);
-
-    setTransactionData({
-      id,
-      actions: [
-        {
-          name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
-          chainId: values.from.chainId,
-          status: "idle",
-          signAndSend: () => {
-            setErrorMessage(undefined);
-            actionFn();
+          {
+            name: `Get ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
+            chainId: values.to.chainId,
+            status: "idle",
+            signAndSend: undefined,
           },
-        },
-        {
-          name: `Get ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
-          chainId: values.to.chainId,
-          status: "idle",
-          signAndSend: undefined,
-        },
-      ],
-    });
+        ],
+      });
 
-    actionFn();
+      actionFn();
     } catch (error) {
-      console.error('Bridge error:', error);
+      console.error("Bridge error:", error);
     } finally {
       setIsLoading(false);
     }
