@@ -5,6 +5,7 @@ import { UniswapV3QuoterABI } from "@/lib/abi/uniswapv3/quoter";
 import { UniswapV3SwapRouterV2ABI } from "@/lib/abi/uniswapv3/swap-router-v2";
 import { createAbiEncoder } from "@/lib/utils/abi";
 import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
+import { FlashAdapterABI } from "@/lib/abi/flashloan/flash-adapter";
 
 export const uniswapV3QuoterEncoder = createAbiEncoder(UniswapV3QuoterABI);
 export const uniswapV3PoolEncoder = createAbiEncoder(UniswapV3PoolABI);
@@ -22,5 +23,7 @@ export const erc20Encoder = createAbiEncoder(TokenABI);
 export const wethEncoder = createAbiEncoder(WETHAbi);
 
 export const rollupBridgeEncoder = createAbiEncoder(UserOperationBridgeAbi);
+
+export const flashAdapterEncoder = createAbiEncoder(FlashAdapterABI);
 
 

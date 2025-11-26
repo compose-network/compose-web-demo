@@ -72,13 +72,7 @@ const routes = [
   },
   {
     path: "/playground",
-    element: (
-      <DashboardLayout>
-        <MainPage>
-          <Playground />
-        </MainPage>
-      </DashboardLayout>
-    ),
+    element: <Playground />,
   },
   {
     path: "/maintenance",
