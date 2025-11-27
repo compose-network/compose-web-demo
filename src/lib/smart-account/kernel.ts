@@ -1,79 +1,37 @@
-import { useAccount } from "@/hooks/account/use-account";
 import { useEntrypointContract } from "@/lib/abi/entrypoint";
-import {
-  ENTRYPOINT_ADDRESS,
-  ENTRYPOINT_WITH_VERSION,
-  ROLLUP_ADDRESSES,
-} from "@/wagmi/addresses";
-import { rollupA, rollupB } from "@/wagmi/config";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { toMultiChainECDSAValidator } from "@zerodev/multi-chain-ecdsa-validator";
-import type { KernelSmartAccountImplementation } from "@zerodev/sdk";
-import { createKernelAccount } from "@zerodev/sdk";
-import { KERNEL_V3_1 } from "@zerodev/sdk/constants";
-import { type Address, type Client, isAddress } from "viem";
-import { useBalance, usePublicClient, useWalletClient } from "wagmi";
+import { ENTRYPOINT_ADDRESS } from "@/wagmi/addresses";
+import { keepPreviousData } from "@tanstack/react-query";
+import { type Address } from "viem";
+import { useBalance } from "wagmi";
+
+import { useSmartAccount as useSmartAccountSDK } from "@compose-network/sdk/react";
+import { rollupA, rollupB } from "@compose-network/sdk";
 
 export const useSmartAccount = () => {
-  const account = useAccount();
-  const walletClient = useWalletClient();
-  const publicClientA = usePublicClient({ chainId: rollupA.id });
-  const publicClientB = usePublicClient({ chainId: rollupB.id });
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  const kernel: any = { data: undefined };
 
-  const kernel = useQuery({
-    queryKey: ["kernel-accounts", account.address],
-    queryFn: async () => {
-      const [validatorA, validatorB] = await Promise.all([
-        toMultiChainECDSAValidator(publicClientA as Client, {
-          entryPoint: ENTRYPOINT_WITH_VERSION,
-          signer: walletClient.data!,
-          kernelVersion: KERNEL_V3_1,
-          validatorAddress: ROLLUP_ADDRESSES[rollupA.id].MULTICHAIN_VALIDATOR,
-          multiChainIds: [rollupA.id, rollupB.id],
-        }),
-        toMultiChainECDSAValidator(publicClientB as Client, {
-          entryPoint: ENTRYPOINT_WITH_VERSION,
-          signer: walletClient.data!,
-          kernelVersion: KERNEL_V3_1,
-          validatorAddress: ROLLUP_ADDRESSES[rollupB.id].MULTICHAIN_VALIDATOR,
-          multiChainIds: [rollupA.id, rollupB.id],
-        }),
-      ]);
-
-      const [accountA, accountB] = await Promise.all([
-        createKernelAccount(
-          publicClientA as KernelSmartAccountImplementation["client"],
-          {
-            entryPoint: ENTRYPOINT_WITH_VERSION,
-            plugins: { sudo: validatorA },
-            kernelVersion: KERNEL_V3_1,
-            accountImplementationAddress:
-              ROLLUP_ADDRESSES[rollupA.id].KERNEL_IMPL,
-            factoryAddress: ROLLUP_ADDRESSES[rollupA.id].KERNEL_FACTORY,
-            useMetaFactory: false,
-          },
-        ),
-        createKernelAccount(
-          publicClientB as KernelSmartAccountImplementation["client"],
-          {
-            entryPoint: ENTRYPOINT_WITH_VERSION,
-            plugins: { sudo: validatorB },
-            kernelVersion: KERNEL_V3_1,
-            accountImplementationAddress:
-              ROLLUP_ADDRESSES[rollupB.id].KERNEL_IMPL,
-            factoryAddress: ROLLUP_ADDRESSES[rollupB.id].KERNEL_FACTORY,
-            useMetaFactory: false,
-          },
-        ),
-      ]);
-
-      return {
-        accounts: { A: accountA, B: accountB },
-        validators: { A: validatorA, B: validatorB },
-      };
-    },
-    enabled: isAddress(account.address ?? "") && !!walletClient.data,
+  const smartAccountAQuery = useSmartAccountSDK({
+    chainId: rollupA.id,
+    multiChainIds: [rollupA.id, rollupB.id],
   });
+
+  const smartAccountBQuery = useSmartAccountSDK({
+    chainId: rollupB.id,
+    multiChainIds: [rollupA.id, rollupB.id],
+  });
+
+  if (smartAccountAQuery && smartAccountBQuery) {
+    kernel.data!.accounts.A = smartAccountAQuery?.data?.account;
+    kernel.data!.validators.A = smartAccountAQuery?.data?.validator;
+
+    kernel.data!.accounts.B = smartAccountBQuery?.data?.account;
+    kernel.data!.validators.B = smartAccountBQuery?.data?.validator;
+  }
+
+  const publicClientA = smartAccountAQuery?.data?.publicClient;
+
+  const publicClientB = smartAccountBQuery?.data?.publicClient;
 
   const { useBalanceOf, useDepositTo } = useEntrypointContract();
 
@@ -138,9 +96,14 @@ export const useSmartAccount = () => {
     gasBalanceB,
     depositToA,
     depositToB,
+
     kernel,
+
+    smartAccountA: smartAccountAQuery.data,
+    smartAccountB: smartAccountBQuery.data,
+
     getPublicClient,
     getKernelByChainId,
-    isLoading: kernel.isLoading,
+    isLoading: smartAccountAQuery.isLoading || smartAccountBQuery.isLoading,
   };
 };

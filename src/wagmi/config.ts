@@ -15,9 +15,14 @@ import {
   polygon as polygonChain,
 } from "viem/chains";
 import { createConfig } from "wagmi";
+import {
+  createComposeConfig,
+  rollupA,
+  rollupB,
+  rollupsAccountAbstractionContracts,
+} from "@compose-network/sdk";
 
 import {
-  parseBlockExplorerUrl,
   parseChainId,
   parseContractAddress,
   resolveRpcUrls,
@@ -63,16 +68,6 @@ const RPC_DESCRIPTORS = {
 
 const rpcHttp = resolveRpcUrls(RPC_DESCRIPTORS);
 const hoodiChainId = parseChainId("VITE_HOODI_CHAIN_ID", 560048);
-const rollupAChainId = parseChainId("VITE_ROLLUP_A_CHAIN_ID", 77777);
-const rollupBChainId = parseChainId("VITE_ROLLUP_B_CHAIN_ID", 88888);
-const rollupABlockExplorerUrl = parseBlockExplorerUrl(
-  "VITE_ROLLUP_A_BLOCK_EXPLORER_URL",
-  "https://blockscout-rollup-1.stage.ops.ssvlabsinternal.com/",
-);
-const rollupBBlockExplorerUrl = parseBlockExplorerUrl(
-  "VITE_ROLLUP_B_BLOCK_EXPLORER_URL",
-  "https://blockscout-rollup-2.stage.ops.ssvlabsinternal.com/",
-);
 
 const createTransportForUrls = (urls: string[]): Transport => {
   const uniqueUrls = Array.from(new Set(urls));
@@ -103,53 +98,6 @@ export const hoodi = defineChain({
     default: {
       name: "Etherscan",
       url: "https://hoodi.etherscan.io",
-    },
-  },
-  iconBackground: "none",
-  iconUrl: "/images/networks/light.svg",
-  testnet: true,
-});
-export const rollupA = defineChain({
-  id: rollupAChainId,
-  name: "Rollup A",
-  nativeCurrency: {
-    name: "Ethereum",
-    symbol: "ETH",
-    decimals: 18,
-  },
-  rpcUrls: {
-    default: {
-      http: rpcHttp.rollupA,
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "Rollup A",
-      url: rollupABlockExplorerUrl,
-    },
-  },
-  iconBackground: "none",
-  iconUrl: "/images/networks/light.svg",
-  testnet: true,
-});
-
-export const rollupB = defineChain({
-  id: rollupBChainId,
-  name: "Rollup B",
-  nativeCurrency: {
-    name: "Ethereum",
-    symbol: "ETH",
-    decimals: 18,
-  },
-  rpcUrls: {
-    default: {
-      http: rpcHttp.rollupB,
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "Rollup B",
-      url: rollupBBlockExplorerUrl,
     },
   },
   iconBackground: "none",
@@ -224,8 +172,9 @@ export const chains = [
   baseChain,
   arbitrumChain,
   optimismChain,
-] satisfies [Chain, ...Chain[]];
-export const chainsMap = {
+] as const satisfies Readonly<[Chain, ...Chain[]]>;
+
+export const chainsMap: Record<number, Chain> = {
   [rollupA.id]: rollupA,
   [rollupB.id]: rollupB,
   [mainnet.id]: mainnet,
@@ -236,7 +185,7 @@ export const chainsMap = {
   [optimismChain.id]: optimismChain,
 };
 
-export const getChainById = (chainId: number) => {
+export const getChainById = (chainId: number): Chain => {
   return chainsMap[chainId as keyof typeof chainsMap];
 };
 
@@ -245,11 +194,6 @@ export const getExplorerHashUrl = (chainId: number, hash: string) => {
   if (!chain) return "";
   return new URL(`tx/${hash}`, chain.blockExplorers?.default?.url).toString();
 };
-
-export const rollupIdMap = {
-  [rollupA.id]: 1,
-  [rollupB.id]: 2,
-} as const;
 
 const DEFAULT_HOODI_BRIDGE_ADDRESS =
   "0x119b79f1bd3ef2e9e386bf52ca344d6aa3075c93" as Address;
@@ -302,9 +246,6 @@ export const bridgeContracts = {
 } as const;
 
 export type RollupChainId = typeof rollupA.id | typeof rollupB.id;
-export const isChainSupported = (chainId: number) => {
-  return chains.some((chain) => chain.id === chainId);
-};
 
 const connectors = connectorsForWallets(
   [
@@ -320,7 +261,7 @@ const connectors = connectorsForWallets(
 );
 
 export const config = createConfig({
-  chains: [rollupA, rollupB, hoodi],
+  chains,
   connectors: connectors,
   transports: chains.reduce(
     (acc, chain) => {
@@ -337,3 +278,13 @@ export const config = createConfig({
     {} as Record<number, Transport>,
   ),
 });
+
+export const composeConfig = createComposeConfig({
+  wagmi: config,
+  accountAbstractionContracts: {
+    [rollupA.id]: rollupsAccountAbstractionContracts,
+    [rollupB.id]: rollupsAccountAbstractionContracts,
+  },
+});
+
+export { rollupB, rollupA };

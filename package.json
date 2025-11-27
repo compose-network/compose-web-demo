@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@chainsafe/ssz": "^0.18.0",
+    "@compose-network/sdk": "file:/Users/krzysztofjesien/projects/ssv-labs/compose-sdk/compose-network-sdk-0.1.2.tgz",
     "@deepsignal/core": "^4.0.0",
     "@deepsignal/react": "^4.0.0",
     "@fontsource/geist-mono": "^5.2.6",
@@ -109,7 +110,7 @@
     "tailwindcss-animate": "^1.0.7",
     "url-join": "^5.0.0",
     "valtio": "^1.13.2",
-    "viem": "~2.37.6",
+    "viem": "^2.38.4",
     "virtua": "^0.33.2",
     "wagmi": "^2.12.17",
     "xstate": "^5.19.2",
