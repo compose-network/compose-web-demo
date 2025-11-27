@@ -1,201 +1,169 @@
 import { ConnectWalletBtn } from "@/components/connect-wallet/connect-wallet-btn";
-import {
-  createRollupPublicClients,
-  createUserOp,
-} from "@/components/swap/utils/core";
 import { Button } from "@/components/ui/button";
 import { useAccount } from "@/hooks/account/use-account";
-import {
-  erc20Encoder,
-  flashAdapterEncoder,
-  rollupBridgeEncoder,
-} from "@/lib/contract-interactions/encoders";
-import { useSmartAccount } from "@/lib/smart-account/kernel";
-import { toRpcUserOpCanonical } from "@/lib/smart-account/user-op";
-import { encodeXtMessage } from "@/lib/smart-account/xt";
-import { getBridgeAddress, SSV_ADDRESS, UNISWAP_V3 } from "@/wagmi/addresses";
+import { usePoolData } from "@/lib/contract-interactions/uniswap-v3/hooks";
+import { findOptimalLoan } from "@/lib/utils/arbitrage";
+import { UNISWAP_V3 } from "@/wagmi/addresses";
 import { rollupA, rollupB } from "@/wagmi/config";
-import { prepareAndSignUserOperations } from "@zerodev/multi-chain-ecdsa-validator";
+import { useQuery } from "@tanstack/react-query";
 
 import { type FC } from "react";
-import { parseEther } from "viem";
-import { useSwitchChain } from "wagmi";
+import { formatUnits } from "viem";
 
 export const Playground: FC = () => {
   const { address: eoa, isConnected } = useAccount();
-  const switchChain = useSwitchChain();
-  const { kernel } = useSmartAccount();
 
-  const kernelA = kernel.data?.accounts?.A;
-  const kernelB = kernel.data?.accounts?.B;
+  const poolA = usePoolData({
+    contract: UNISWAP_V3[rollupA.id]?.WETH_USDC,
+    chainId: rollupA.id,
+  });
 
-  const runFlash = async () => {
-    if (!isConnected || !eoa) return console.error("Not connected");
-    if (!kernelA || !kernelB) return console.error("Kernel not found");
+  const poolB = usePoolData({
+    contract: UNISWAP_V3[rollupB.id]?.WETH_USDC,
+    chainId: rollupB.id,
+  });
 
-    const [publicClientA, publicClientB] = createRollupPublicClients(
-      rollupA.id,
-      rollupB.id,
-    );
-
-    await switchChain.switchChainAsync({ chainId: rollupA.id });
-
-    const bridgeContractA = getBridgeAddress(rollupA.id);
-    const bridgeContractB = getBridgeAddress(rollupB.id);
-
-    const sessionId = BigInt(Math.floor(Math.random() * 1000000));
-    const sessionId2 = BigInt(Math.floor(Math.random() * 1000000));
-
-    const flashAdapterContract = "0x96c08a7a6d0ae2bec9bb816dbacec39d30c1dfe1";
-
-    const [opA, opB] = await Promise.all([
-      createUserOp({
-        account: kernelA,
-        chainId: rollupA.id,
-        calls: [
-          {
-            to: flashAdapterContract, // Flash Adapter
-            value: 0n,
-            data: flashAdapterEncoder.flash({
-              amount0: parseEther("1"),
-              amount1: 0n,
-              pool: UNISWAP_V3[77777].SSV_LINK,
-              calls: [
-                {
-                  target: bridgeContractA,
-                  value: 0n,
-                  callData: rollupBridgeEncoder.send({
-                    otherChainId: BigInt(rollupB.id),
-                    token: SSV_ADDRESS,
-                    sender: flashAdapterContract,
-                    receiver: kernelB.address,
-                    amount: parseEther("1"),
-                    sessionId: sessionId,
-                    destBridge: bridgeContractB,
-                  }),
-                },
-                {
-                  target: bridgeContractA,
-                  value: 0n,
-                  callData: rollupBridgeEncoder.receiveTokens({
-                    otherChainId: BigInt(rollupB.id),
-                    sender: kernelB.address,
-                    receiver: flashAdapterContract,
-                    sessionId: sessionId2,
-                    srcBridge: bridgeContractB,
-                  }),
-                },
-                {
-                  target: SSV_ADDRESS,
-                  value: 0n,
-                  callData: erc20Encoder.transfer({
-                    recipient: kernelA.address!,
-                    amount: parseEther("2"),
-                  }),
-                },
-              ],
-            }),
-          },
-        ],
-      }),
-      createUserOp({
-        account: kernelB,
-        chainId: rollupB.id,
-        calls: [
-          {
-            to: bridgeContractB,
-            value: 0n,
-            data: rollupBridgeEncoder.receiveTokens({
-              otherChainId: BigInt(rollupA.id),
-              sender: flashAdapterContract,
-              receiver: kernelB.address,
-              sessionId: sessionId,
-              srcBridge: bridgeContractA,
-            }),
-          },
-          {
-            to: bridgeContractB,
-            value: 0n,
-            data: rollupBridgeEncoder.send({
-              otherChainId: BigInt(rollupA.id),
-              token: SSV_ADDRESS,
-              sender: kernelB.address,
-              receiver: flashAdapterContract,
-              amount: parseEther("10"),
-              sessionId: sessionId2,
-              destBridge: bridgeContractA,
-            }),
-          },
-        ],
-      }),
-    ]);
-
-    const [signedA, signedB] = await prepareAndSignUserOperations(
-      [publicClientA, publicClientB],
-      [opA, opB],
-    );
-
-    const userOpA = toRpcUserOpCanonical(signedA);
-    const userOpB = toRpcUserOpCanonical(signedB);
-
-    const [buildA, buildB] = await Promise.all([
-      publicClientA.request({
-        method: "compose_buildSignedUserOpsTx",
-        params: [[userOpA], { chainId: rollupA.id }],
-      }),
-      publicClientB.request({
-        method: "compose_buildSignedUserOpsTx",
-        params: [[userOpB], { chainId: rollupB.id }],
-      }),
-    ]);
-
-    const explorerUrls = [
-      new URL(
-        `tx/${buildA.hash}`,
-        publicClientA.chain.blockExplorers?.default?.url,
-      ).toString(),
-      new URL(
-        `tx/${buildB.hash}`,
-        publicClientB.chain.blockExplorers?.default?.url,
-      ).toString(),
-    ];
-    explorerUrls.forEach((url) => console.log(url));
-
-    Promise.all([
-      publicClientA.waitForTransactionReceipt({
-        hash: buildA.hash,
-      }),
-      publicClientB.waitForTransactionReceipt({
-        hash: buildB.hash,
-      }),
-    ]).then(([receiptA, receiptB]) => {
-      console.log("receiptA:", receiptA);
-      console.log("receiptB:", receiptB);
-    });
-
-    const payload = encodeXtMessage({
-      senderId: "client",
-      entries: [
-        { chainId: rollupA.id, rawTx: buildA.raw as `0x${string}` },
-        { chainId: rollupB.id, rawTx: buildB.raw as `0x${string}` },
-      ],
-    });
-
-    await publicClientA
-      .request({
-        method: "eth_sendXTransaction",
-        params: [payload],
-      })
-      .then((res) => {
-        console.log("eth_sendXTransaction res:", res);
-      });
-  };
+  const arbitrage = useQuery({
+    queryKey: ["arbitrage", poolA.data, poolB.data],
+    queryFn: () => {
+      if (!poolA.data || !poolB.data) return null;
+      return findOptimalLoan(poolA.data, poolB.data);
+    },
+    enabled: !!poolA.data && !!poolB.data,
+  });
 
   return (
-    <div className="w-screen h-screen flex flex-col items-center justify-center">
-      <Button onClick={runFlash} disabled={!isConnected || !eoa}>
-        Run Flash
-      </Button>
+    <div className="w-screen h-screen flex flex-col items-center justify-center gap-4">
+      <div className="flex flex-col gap-4 items-center">
+        <div className="text-lg font-semibold">Pool Reserves</div>
+        <div className="flex gap-6">
+          <div className="p-4 border rounded-lg min-w-[280px]">
+            <div className="text-sm font-semibold text-gray-700 mb-3">
+              Chain A (Rollup A)
+            </div>
+            {poolA.data ? (
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Token0:</span>
+                  <span className="font-mono font-semibold">
+                    {poolA.data.formatted.token0Reserve}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Token1:</span>
+                  <span className="font-mono font-semibold">
+                    {poolA.data.formatted.token1Reserve}
+                  </span>
+                </div>
+                <div className="pt-3 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Price:</span>
+                    <span className="font-mono font-bold text-blue-600">
+                      {poolA.data.formatted.price}
+                    </span>
+                  </div>
+                </div>
+                <div className="pt-3 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Fee:</span>
+                    <span className="font-mono font-semibold">
+                      {poolA.data.formatted.fee}
+                    </span>
+                  </div>
+                </div>
+                <Button onClick={poolA.randomize}>Randomize Liquidity</Button>
+
+              </div>
+            ) : (
+              <div className="text-gray-400">
+                {poolA.isLoading
+                  ? "Loading..."
+                  : poolA.isError
+                    ? "Error loading pool data"
+                    : "No data"}
+              </div>
+            )}
+          </div>
+          <div className="p-4 border rounded-lg min-w-[280px]">
+            <div className="text-sm font-semibold text-gray-700 mb-3">
+              Chain B (Rollup B)
+            </div>
+            {poolB.data ? (
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Token0:</span>
+                  <span className="font-mono font-semibold">
+                    {poolB.data.formatted.token0Reserve}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Token1:</span>
+                  <span className="font-mono font-semibold">
+                    {poolB.data.formatted.token1Reserve}
+                  </span>
+                </div>
+                <div className="pt-3 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Price:</span>
+                    <span className="font-mono font-bold text-green-600">
+                      {poolB.data.formatted.price}
+                    </span>
+                  </div>
+                </div>
+                <div className="pt-3 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Fee:</span>
+                    <span className="font-mono font-semibold">
+                      {poolB.data.formatted.fee}
+                    </span>
+                  </div>
+                </div>
+                <Button onClick={poolB.randomize}>Randomize Liquidity</Button>
+              </div>
+            ) : (
+              <div className="text-gray-400">
+                {poolB.isLoading
+                  ? "Loading..."
+                  : poolB.isError
+                    ? "Error loading pool data"
+                    : "No data"}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      {arbitrage.data && (
+        <div className="p-4 border rounded-lg min-w-[400px] bg-gradient-to-r from-blue-50 to-green-50">
+          <div className="text-sm font-semibold text-gray-700 mb-3">
+            Arbitrage Opportunity
+          </div>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Direction:</span>
+              <span className="font-mono font-semibold">
+                {arbitrage.data.direction === "AtoB" ? "A → B" : "B → A"}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Optimal Loan:</span>
+              <span className="font-mono font-bold text-blue-600">
+                {formatUnits(arbitrage.data.optimalLoanAmount, 18)} USDC
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Expected Profit:</span>
+              <span
+                className={`font-mono font-bold ${
+                  arbitrage.data.profit > 0n ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                {formatUnits(arbitrage.data.profit, 18)} USDC
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+      <Button disabled={!isConnected || !eoa}>Run Flash</Button>
       <ConnectWalletBtn className="max-w-[300px]" />
     </div>
   );
