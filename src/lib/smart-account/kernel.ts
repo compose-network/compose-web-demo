@@ -5,7 +5,7 @@ import { type Address } from "viem";
 import { useBalance } from "wagmi";
 
 import { useSmartAccount as useSmartAccountSDK } from "@compose-network/sdk/react";
-import { rollupA, rollupB } from "@compose-network/sdk";
+import { rollupA, rollupB } from "@/wagmi/config.ts";
 
 export const useSmartAccount = () => {
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
@@ -21,12 +21,17 @@ export const useSmartAccount = () => {
     multiChainIds: [rollupA.id, rollupB.id],
   });
 
-  if (smartAccountAQuery && smartAccountBQuery) {
-    kernel.data!.accounts.A = smartAccountAQuery?.data?.account;
-    kernel.data!.validators.A = smartAccountAQuery?.data?.validator;
-
-    kernel.data!.accounts.B = smartAccountBQuery?.data?.account;
-    kernel.data!.validators.B = smartAccountBQuery?.data?.validator;
+  if (smartAccountAQuery.data && smartAccountBQuery.data) {
+    kernel.data = {
+      accounts: {
+        A: smartAccountAQuery?.data?.account,
+        B: smartAccountBQuery?.data?.account,
+      },
+      validators: {
+        A: smartAccountAQuery?.data?.validator,
+        B: smartAccountBQuery?.data?.validator,
+      },
+    };
   }
 
   const publicClientA = smartAccountAQuery?.data?.publicClient;

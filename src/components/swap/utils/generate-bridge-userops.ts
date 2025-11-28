@@ -3,11 +3,9 @@ import { createUserOp } from "@/components/swap/utils/core";
 import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
 import { TokenABI } from "@/lib/abi/token";
 import { WETHAbi } from "@/lib/abi/weth";
-import {
-  type BRIDGE_ADDRESSES,
-  getBridgeAddress,
-  WETH_ADDRESS,
-} from "@/wagmi/addresses";
+import { WETH_ADDRESS } from "@/wagmi/addresses";
+import type { BRIDGE_ADDRESSES } from "@/wagmi/config";
+import { getBridgeAddress } from "@/wagmi/config";
 import { config } from "@/wagmi/config";
 import { getPublicClient } from "@wagmi/core";
 import { signUserOperations } from "@zerodev/multi-chain-ecdsa-validator/actions"; //NOTE (Chris): Do not remove "actions" suffix as it breaks function

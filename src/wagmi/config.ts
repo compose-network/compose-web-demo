@@ -15,19 +15,21 @@ import {
   polygon as polygonChain,
 } from "viem/chains";
 import { createConfig } from "wagmi";
-import {
-  createComposeConfig,
-  rollupA,
-  rollupB,
-  rollupsAccountAbstractionContracts,
-} from "@compose-network/sdk";
+import { createComposeConfig } from "@compose-network/sdk";
 
 import {
+  parseBlockExplorerUrl,
   parseChainId,
   parseContractAddress,
   resolveRpcUrls,
   type RpcDescriptor,
 } from "./rpc-env";
+import {
+  rollupABridge,
+  rollupAContracts,
+  rollupBBridge,
+  rollupBContracts,
+} from "@/wagmi/addresses.ts";
 
 const RPC_DESCRIPTORS = {
   hoodi: {
@@ -68,6 +70,64 @@ const RPC_DESCRIPTORS = {
 
 const rpcHttp = resolveRpcUrls(RPC_DESCRIPTORS);
 const hoodiChainId = parseChainId("VITE_HOODI_CHAIN_ID", 560048);
+const rollupAChainId = parseChainId("VITE_ROLLUP_A_CHAIN_ID", 77777);
+const rollupBChainId = parseChainId("VITE_ROLLUP_B_CHAIN_ID", 88888);
+const rollupABlockExplorerUrl = parseBlockExplorerUrl(
+  "VITE_ROLLUP_A_BLOCK_EXPLORER_URL",
+  "https://blockscout-rollup-1.stage.ops.ssvlabsinternal.com/",
+);
+const rollupBBlockExplorerUrl = parseBlockExplorerUrl(
+  "VITE_ROLLUP_B_BLOCK_EXPLORER_URL",
+  "https://blockscout-rollup-2.stage.ops.ssvlabsinternal.com/",
+);
+
+export const rollupA = defineChain({
+  id: rollupAChainId,
+  name: "Rollup A",
+  nativeCurrency: {
+    name: "Ethereum",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: rpcHttp.rollupA,
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Rollup A",
+      url: rollupABlockExplorerUrl,
+    },
+  },
+  iconBackground: "none",
+  iconUrl: "/images/networks/light.svg",
+  testnet: true,
+});
+
+export const rollupB = defineChain({
+  id: rollupBChainId,
+  name: "Rollup B",
+  nativeCurrency: {
+    name: "Ethereum",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: rpcHttp.rollupB,
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Rollup B",
+      url: rollupBBlockExplorerUrl,
+    },
+  },
+  iconBackground: "none",
+  iconUrl: "/images/networks/light.svg",
+  testnet: true,
+});
 
 const createTransportForUrls = (urls: string[]): Transport => {
   const uniqueUrls = Array.from(new Set(urls));
@@ -223,6 +283,15 @@ const rollupBSwapAddress = parseContractAddress(
 export const l2StandardBridgeProxyAddress =
   "0x4200000000000000000000000000000000000010";
 
+export const BRIDGE_ADDRESSES = {
+  [rollupA.id]: { BRIDGE: rollupABridge },
+  [rollupB.id]: { BRIDGE: rollupBBridge },
+} as const;
+
+export const getBridgeAddress = (chainId: keyof typeof BRIDGE_ADDRESSES) => {
+  return BRIDGE_ADDRESSES[chainId]?.BRIDGE;
+};
+
 export const contracts = {
   [rollupB.id]: {
     swap: rollupBSwapAddress,
@@ -282,9 +351,17 @@ export const config = createConfig({
 export const composeConfig = createComposeConfig({
   wagmi: config,
   accountAbstractionContracts: {
-    [rollupA.id]: rollupsAccountAbstractionContracts,
-    [rollupB.id]: rollupsAccountAbstractionContracts,
+    [rollupA.id]: {
+      kernelImpl: rollupAContracts.KERNEL_IMPL,
+      kernelFactory: rollupAContracts.KERNEL_FACTORY,
+      multichainValidator: rollupAContracts.MULTICHAIN_VALIDATOR,
+      metaFactory: rollupAContracts.META_FACTORY,
+    },
+    [rollupB.id]: {
+      kernelImpl: rollupBContracts.KERNEL_IMPL,
+      kernelFactory: rollupBContracts.KERNEL_FACTORY,
+      multichainValidator: rollupBContracts.MULTICHAIN_VALIDATOR,
+      metaFactory: rollupBContracts.META_FACTORY,
+    },
   },
 });
-
-export { rollupB, rollupA };

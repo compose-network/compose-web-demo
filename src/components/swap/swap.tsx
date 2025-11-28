@@ -29,12 +29,7 @@ import { stringifyBigints } from "@/lib/utils/bigint";
 import { formatCurrency } from "@/lib/utils/number";
 import { isNativeToken } from "@/lib/utils/token";
 import { getErrorMessage } from "@/lib/utils/wagmi";
-import {
-  SSV_ADDRESS,
-  UNISWAP_V3,
-  USDC_ADDRESS,
-  WETH_ADDRESS,
-} from "@/wagmi/addresses";
+import { SSV_ADDRESS, USDC_ADDRESS, WETH_ADDRESS } from "@/wagmi/addresses";
 import {
   arbitrumChain,
   baseChain,
@@ -55,6 +50,7 @@ import { useLocalStorage } from "react-use";
 import { isAddress, parseEther, zeroAddress } from "viem";
 import { useSendTransaction, useSwitchChain } from "wagmi";
 import { z } from "zod";
+import { UNISWAP_V3 } from "@/wagmi/uniswap.ts";
 
 const schema = z.object({
   fromChainId: z

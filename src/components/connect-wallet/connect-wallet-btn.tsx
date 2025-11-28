@@ -28,7 +28,7 @@ export const ConnectWalletBtn: FC<ButtonProps> = (props) => {
   return (
     <ConnectButton.Custom>
       {({ chain, openAccountModal, openConnectModal, mounted }) => {
-        const connected = mounted && account && chain;
+        const connected = mounted && account.isConnected && chain;
         if (!mounted) return null;
 
         if (!connected) {

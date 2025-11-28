@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { getBridgeAddress, UNISWAP_V3, WETH_ADDRESS } from "@/wagmi/addresses";
+import { WETH_ADDRESS } from "@/wagmi/addresses";
 import { type Address, type Hex, zeroAddress } from "viem";
-import { rollupA, rollupB } from "@/wagmi/config";
+import { getBridgeAddress, rollupA, rollupB } from "@/wagmi/config";
 import type { CreateKernelAccountReturnType } from "@zerodev/sdk";
 import {
   createRollupPublicClient,
@@ -9,6 +9,7 @@ import {
   createUserOp,
 } from "@/components/swap/utils/core";
 import { isAddressEqual } from "@/wagmi/tokens";
+import { UNISWAP_V3 } from "@/wagmi/uniswap.ts";
 import type { ComposedSignedUserOpsTxReturnType } from "@/lib/smart-account/user-op";
 import { toRpcUserOpCanonical } from "@/lib/smart-account/user-op";
 import type { PrepareUserOperationReturnType } from "viem/account-abstraction";
