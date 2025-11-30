@@ -12,6 +12,7 @@ export type AssetLogoProps = {
   tokenAddress: Address;
   fallbackAssetSrc?: string;
   isFlashLoan?: boolean;
+  size?: "sm" | "default";
 };
 
 type AssetLogoFC = FC<
@@ -23,6 +24,7 @@ export const AssetLogo: AssetLogoFC = ({
   tokenAddress,
   isFlashLoan,
   fallbackAssetSrc = "/images/networks/light.svg",
+  size = "default",
   className,
   ...props
 }) => {
@@ -36,7 +38,13 @@ export const AssetLogo: AssetLogoFC = ({
     : onlyTokens[asset.symbol?.toUpperCase() || ""] || fallbackAssetSrc;
 
   return (
-    <div className={cn("relative size-10", className)}>
+    <div
+      className={cn(
+        "relative",
+        { "size-10": size === "default", "size-7": size === "sm" },
+        className,
+      )}
+    >
       {isFlashLoan ? (
         <HiOutlineDocumentText
           className="size-full"
@@ -51,6 +59,7 @@ export const AssetLogo: AssetLogoFC = ({
       )}
 
       <ChainIcon
+        size={size}
         chainId={chainId}
         className="absolute -bottom-1 -right-1 pointer-events-none"
       />

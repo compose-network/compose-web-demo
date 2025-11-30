@@ -23,6 +23,7 @@ export type TokenInputProps = {
   isLoading?: boolean;
   canPickToken?: boolean;
   disabledTokens?: Address[];
+  showBalance?: boolean;
 };
 
 type TokenInputFC = FC<
@@ -39,6 +40,7 @@ export const TokenInput: TokenInputFC = ({
   disabledTokens,
   onChainSelect,
   onSelectToken,
+  showBalance = true,
   ...props
 }) => {
   const { isConnected } = useAccount();
@@ -51,66 +53,70 @@ export const TokenInput: TokenInputFC = ({
   return (
     <div className="p-[1px] rounded-[20px] bg-gradient-to-r from-[#14B5C0]/60 via-[#2ABEC9]/60 via-[#24B979]/60 to-[#F29422]/60 to-[#E68713]/60">
       <div className="flex flex-col p-3 pl-8 rounded-[20px] gap-3 bg-gray-100">
-      <div className="flex items-center">
-        <BigNumberInput
-          {...props}
-          readOnly={readOnly}
-          decimals={asset.decimals}
-          // max={account.isConnected ? asset.balance : undefined}
-          className={cn("border-none text-3xl px-0 h-full", {
-            "text-gray-500": readOnly,
-            "animate-pulse opacity-50 animated-gradient-text": isLoading,
-          })}
-        />
-        <TokenPicker
-          onChainSelect={onChainSelect}
-          chains={chains}
-          selectedToken={tokenAddress}
-          chainId={chainId}
-          onSelectToken={onSelectToken}
-          readOnly={!canPickToken}
-          disabledTokens={disabledTokens}
-        />
-      </div>
-      <Divider />
-      <div className="flex justify-between items-center">
-        <Text variant="body-3-medium" className="text-gray-500">
-          Wallet Balance:{" "}
-          {isConnected ? (
-            formatCurrency(asset.balance ?? 0n, asset.decimals)
-          ) : (
-            <ConnectButton.Custom>
-              {({ openConnectModal, mounted }) => {
-                if (!mounted) return null;
+        <div className="flex items-center">
+          <BigNumberInput
+            {...props}
+            readOnly={readOnly}
+            decimals={asset.decimals}
+            // max={account.isConnected ? asset.balance : undefined}
+            className={cn("border-none text-3xl px-0 h-full", {
+              "text-gray-500": readOnly,
+              "animate-pulse opacity-50 animated-gradient-text": isLoading,
+            })}
+          />
+          <TokenPicker
+            onChainSelect={onChainSelect}
+            chains={chains}
+            selectedToken={tokenAddress}
+            chainId={chainId}
+            onSelectToken={onSelectToken}
+            readOnly={!canPickToken}
+            disabledTokens={disabledTokens}
+          />
+        </div>
+        {showBalance && (
+          <>
+            <Divider />
+            <div className="flex justify-between items-center">
+              <Text variant="body-3-medium" className="text-gray-500">
+                Wallet Balance:{" "}
+                {isConnected ? (
+                  formatCurrency(asset.balance ?? 0n, asset.decimals)
+                ) : (
+                  <ConnectButton.Custom>
+                    {({ openConnectModal, mounted }) => {
+                      if (!mounted) return null;
 
-                return (
-                  <Button
-                    variant="link"
-                    as="span"
-                    className="cursor-pointer"
-                    onClick={openConnectModal}
-                  >
-                    Connect Wallet to see balance
-                  </Button>
-                );
-              }}
-            </ConnectButton.Custom>
-          )}
-        </Text>
-        {!readOnly && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-primary-500 font-semibold h-6"
-            onClick={() => {
-              props.onChange(asset.balance ?? 0n);
-            }}
-          >
-            Max
-          </Button>
+                      return (
+                        <Button
+                          variant="link"
+                          as="span"
+                          className="cursor-pointer"
+                          onClick={openConnectModal}
+                        >
+                          Connect Wallet to see balance
+                        </Button>
+                      );
+                    }}
+                  </ConnectButton.Custom>
+                )}
+              </Text>
+              {!readOnly && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-primary-500 font-semibold h-6"
+                  onClick={() => {
+                    props.onChange(asset.balance ?? 0n);
+                  }}
+                >
+                  Max
+                </Button>
+              )}
+            </div>
+          </>
         )}
       </div>
-    </div>
     </div>
   );
 };

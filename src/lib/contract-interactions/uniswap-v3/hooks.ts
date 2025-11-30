@@ -26,3 +26,5 @@ export const uniswapV3QuoterContractHooks = createContractHooks(
 
 export const useUniswapV3QuoterContractHooks = () =>
   uniswapV3QuoterContractHooks;
+
+export { usePoolData, type PoolData, type PoolDataFormatted } from "./use-pool-data";
