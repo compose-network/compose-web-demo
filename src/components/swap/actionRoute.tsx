@@ -93,7 +93,7 @@ const ActionRoute: RouteFC = ({
           return (
             <div
               className="flex flex-col w-[30%] items-center flex-nowrap "
-              key={`${preparedAction.chainId}${preparedAction.chainId}`}
+              key={`${preparedAction.chainId}${preparedAction.type}${preparedAction.token}`}
             >
               <Text
                 variant="caption-medium"
@@ -109,7 +109,7 @@ const ActionRoute: RouteFC = ({
           return (
             <div
               className={`flex flex-col ${type === "bridge" ? "w-full" : "w-[30%]"} items-center flex-nowrap`}
-              key={`${preparedAction.chainId}${preparedAction.chainId}`}
+              key={`${preparedAction.chainId}${preparedAction.type}${preparedAction.token}`}
             >
               <Text
                 variant="caption-medium"
@@ -124,7 +124,7 @@ const ActionRoute: RouteFC = ({
         return (
           <div
             className="flex justify-center items-center"
-            key={`${preparedAction.chainId}${preparedAction.chainId}`}
+            key={`${preparedAction.chainId}${preparedAction.type}${preparedAction.token}`}
           >
             <Token
               token={preparedAction?.token || "0x"}
