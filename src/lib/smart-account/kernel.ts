@@ -6,9 +6,6 @@ import { useBalance } from "wagmi";
 
 import { useSmartAccount as useSmartAccountSDK } from "@compose-network/sdk/react";
 import { rollupA, rollupB } from "@/wagmi/config.ts";
-import type { CreateSmartAccountReturnType } from "@compose-network/sdk";
-
-export type ComposeSmartAccount = CreateSmartAccountReturnType["account"];
 
 export const useSmartAccount = () => {
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */

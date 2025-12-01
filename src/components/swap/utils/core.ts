@@ -3,14 +3,16 @@ import type {
   toRpcUserOpCanonical,
 } from "@/lib/smart-account/user-op";
 import { chainsMap, config, rollupA, rollupB } from "@/wagmi/config";
+import type { Transport } from "@wagmi/core";
 import { getPublicClient, http } from "@wagmi/core";
 import type { CreateKernelAccountReturnType } from "@zerodev/sdk";
+import type { Chain, PublicClient } from "viem";
 import { type Address, createPublicClient, type Hex, rpcSchema } from "viem";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type {
   GetPaymasterDataParameters,
   PaymasterActions,
+  SmartAccount,
 } from "viem/account-abstraction";
 import { getPaymasterDataForChain } from "@/api/paymaster.ts";
 
@@ -115,7 +117,7 @@ export type ComposeRpcSchema = [
 
 export const createRollupPublicClient = (
   sourceChainId: keyof typeof chainsMap,
-) => {
+): PublicClient<Transport, Chain, SmartAccount, ComposeRpcSchema> => {
   return createPublicClient({
     chain: chainsMap[sourceChainId],
     transport: http(chainsMap[sourceChainId].rpcUrls.default.http[0]),

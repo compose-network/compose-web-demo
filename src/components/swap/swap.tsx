@@ -159,7 +159,8 @@ export const Swap: FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.fromToken, values.toToken, values.fromChainId, values.toChainId]);
 
-  const kernel = useSmartAccount();
+  const { getKernelByChainId, smartAccountA, smartAccountB } =
+    useSmartAccount();
 
   const isSameToken = values.fromToken === values.toToken;
 
@@ -200,7 +201,7 @@ export const Swap: FC = () => {
         });
       }
 
-      if (!kernel.kernel.data?.accounts) {
+      if (!(smartAccountA?.account.address && smartAccountB?.account.address)) {
         return toast({
           title: "Kernel A account not found",
           variant: "destructive",
@@ -221,8 +222,8 @@ export const Swap: FC = () => {
               is_from_B_to_B
                 ? rollupBSwapContract
                 : values.fromChainId === rollupA.id
-                  ? kernel.kernel.data?.accounts.A.address
-                  : kernel.kernel.data?.accounts.B.address,
+                  ? smartAccountA.account.address
+                  : smartAccountB.account.address,
             ],
             address: values.fromToken,
           });
@@ -254,10 +255,8 @@ export const Swap: FC = () => {
               spender: is_from_B_to_B
                 ? rollupBSwapContract
                 : values.fromChainId === rollupA.id
-                  ? // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-                    kernel.kernel.data?.accounts.A.address!
-                  : // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-                    kernel.kernel.data?.accounts.B.address!,
+                  ? smartAccountA.account.address
+                  : smartAccountB.account.address,
               amount: globals.MAX_WEI_AMOUNT,
             },
             {
@@ -325,7 +324,7 @@ export const Swap: FC = () => {
 
           const hash = await sendTx.sendTransactionAsync(
             {
-              to: kernel.getKernelByChainId(values.fromChainId)!.address,
+              to: getKernelByChainId(values.fromChainId)!.address,
               value: values.fromAmount,
               chainId: values.fromChainId,
             },
@@ -408,12 +407,12 @@ export const Swap: FC = () => {
           fromToken: values.fromToken,
           toToken: values.toToken,
           eoaAddress: address!,
-          kernelA: kernel.kernel.data!.accounts.A,
-          kernelB: kernel.kernel.data!.accounts.B,
+          kernelA: smartAccountA.account,
+          kernelB: smartAccountB.account,
           amountOut: quoteExactInputSingle.data?.[0] ?? 0n,
         },
         {
-          onSignedUserOps() {
+          onSigned() {
             setTransactionData((prev) => {
               if (!prev) return null;
               const clone = cloneDeep(prev);
@@ -421,7 +420,7 @@ export const Swap: FC = () => {
               return clone;
             });
           },
-          onBuildUserOps(builds) {
+          onComposed(builds) {
             setTransactionData((prev) => {
               if (!prev) return null;
               const clone = cloneDeep(prev);

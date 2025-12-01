@@ -47,7 +47,7 @@ import { BRIDGE_CONFIG } from "@/wagmi/bridge.ts";
 import { getErrorMessage } from "@/lib/utils/wagmi.ts";
 import { safeStringify } from "@/lib/utils/bigint.ts";
 import ActionRoute from "@/components/swap/actionRoute.tsx";
-import { composeReadyUserOps } from "@compose-network/sdk";
+import { composeSignedUserOps } from "@compose-network/sdk";
 
 const schema = z.object({
   token: z.string().refine(isAddress),
@@ -444,7 +444,7 @@ export const UserOperationBridge: FC = () => {
         const userOpB = toRpcUserOpCanonical(signedB);
 
         const { send, builds, explorerUrls, payload } =
-          await composeReadyUserOps([
+          await composeSignedUserOps([
             {
               signedCanonicalOps: userOpA,
               publicClient: sourcePublicClient,
