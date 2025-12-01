@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useAccount } from "@/hooks/account/use-account";
 import { usePoolData } from "@/lib/contract-interactions/uniswap-v3/hooks";
 import { findOptimalLoan } from "@/lib/utils/arbitrage";
-import { UNISWAP_V3 } from "@/wagmi/addresses";
+import { UNISWAP_V3 } from "@/wagmi/uniswap.ts";
 import { rollupA, rollupB } from "@/wagmi/config";
 import { useQuery } from "@tanstack/react-query";
 
@@ -72,7 +72,6 @@ export const Playground: FC = () => {
                   </div>
                 </div>
                 <Button onClick={poolA.randomize}>Randomize Liquidity</Button>
-
               </div>
             ) : (
               <div className="text-gray-400">

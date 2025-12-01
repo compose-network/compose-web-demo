@@ -30,6 +30,9 @@ import {
   rollupBBridge,
   rollupBContracts,
 } from "@/wagmi/addresses.ts";
+import { endpoint } from "@/api";
+import { camelCase } from "lodash-es";
+import { getChainName } from "@/lib/utils/wagmi.ts";
 
 const RPC_DESCRIPTORS = {
   hoodi: {
@@ -280,6 +283,10 @@ const rollupBSwapAddress = parseContractAddress(
   DEFAULT_ROLLUP_B_SWAP_ADDRESS,
 );
 
+const PAYMASTER_ADDRESS =
+  import.meta.env.VITE_PAYMASTER_URL ||
+  "https://paymaster.stage.ops.ssvlabsinternal.com";
+
 export const l2StandardBridgeProxyAddress =
   "0x4200000000000000000000000000000000000010";
 
@@ -348,6 +355,8 @@ export const config = createConfig({
   ),
 });
 
+console.log(import.meta.env);
+
 export const composeConfig = createComposeConfig({
   wagmi: config,
   accountAbstractionContracts: {
@@ -363,5 +372,10 @@ export const composeConfig = createComposeConfig({
       multichainValidator: rollupBContracts.MULTICHAIN_VALIDATOR,
       metaFactory: rollupBContracts.META_FACTORY,
     },
+  },
+  getPaymasterEndpoint: ({ chainId }) => {
+    const chainName = camelCase(getChainName(chainId));
+
+    return endpoint(PAYMASTER_ADDRESS, "rpc/v1", chainName);
   },
 });

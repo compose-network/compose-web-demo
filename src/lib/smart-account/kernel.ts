@@ -6,6 +6,9 @@ import { useBalance } from "wagmi";
 
 import { useSmartAccount as useSmartAccountSDK } from "@compose-network/sdk/react";
 import { rollupA, rollupB } from "@/wagmi/config.ts";
+import type { CreateSmartAccountReturnType } from "@compose-network/sdk";
+
+export type ComposeSmartAccount = CreateSmartAccountReturnType["account"];
 
 export const useSmartAccount = () => {
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
@@ -51,20 +54,20 @@ export const useSmartAccount = () => {
   });
 
   const balanceA = useBalance({
-    address: kernel.data?.accounts?.A?.address as Address,
+    address: smartAccountAQuery.data?.account.address as Address,
     chainId: rollupA.id,
   });
 
   const balanceB = useBalance({
-    address: kernel.data?.accounts?.B?.address as Address,
+    address: smartAccountBQuery.data?.account.address as Address,
     chainId: rollupB.id,
   });
 
   const gasBalanceA = useBalanceOf(
-    { account: kernel.data?.accounts?.A?.address as Address },
+    { account: smartAccountAQuery.data?.account.address as Address },
     {
       chainId: rollupA.id,
-      enabled: !!kernel.data?.accounts?.A?.address,
+      enabled: !!smartAccountAQuery.data?.account.address,
       contract: ENTRYPOINT_ADDRESS,
       watch: true,
       placeholderData: keepPreviousData,
@@ -72,10 +75,10 @@ export const useSmartAccount = () => {
   );
 
   const gasBalanceB = useBalanceOf(
-    { account: kernel.data?.accounts?.B?.address as Address },
+    { account: smartAccountBQuery.data?.account.address as Address },
     {
       chainId: rollupB.id,
-      enabled: !!kernel.data?.accounts?.B?.address,
+      enabled: !!smartAccountBQuery.data?.account.address,
       watch: true,
       contract: ENTRYPOINT_ADDRESS,
       placeholderData: keepPreviousData,
@@ -88,8 +91,8 @@ export const useSmartAccount = () => {
   };
 
   const getKernelByChainId = (chainId: number) => {
-    if (chainId === rollupA.id) return kernel.data?.accounts?.A;
-    if (chainId === rollupB.id) return kernel.data?.accounts?.B;
+    if (chainId === rollupA.id) return smartAccountAQuery.data?.account;
+    if (chainId === rollupB.id) return smartAccountBQuery.data?.account;
   };
 
   return {
