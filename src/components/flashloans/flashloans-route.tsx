@@ -2,14 +2,15 @@ import { cn } from "@/lib/utils/tw.ts";
 import { Text } from "@/components/ui/text.tsx";
 import type { Address } from "viem";
 import { AssetLogo } from "@/components/ui/asset-logo.tsx";
+import type { AppChainId } from "@/wagmi/config.ts";
 import { chainsMap } from "@/wagmi/config.ts";
 import { DottedArrowLine } from "@/components/ui/dashed-arrow.tsx";
 import { SwapArrow } from "@/components/ui/swap-arrow.tsx";
 import { Arrow } from "@/components/ui/arrow.tsx";
 
 type FlashloansRouteProps = {
-  sourceChainId: number;
-  destChainId: number;
+  sourceChainId: AppChainId;
+  destChainId: AppChainId;
   loanToken: Address;
   swapToken: Address;
 };
@@ -20,7 +21,7 @@ const Token = ({
   isFlashLoan,
 }: {
   token: Address;
-  chainId: number;
+  chainId: AppChainId;
   isFlashLoan?: boolean;
 }) => (
   <div className="flex flex-col items-center size-20 justify-between">

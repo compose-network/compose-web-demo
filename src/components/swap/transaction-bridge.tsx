@@ -3,7 +3,7 @@ import { type FC, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { RollupChainId } from "@/wagmi/config";
+import type { AppChainId, RollupChainId } from "@/wagmi/config";
 import {
   arbitrumChain,
   baseChain,
@@ -78,7 +78,7 @@ export const TransactionBridge: FC = () => {
     resolver: zodResolver(schema),
   });
 
-  const handleChainSelect = async (chainId: number) => {
+  const handleChainSelect = async (chainId: AppChainId) => {
     await switchChain.switchChainAsync({ chainId });
     form.setValue("from.chainId", chainId);
   };
@@ -87,7 +87,7 @@ export const TransactionBridge: FC = () => {
 
   const fromToken = useAsset({
     tokenAddress: values.from.token,
-    chainId: values.from.chainId,
+    chainId: values.from.chainId as AppChainId,
   });
 
   const { useBridgeETH } = useBridgeContract();
@@ -238,7 +238,7 @@ export const TransactionBridge: FC = () => {
         actions: [
           {
             name: `Bridge ${formatCurrency(values.from.amount, fromToken.decimals || 18)} ${fromToken.symbol}`,
-            chainId: values.from.chainId,
+            chainId: values.from.chainId as AppChainId,
             status: "idle",
             signAndSend: () => {
               setErrorMessage(undefined);
@@ -282,7 +282,7 @@ export const TransactionBridge: FC = () => {
               onChainSelect={handleChainSelect}
               value={values.from.amount}
               tokenAddress={values.from.token}
-              chainId={values.from.chainId}
+              chainId={values.from.chainId as AppChainId}
               onSelectToken={(token) => form.setValue("from.token", token)}
               onChange={(amount) => {
                 form.setValue("from.amount", amount, {

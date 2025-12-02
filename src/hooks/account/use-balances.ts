@@ -6,6 +6,7 @@ import { useQueries } from "@tanstack/react-query";
 import type { Address } from "abitype";
 import { isAddress, zeroAddress } from "viem";
 import { useBalance } from "wagmi";
+import type { AppChainId } from "@/wagmi/config.ts";
 
 type Balance = {
   balance: bigint;
@@ -13,7 +14,7 @@ type Balance = {
   token: Address;
 };
 
-export const useBalances = (assets: Address[], chainId: number) => {
+export const useBalances = (assets: Address[], chainId: AppChainId) => {
   const account = useAccount();
   const ethBalance = useBalance({ address: account.address! });
 

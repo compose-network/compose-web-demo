@@ -14,10 +14,11 @@ import { useAccount } from "@/hooks/account/use-account";
 import { useSwitchChain } from "wagmi";
 import { withTransactionModal } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
 import { useLocalStorage } from "react-use";
+import type { AppChainId } from "@/wagmi/config.ts";
 
 export type TokenPickerItemProps = {
   token: Address;
-  chainId: number;
+  chainId: AppChainId;
 };
 
 type TokenPickerItemFC = FC<

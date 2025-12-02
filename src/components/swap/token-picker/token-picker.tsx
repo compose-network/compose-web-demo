@@ -7,13 +7,14 @@ import { TokenPickerCommandDialog } from "@/components/swap/token-picker/token-p
 import { AssetLogo } from "@/components/ui/asset-logo";
 import AssetName from "@/components/ui/asset-name";
 import type { Address } from "abitype";
+import type { AppChainId } from "@/wagmi/config.ts";
 
 export type TokenPickerProps = {
-  chainId: number;
+  chainId: AppChainId;
   chains: TokenPickerCommandDialogProps["chains"];
   selectedToken: Address;
   onSelectToken: (token: Address) => void;
-  onChainSelect: (chainId: number) => void;
+  onChainSelect: (chainId: AppChainId) => void;
   readOnly?: boolean;
   canPickToken?: boolean;
   disabledTokens?: Address[];
@@ -61,20 +62,20 @@ export const TokenPicker: TokenPickerFC = ({
           )}
           {...props}
         >
-        <div className="flex gap-3 items-center flex-1">
-          <AssetLogo
-            tokenAddress={selectedToken}
-            chainId={chainId}
-            className="size-10"
-          />
-          <AssetName
-            symbolOnly
-            tokenAddress={selectedToken}
-            chainId={chainId}
-            className="text-xl font-semibold"
-          />
-        </div>
-        {!readOnly && <ChevronDown className="size-4 justify-end" />}
+          <div className="flex gap-3 items-center flex-1">
+            <AssetLogo
+              tokenAddress={selectedToken}
+              chainId={chainId}
+              className="size-10"
+            />
+            <AssetName
+              symbolOnly
+              tokenAddress={selectedToken}
+              chainId={chainId}
+              className="text-xl font-semibold"
+            />
+          </div>
+          {!readOnly && <ChevronDown className="size-4 justify-end" />}
         </Button>
       </div>
     </>

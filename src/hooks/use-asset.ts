@@ -6,10 +6,11 @@ import { useSymbol } from "@/lib/contract-interactions/erc-20/read/use-symbol";
 import { getNativeCurrency, isNativeToken } from "@/lib/utils/token";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { useBalance, useBlockNumber, useReadContract } from "wagmi";
+import type { AppChainId } from "@/wagmi/config.ts";
 
 type UseAssetProps = {
   tokenAddress?: `0x${string}`;
-  chainId: number;
+  chainId: AppChainId;
   watch?: boolean;
 };
 

@@ -14,18 +14,19 @@ import type { Address } from "viem";
 import { Text } from "@/components/ui/text";
 import { ChainIcon } from "@/components/ui/chain-icon";
 import { Tooltip } from "@/components/ui/tooltip";
+import type { AppChainId } from "@/wagmi/config";
 import { getChainById } from "@/wagmi/config";
 
 export type TokenPickerCommandDialogProps = {
-  chainId: number;
+  chainId: AppChainId;
   chains: {
-    chainId: number;
+    chainId: AppChainId;
     isNotSupported?: boolean;
     notSupportedReason?: string;
     tokens?: Address[];
   }[];
   onTokenSelect: (token: Address) => void;
-  onChainSelect: (chainId: number) => void;
+  onChainSelect: (chainId: AppChainId) => void;
   disabledTokens?: Address[];
 } & DialogProps;
 

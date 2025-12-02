@@ -1,5 +1,6 @@
 import { AssetLogo } from "@/components/ui/asset-logo.tsx";
 import { Text } from "@/components/ui/text.tsx";
+import type { AppChainId } from "@/wagmi/config.ts";
 import { chainsMap, rollupB } from "@/wagmi/config.ts";
 import type { Address } from "viem";
 import { cn } from "@/lib/utils/tw.ts";
@@ -18,16 +19,16 @@ import type { ComponentPropsWithoutRef, FC } from "react";
 export type ActionRouteProps = {
   type: string;
   from: Address;
-  fromChainId: number;
+  fromChainId: AppChainId;
   to: Address;
-  toChainId: number;
+  toChainId: AppChainId;
 };
 type RouteFC = FC<
   Omit<ComponentPropsWithoutRef<"div">, keyof ActionRouteProps> &
     ActionRouteProps
 >;
 
-const Token = ({ token, chainId }: { token: Address; chainId: number }) => (
+const Token = ({ token, chainId }: { token: Address; chainId: AppChainId }) => (
   <div className="flex flex-col items-center size-20 justify-between">
     <AssetLogo tokenAddress={token} chainId={chainId} />
     <Text variant="body-3-medium" className="text-gray-600">
@@ -37,7 +38,7 @@ const Token = ({ token, chainId }: { token: Address; chainId: number }) => (
 );
 
 const prepareAction = (action: ActionRouteProps) => {
-  const actions: { token?: Address; chainId?: number; type?: string }[] = [
+  const actions: { token?: Address; chainId?: AppChainId; type?: string }[] = [
     {
       token: action.from,
       chainId: action.fromChainId,
@@ -128,7 +129,7 @@ const ActionRoute: RouteFC = ({
           >
             <Token
               token={preparedAction?.token || "0x"}
-              chainId={preparedAction?.chainId || -1}
+              chainId={preparedAction?.chainId || (-1 as AppChainId)}
             />
           </div>
         );

@@ -379,3 +379,5 @@ export const composeConfig = createComposeConfig({
     return endpoint(PAYMASTER_ADDRESS, "rpc/v1", chainName);
   },
 });
+
+export type AppChainId = (typeof config)["chains"][number]["id"];

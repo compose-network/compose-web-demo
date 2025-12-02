@@ -2,14 +2,15 @@ import { Text } from "@/components/ui/text.tsx";
 import { AssetLogo } from "@/components/ui/asset-logo.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { FaArrowDown } from "react-icons/fa6";
+import type { AppChainId } from "@/wagmi/config.ts";
 
 type FlahLoansTokensProps = {
   priceA: string;
   priceB: string;
   tokenAddressA: `0x${string}`;
   tokenAddressB: `0x${string}`;
-  chainIdA: number;
-  chainIdB: number;
+  chainIdA: AppChainId;
+  chainIdB: AppChainId;
 };
 
 const FlahLoansTokens = ({
