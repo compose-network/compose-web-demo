@@ -355,8 +355,6 @@ export const config = createConfig({
   ),
 });
 
-console.log(import.meta.env);
-
 export const composeConfig = createComposeConfig({
   wagmi: config,
   accountAbstractionContracts: {

@@ -8,9 +8,6 @@ import { useSmartAccount as useSmartAccountSDK } from "@compose-network/sdk/reac
 import { rollupA, rollupB } from "@/wagmi/config.ts";
 
 export const useSmartAccount = () => {
-  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  const kernel: any = { data: undefined };
-
   const smartAccountAQuery = useSmartAccountSDK({
     chainId: rollupA.id,
     multiChainIds: [rollupA.id, rollupB.id],
@@ -20,19 +17,6 @@ export const useSmartAccount = () => {
     chainId: rollupB.id,
     multiChainIds: [rollupA.id, rollupB.id],
   });
-
-  if (smartAccountAQuery.data && smartAccountBQuery.data) {
-    kernel.data = {
-      accounts: {
-        A: smartAccountAQuery?.data?.account,
-        B: smartAccountBQuery?.data?.account,
-      },
-      validators: {
-        A: smartAccountAQuery?.data?.validator,
-        B: smartAccountBQuery?.data?.validator,
-      },
-    };
-  }
 
   const publicClientA = smartAccountAQuery?.data?.publicClient;
 
@@ -101,8 +85,6 @@ export const useSmartAccount = () => {
     gasBalanceB,
     depositToA,
     depositToB,
-
-    kernel,
 
     smartAccountA: smartAccountAQuery.data,
     smartAccountB: smartAccountBQuery.data,

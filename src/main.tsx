@@ -27,7 +27,7 @@ globalThis.Buffer = Buffer;
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <WagmiProvider config={config}>
-    <ComposeProvider config={composeConfig}>
+    <ComposeProvider<typeof config> config={composeConfig}>
       <QueryClientProvider client={queryClient}>
         {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
         <RainbowKitProvider>

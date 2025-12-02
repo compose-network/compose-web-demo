@@ -23,10 +23,7 @@ import { useApprove } from "@/lib/contract-interactions/erc-20/write/use-approve
 import { useMint } from "@/lib/contract-interactions/erc-20/write/use-mint";
 import { withTransactionModal } from "@/lib/contract-interactions/utils/useWaitForTransactionReceipt";
 import { useSmartAccount } from "@/lib/smart-account/kernel";
-import {
-  decodeUserOperationLogs,
-  toRpcUserOpCanonical,
-} from "@/lib/smart-account/user-op";
+import { decodeUserOperationLogs } from "@/lib/smart-account/user-op";
 import { formatCurrency } from "@/lib/utils/number";
 import { isNativeToken } from "@/lib/utils/token";
 import { BRIDGE_TOKEN } from "@/wagmi/addresses";
@@ -47,7 +44,10 @@ import { BRIDGE_CONFIG } from "@/wagmi/bridge.ts";
 import { getErrorMessage } from "@/lib/utils/wagmi.ts";
 import { safeStringify } from "@/lib/utils/bigint.ts";
 import ActionRoute from "@/components/swap/actionRoute.tsx";
-import { composeSignedUserOps } from "@compose-network/sdk";
+import {
+  composeSignedUserOps,
+  toRpcUserOpCanonical,
+} from "@compose-network/sdk";
 
 const schema = z.object({
   token: z.string().refine(isAddress),
