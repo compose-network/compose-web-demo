@@ -8,12 +8,14 @@ import { RainbowKitProvider } from "@/lib/providers/rainbow-kit";
 import { queryClient } from "@/lib/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
-import { config } from "./wagmi/config";
+import { composeConfig, config } from "./wagmi/config";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 import { RouterProvider } from "react-router-dom";
 
 import { Toaster } from "@/components/ui/toaster";
+import { ComposeProvider } from "@compose-network/sdk/react";
+
 import "@/global.css";
 import "@fontsource/manrope/400.css";
 import "@fontsource/manrope/500.css";
@@ -25,14 +27,16 @@ globalThis.Buffer = Buffer;
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <WagmiProvider config={config}>
-    <QueryClientProvider client={queryClient}>
-      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-      <RainbowKitProvider>
-        <NuqsAdapter>
-          <RouterProvider router={router} />
-        </NuqsAdapter>
-        <Toaster />
-      </RainbowKitProvider>
-    </QueryClientProvider>
+    <ComposeProvider<typeof config> config={composeConfig}>
+      <QueryClientProvider client={queryClient}>
+        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+        <RainbowKitProvider>
+          <NuqsAdapter>
+            <RouterProvider router={router} />
+          </NuqsAdapter>
+          <Toaster />
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </ComposeProvider>
   </WagmiProvider>,
 );

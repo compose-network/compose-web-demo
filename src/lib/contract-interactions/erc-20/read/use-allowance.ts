@@ -13,6 +13,7 @@ import {
 } from "@/lib/contract-interactions/utils";
 import type { ExtractAbiFunction } from "abitype";
 import { readContractQueryOptions } from "wagmi/query";
+import type { AppChainId } from "@/wagmi/config";
 import { config } from "@/wagmi/config";
 import { queryClient } from "@/lib/react-query";
 
@@ -20,7 +21,7 @@ type Fn = ExtractAbiFunction<typeof TokenABI, "allowance">;
 const abiFunction = extractAbiFunction(TokenABI, "allowance");
 
 export const getAllowanceQueryOptions = (
-  { address, chainId }: { address: `0x${string}`; chainId?: number },
+  { address, chainId }: { address: `0x${string}`; chainId?: AppChainId },
   params: AbiInputsToParams<Fn["inputs"]>,
 ) =>
   readContractQueryOptions(config, {
@@ -37,7 +38,7 @@ type QueryOptions = UseReadContractParameters<
 >["query"];
 
 export const fetchAllowance = (
-  { address, chainId }: { address: `0x${string}`; chainId?: number },
+  { address, chainId }: { address: `0x${string}`; chainId?: AppChainId },
   params: AbiInputsToParams<Fn["inputs"]>,
 ) =>
   queryClient.fetchQuery(

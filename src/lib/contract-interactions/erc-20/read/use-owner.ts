@@ -8,6 +8,7 @@ import { useReadContract } from "wagmi";
 import { TokenABI } from "@/lib/abi/token";
 
 import { readContractQueryOptions } from "wagmi/query";
+import type { AppChainId } from "@/wagmi/config";
 import { config } from "@/wagmi/config";
 import { queryClient } from "@/lib/react-query";
 
@@ -16,7 +17,7 @@ export const getOwnerQueryOptions = ({
   chainId,
 }: {
   address: `0x${string}`;
-  chainId?: number;
+  chainId?: AppChainId;
 }) =>
   readContractQueryOptions(config, {
     abi: TokenABI,
@@ -35,7 +36,7 @@ export const fetchOwner = ({
   chainId,
 }: {
   address: `0x${string}`;
-  chainId?: number;
+  chainId?: AppChainId;
 }) => queryClient.fetchQuery(getOwnerQueryOptions({ address, chainId }));
 
 export const useOwner = (

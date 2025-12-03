@@ -169,6 +169,7 @@ type ContractAddressEnvKey = keyof Pick<
   | "VITE_WETH_ADDRESS"
   | "VITE_USDC_ADDRESS"
   | "VITE_SSV_ADDRESS"
+  | "VITE_ROLLUP_B_SWAP_ADDRESS"
 >;
 
 export const parseContractAddress = (

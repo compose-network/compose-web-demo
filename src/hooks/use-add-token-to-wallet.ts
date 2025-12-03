@@ -3,12 +3,13 @@ import { toast } from "@/components/ui/use-toast";
 import type { Address } from "viem";
 import { erc20Abi } from "viem";
 import { readContract } from "@wagmi/core";
+import type { AppChainId } from "@/wagmi/config";
 import { config } from "@/wagmi/config";
 import { getAssetLogoSrc } from "@/lib/utils/token";
 
 export interface AddTokenToWalletParams {
   address: Address;
-  chainId: number;
+  chainId: AppChainId;
 }
 
 export const useAddTokenToWallet = () => {

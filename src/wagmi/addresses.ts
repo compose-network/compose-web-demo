@@ -1,9 +1,7 @@
-import { rollupA, rollupB } from "@/wagmi/config";
 import { getEntryPoint } from "@zerodev/sdk/constants";
 import type { Address } from "viem";
 import { parseContractAddress } from "./rpc-env";
 
-export * from "./uniswap";
 export const ENTRYPOINT_WITH_VERSION = getEntryPoint("0.7");
 export const ENTRYPOINT_ADDRESS = ENTRYPOINT_WITH_VERSION.address;
 
@@ -28,7 +26,7 @@ const DEFAULT_ROLLUP_B_CONTRACTS = {
   META_FACTORY: "0x54db674c515e5fdec3f91345bc2fdafafd8b3b8a",
 } as const satisfies RollupContracts;
 
-const rollupAContracts: RollupContracts = {
+export const rollupAContracts: RollupContracts = {
   KERNEL_IMPL: parseContractAddress(
     "VITE_ROLLUP_A_KERNEL_IMPL",
     DEFAULT_ROLLUP_A_CONTRACTS.KERNEL_IMPL,
@@ -47,7 +45,7 @@ const rollupAContracts: RollupContracts = {
   ),
 };
 
-const rollupBContracts: RollupContracts = {
+export const rollupBContracts: RollupContracts = {
   KERNEL_IMPL: parseContractAddress(
     "VITE_ROLLUP_B_KERNEL_IMPL",
     DEFAULT_ROLLUP_B_CONTRACTS.KERNEL_IMPL,
@@ -66,33 +64,20 @@ const rollupBContracts: RollupContracts = {
   ),
 };
 
-export const ROLLUP_ADDRESSES = {
-  [rollupA.id]: rollupAContracts,
-  [rollupB.id]: rollupBContracts,
-} as const;
-
 const DEFAULT_ROLLUP_A_BRIDGE_ADDRESS =
   "0x31c57E2910496e46Bb883EDeb1eB2bee8E3Ee82C";
 const DEFAULT_ROLLUP_B_BRIDGE_ADDRESS =
   "0x31c57E2910496e46Bb883EDeb1eB2bee8E3Ee82C";
 
-const rollupABridge = parseContractAddress(
+export const rollupABridge = parseContractAddress(
   "VITE_ROLLUP_A_BRIDGE_ADDRESS",
   DEFAULT_ROLLUP_A_BRIDGE_ADDRESS,
 );
-const rollupBBridge = parseContractAddress(
+
+export const rollupBBridge = parseContractAddress(
   "VITE_ROLLUP_B_BRIDGE_ADDRESS",
   DEFAULT_ROLLUP_B_BRIDGE_ADDRESS,
 );
-
-export const BRIDGE_ADDRESSES = {
-  [rollupA.id]: { BRIDGE: rollupABridge },
-  [rollupB.id]: { BRIDGE: rollupBBridge },
-} as const;
-
-export const getBridgeAddress = (chainId: keyof typeof BRIDGE_ADDRESSES) => {
-  return BRIDGE_ADDRESSES[chainId]?.BRIDGE;
-};
 
 const DEFAULT_BRIDGE_TOKEN_ADDRESS =
   "0x4c77De11C15d8b5e2584e67e2E6E1Ec7A78B0b5b";
@@ -118,5 +103,3 @@ export const SSV_ADDRESS: Address = parseContractAddress(
   "VITE_SSV_ADDRESS",
   DEFAULT_SSV_ADDRESS,
 );
-
-

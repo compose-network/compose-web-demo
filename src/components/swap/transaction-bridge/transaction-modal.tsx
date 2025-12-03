@@ -11,6 +11,7 @@ import { zeroAddress } from "viem";
 import { statusIcons } from "@/components/modals/batch-transaction-modal";
 import { Text } from "@/components/ui/text";
 import { ChainIcon } from "@/components/ui/chain-icon";
+import type { AppChainId } from "@/wagmi/config";
 import { getChainById, getExplorerHashUrl, rollupA } from "@/wagmi/config";
 import { shortenAddress } from "@/lib/utils/strings.ts";
 import { TbExternalLink } from "react-icons/tb";
@@ -33,8 +34,8 @@ export type TransactionModalProps = {
       name: string;
       description?: string;
       tooltip?: string;
-      chainId: number;
-      toChainId?: number;
+      chainId: AppChainId;
+      toChainId?: AppChainId;
       toTokenAddress?: `0x${string}`;
       status: keyof typeof statusIcons;
       hash?: Hex | { chainId: number; hash: Hex }[];

@@ -4,10 +4,11 @@ import { useAsset } from "@/hooks/use-asset";
 import type { ComponentPropsWithoutRef, FC } from "react";
 import type { Address } from "abitype";
 import { cn } from "@/lib/utils/tw";
+import type { AppChainId } from "@/wagmi/config.ts";
 
 export type AssetNameProps = {
   tokenAddress: Address;
-  chainId: number;
+  chainId: AppChainId;
   symbolOnly?: boolean;
   nameClassName?: string;
   symbolClassName?: string;

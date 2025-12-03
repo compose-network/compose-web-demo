@@ -4,11 +4,12 @@ import type { Address } from "abitype";
 import { AssetLogo } from "@/components/ui/asset-logo";
 import { Text } from "@/components/ui/text";
 import { Tooltip } from "@/components/ui/tooltip";
+import type { AppChainId } from "@/wagmi/config.ts";
 
 export type AssetsDisplayProps = {
   addresses: Address[];
   max?: number;
-  chainId: number;
+  chainId: AppChainId;
 };
 
 type AssetsDisplayFC = FC<

@@ -6,13 +6,11 @@ import { Tooltip } from "@/components/ui/tooltip.tsx";
 
 const HowItWorksBtn: FC<ButtonProps> = ({ className, ...props }) => {
   return (
-    <Tooltip content={"How It Works?"}>
-      {" "}
+    <Tooltip asChild content={"How It Works?"}>
       <Button
         variant="white"
         className={cn(className, "size-12 rounded-xl p-0")}
         {...props}
-        how-
       >
         <IoInformationCircle className="size-6 text-gray-800" />
       </Button>

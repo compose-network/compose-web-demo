@@ -6,9 +6,10 @@ import { cn } from "@/lib/utils/tw";
 import type { Address } from "abitype";
 import type { ComponentPropsWithoutRef, FC } from "react";
 import { HiOutlineDocumentText } from "react-icons/hi";
+import type { AppChainId } from "@/wagmi/config.ts";
 
 export type AssetLogoProps = {
-  chainId: number;
+  chainId: AppChainId;
   tokenAddress: Address;
   fallbackAssetSrc?: string;
   isFlashLoan?: boolean;

@@ -12,13 +12,14 @@ import { formatCurrency } from "@/lib/utils/number";
 import type { TokenPickerCommandDialogProps } from "@/components/swap/token-picker/token-picker-command-dialog";
 import { useAccount } from "@/hooks/account/use-account";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import type { AppChainId } from "@/wagmi/config.ts";
 
 export type TokenInputProps = {
-  chainId: number;
+  chainId: AppChainId;
   chains: TokenPickerCommandDialogProps["chains"];
   tokenAddress: Address;
   onSelectToken: (token: Address) => void;
-  onChainSelect: (chainId: number) => void;
+  onChainSelect: (chainId: AppChainId) => void;
   readOnly?: boolean;
   isLoading?: boolean;
   canPickToken?: boolean;

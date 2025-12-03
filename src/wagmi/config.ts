@@ -15,6 +15,7 @@ import {
   polygon as polygonChain,
 } from "viem/chains";
 import { createConfig } from "wagmi";
+import { createComposeConfig } from "@compose-network/sdk";
 
 import {
   parseBlockExplorerUrl,
@@ -23,6 +24,15 @@ import {
   resolveRpcUrls,
   type RpcDescriptor,
 } from "./rpc-env";
+import {
+  rollupABridge,
+  rollupAContracts,
+  rollupBBridge,
+  rollupBContracts,
+} from "@/wagmi/addresses.ts";
+import { endpoint } from "@/api";
+import { camelCase } from "lodash-es";
+import { getChainName } from "@/lib/utils/wagmi.ts";
 
 const RPC_DESCRIPTORS = {
   hoodi: {
@@ -74,41 +84,6 @@ const rollupBBlockExplorerUrl = parseBlockExplorerUrl(
   "https://blockscout-rollup-2.stage.ops.ssvlabsinternal.com/",
 );
 
-const createTransportForUrls = (urls: string[]): Transport => {
-  const uniqueUrls = Array.from(new Set(urls));
-  if (!uniqueUrls.length) {
-    throw new Error("[wagmi-config] Missing RPC URLs for transport creation.");
-  }
-
-  return uniqueUrls.length === 1
-    ? http(uniqueUrls[0])
-    : fallback(uniqueUrls.map((url) => http(url)));
-};
-
-export const hoodi = defineChain({
-  id: hoodiChainId,
-  name: "Hoodi",
-  network: "hoodi",
-  nativeCurrency: {
-    name: "Hoodi",
-    symbol: "ETH",
-    decimals: 18,
-  },
-  rpcUrls: {
-    default: {
-      http: rpcHttp.hoodi,
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "Etherscan",
-      url: "https://hoodi.etherscan.io",
-    },
-  },
-  iconBackground: "none",
-  iconUrl: "/images/networks/light.svg",
-  testnet: true,
-});
 export const rollupA = defineChain({
   id: rollupAChainId,
   name: "Rollup A",
@@ -150,6 +125,42 @@ export const rollupB = defineChain({
     default: {
       name: "Rollup B",
       url: rollupBBlockExplorerUrl,
+    },
+  },
+  iconBackground: "none",
+  iconUrl: "/images/networks/light.svg",
+  testnet: true,
+});
+
+const createTransportForUrls = (urls: string[]): Transport => {
+  const uniqueUrls = Array.from(new Set(urls));
+  if (!uniqueUrls.length) {
+    throw new Error("[wagmi-config] Missing RPC URLs for transport creation.");
+  }
+
+  return uniqueUrls.length === 1
+    ? http(uniqueUrls[0])
+    : fallback(uniqueUrls.map((url) => http(url)));
+};
+
+export const hoodi = defineChain({
+  id: hoodiChainId,
+  name: "Hoodi",
+  network: "hoodi",
+  nativeCurrency: {
+    name: "Hoodi",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: rpcHttp.hoodi,
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Etherscan",
+      url: "https://hoodi.etherscan.io",
     },
   },
   iconBackground: "none",
@@ -224,8 +235,9 @@ export const chains = [
   baseChain,
   arbitrumChain,
   optimismChain,
-] satisfies [Chain, ...Chain[]];
-export const chainsMap = {
+] as const satisfies Readonly<[Chain, ...Chain[]]>;
+
+export const chainsMap: Record<number, Chain> = {
   [rollupA.id]: rollupA,
   [rollupB.id]: rollupB,
   [mainnet.id]: mainnet,
@@ -236,7 +248,7 @@ export const chainsMap = {
   [optimismChain.id]: optimismChain,
 };
 
-export const getChainById = (chainId: number) => {
+export const getChainById = (chainId: number): Chain => {
   return chainsMap[chainId as keyof typeof chainsMap];
 };
 
@@ -245,11 +257,6 @@ export const getExplorerHashUrl = (chainId: number, hash: string) => {
   if (!chain) return "";
   return new URL(`tx/${hash}`, chain.blockExplorers?.default?.url).toString();
 };
-
-export const rollupIdMap = {
-  [rollupA.id]: 1,
-  [rollupB.id]: 2,
-} as const;
 
 const DEFAULT_HOODI_BRIDGE_ADDRESS =
   "0x119b79f1bd3ef2e9e386bf52ca344d6aa3075c93" as Address;
@@ -276,8 +283,21 @@ const rollupBSwapAddress = parseContractAddress(
   DEFAULT_ROLLUP_B_SWAP_ADDRESS,
 );
 
+const PAYMASTER_ADDRESS =
+  import.meta.env.VITE_PAYMASTER_URL ||
+  "https://paymaster.stage.ops.ssvlabsinternal.com";
+
 export const l2StandardBridgeProxyAddress =
   "0x4200000000000000000000000000000000000010";
+
+export const BRIDGE_ADDRESSES = {
+  [rollupA.id]: { BRIDGE: rollupABridge },
+  [rollupB.id]: { BRIDGE: rollupBBridge },
+} as const;
+
+export const getBridgeAddress = (chainId: keyof typeof BRIDGE_ADDRESSES) => {
+  return BRIDGE_ADDRESSES[chainId]?.BRIDGE;
+};
 
 export const contracts = {
   [rollupB.id]: {
@@ -302,9 +322,6 @@ export const bridgeContracts = {
 } as const;
 
 export type RollupChainId = typeof rollupA.id | typeof rollupB.id;
-export const isChainSupported = (chainId: number) => {
-  return chains.some((chain) => chain.id === chainId);
-};
 
 const connectors = connectorsForWallets(
   [
@@ -320,7 +337,7 @@ const connectors = connectorsForWallets(
 );
 
 export const config = createConfig({
-  chains: [rollupA, rollupB, hoodi],
+  chains,
   connectors: connectors,
   transports: chains.reduce(
     (acc, chain) => {
@@ -337,3 +354,28 @@ export const config = createConfig({
     {} as Record<number, Transport>,
   ),
 });
+
+export const composeConfig = createComposeConfig({
+  wagmi: config,
+  accountAbstractionContracts: {
+    [rollupA.id]: {
+      kernelImpl: rollupAContracts.KERNEL_IMPL,
+      kernelFactory: rollupAContracts.KERNEL_FACTORY,
+      multichainValidator: rollupAContracts.MULTICHAIN_VALIDATOR,
+      metaFactory: rollupAContracts.META_FACTORY,
+    },
+    [rollupB.id]: {
+      kernelImpl: rollupBContracts.KERNEL_IMPL,
+      kernelFactory: rollupBContracts.KERNEL_FACTORY,
+      multichainValidator: rollupBContracts.MULTICHAIN_VALIDATOR,
+      metaFactory: rollupBContracts.META_FACTORY,
+    },
+  },
+  getPaymasterEndpoint: ({ chainId }) => {
+    const chainName = camelCase(getChainName(chainId));
+
+    return endpoint(PAYMASTER_ADDRESS, "rpc/v1", chainName);
+  },
+});
+
+export type AppChainId = (typeof config)["chains"][number]["id"];

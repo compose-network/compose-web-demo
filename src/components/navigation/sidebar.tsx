@@ -49,6 +49,7 @@ const Sidebar = () => {
         <div>
           {ITEMS.map((item, index) => (
             <Text
+              as="div"
               onClick={() => {
                 if (!item.isFlowInProgress) {
                   navigate(`/${item.route}`);

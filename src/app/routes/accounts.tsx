@@ -142,7 +142,17 @@ const KernelAccountCard: FC<{
 );
 
 export const Accounts: FC = () => {
-  const kernel = useSmartAccount();
+  const {
+    balanceA,
+    balanceB,
+    depositToA,
+    depositToB,
+    gasBalanceA,
+    gasBalanceB,
+    smartAccountA,
+    smartAccountB,
+    isLoading,
+  } = useSmartAccount();
   const { switchChainAsync } = useSwitchChain();
 
   const rollupTokens = tokens || [];
@@ -153,11 +163,11 @@ export const Accounts: FC = () => {
       address: token.address,
       abi: TokenABI,
       functionName: "balanceOf",
-      args: [kernel.kernel.data?.accounts?.A?.address || zeroAddress],
+      args: [smartAccountA?.account.address || zeroAddress],
       chainId: rollupA.id,
     })),
     query: {
-      enabled: !!kernel.kernel.data?.accounts?.A?.address,
+      enabled: !!smartAccountA?.account.address,
     },
   });
 
@@ -167,11 +177,11 @@ export const Accounts: FC = () => {
       address: token.address,
       abi: TokenABI,
       functionName: "balanceOf",
-      args: [kernel.kernel.data?.accounts?.B?.address || zeroAddress],
+      args: [smartAccountB?.account.address || zeroAddress],
       chainId: rollupB.id,
     })),
     query: {
-      enabled: !!kernel.kernel.data?.accounts?.B?.address,
+      enabled: !!smartAccountB?.account.address,
     },
   });
 
@@ -208,37 +218,37 @@ export const Accounts: FC = () => {
         <KernelAccountCard
           title="Kernel Account A"
           chainName="Rollup A"
-          address={kernel.kernel.data?.accounts?.A?.address}
-          ethBalance={kernel.balanceA.data?.value}
-          gasBalance={kernel.gasBalanceA.data}
+          address={smartAccountA?.account.address}
+          ethBalance={balanceA.data?.value}
+          gasBalance={gasBalanceA.data}
           tokenBalances={kernelATokenBalances}
-          isLoading={kernel.kernel.isLoading}
+          isLoading={isLoading}
           onAddGas={async () => {
             await switchChainAsync({ chainId: rollupA.id });
-            await kernel.depositToA.write({
-              account: kernel.kernel.data!.accounts.A.address,
+            await depositToA.write({
+              account: smartAccountA!.account.address,
               value: parseEther("0.1"),
             });
           }}
-          isAddingGas={kernel.depositToA.isPending}
+          isAddingGas={depositToA.isPending}
         />
 
         <KernelAccountCard
           title="Kernel Account B"
           chainName="Rollup B"
-          address={kernel.kernel.data?.accounts?.B?.address}
-          ethBalance={kernel.balanceB.data?.value}
-          gasBalance={kernel.gasBalanceB.data}
+          address={smartAccountB?.account.address}
+          ethBalance={balanceB.data?.value}
+          gasBalance={gasBalanceB.data}
           tokenBalances={kernelBTokenBalances}
-          isLoading={kernel.kernel.isLoading}
+          isLoading={isLoading}
           onAddGas={async () => {
             await switchChainAsync({ chainId: rollupB.id });
-            await kernel.depositToB.write({
-              account: kernel.kernel.data!.accounts.B.address,
+            await depositToB.write({
+              account: smartAccountB!.account.address!,
               value: parseEther("0.1"),
             });
           }}
-          isAddingGas={kernel.depositToB.isPending}
+          isAddingGas={depositToB.isPending}
         />
       </div>
     </>
