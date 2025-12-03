@@ -11,9 +11,6 @@ importers:
       '@chainsafe/ssz':
         specifier: ^0.18.0
         version: 0.18.0
-      '@compose-network/sdk':
-        specifier: github:compose-network/compose-sdk#demo-app-integration-changes
-        version: https://codeload.github.com/compose-network/compose-sdk/tar.gz/6a36f4238ccf1631d7e54089e7cefa389f4221ea(@tanstack/react-query@5.90.11(react@18.3.1))(@wagmi/core@2.22.1(@tanstack/query-core@5.90.11)(@types/react@18.3.27)(react@18.3.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@18.3.1))(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)))(@zerodev/webauthn-key@5.4.4(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)))(react@18.3.1)(typescript@5.9.3)(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))(wagmi@2.19.5(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@18.3.1))(@types/react@18.3.27)(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(react@18.3.1)(typescript@5.9.3)(utf-8-validate@5.0.10)(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@3.25.76))(zod@3.25.76)
       '@deepsignal/core':
         specifier: ^4.0.0
         version: 4.1.0(@preact/signals-core@1.12.1)
@@ -86,6 +83,9 @@ importers:
       '@sentry/react':
         specifier: ^8.31.0
         version: 8.55.0(react@18.3.1)
+      '@ssv-labs/compose-sdk':
+        specifier: github:compose-network/compose-sdk
+        version: https://codeload.github.com/compose-network/compose-sdk/tar.gz/93ca59e8612727bbff8ab443894a0bbf1d7f4be9(@tanstack/react-query@5.90.11(react@18.3.1))(@wagmi/core@2.22.1(@tanstack/query-core@5.90.11)(@types/react@18.3.27)(react@18.3.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@18.3.1))(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)))(@zerodev/webauthn-key@5.4.4(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)))(react@18.3.1)(typescript@5.9.3)(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))(wagmi@2.19.5(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@18.3.1))(@types/react@18.3.27)(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(react@18.3.1)(typescript@5.9.3)(utf-8-validate@5.0.10)(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@3.25.76))(zod@3.25.76)
       '@tanstack/query-sync-storage-persister':
         specifier: ^5.51.1
         version: 5.90.13
@@ -598,17 +598,6 @@ packages:
   '@commitlint/types@20.0.0':
     resolution: {integrity: sha512-bVUNBqG6aznYcYjTjnc3+Cat/iBgbgpflxbIBTnsHTX0YVpnmINPEkSRWymT2Q8aSH3Y7aKnEbunilkYe8TybA==}
     engines: {node: '>=v18'}
-
-  '@compose-network/sdk@https://codeload.github.com/compose-network/compose-sdk/tar.gz/6a36f4238ccf1631d7e54089e7cefa389f4221ea':
-    resolution: {tarball: https://codeload.github.com/compose-network/compose-sdk/tar.gz/6a36f4238ccf1631d7e54089e7cefa389f4221ea}
-    version: 0.1.2
-    engines: {node: '>=22'}
-    peerDependencies:
-      '@tanstack/react-query': ^5.90.5
-      '@wagmi/core': ^2.22.1
-      react: ^18.0.0
-      viem: ^2.x
-      wagmi: ^2.18.2
 
   '@deepsignal/core@4.1.0':
     resolution: {integrity: sha512-JzN2XYybK5voeJ5SG439fKnJBvjRNHUO50h9xpYVQGIP9N7fAzSXsYl6rBdG9cdxVotnZ32PWSQQAiLUpOD44Q==}
@@ -2358,6 +2347,17 @@ packages:
 
   '@solana/web3.js@1.98.4':
     resolution: {integrity: sha512-vv9lfnvjUsRiq//+j5pBdXig0IQdtzA0BRZ3bXEP4KaIyF1CcaydWqgyzQgfZMNIsWNWmG+AUHwPy4AHOD6gpw==}
+
+  '@ssv-labs/compose-sdk@https://codeload.github.com/compose-network/compose-sdk/tar.gz/93ca59e8612727bbff8ab443894a0bbf1d7f4be9':
+    resolution: {tarball: https://codeload.github.com/compose-network/compose-sdk/tar.gz/93ca59e8612727bbff8ab443894a0bbf1d7f4be9}
+    version: 0.0.1
+    engines: {node: '>=22'}
+    peerDependencies:
+      '@tanstack/react-query': ^5.90.5
+      '@wagmi/core': ^2.22.1
+      react: ^18.0.0
+      viem: ^2.x
+      wagmi: ^2.18.2
 
   '@standard-schema/spec@1.0.0':
     resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
@@ -7323,25 +7323,6 @@ snapshots:
       chalk: 5.6.2
     optional: true
 
-  ? '@compose-network/sdk@https://codeload.github.com/compose-network/compose-sdk/tar.gz/6a36f4238ccf1631d7e54089e7cefa389f4221ea(@tanstack/react-query@5.90.11(react@18.3.1))(@wagmi/core@2.22.1(@tanstack/query-core@5.90.11)(@types/react@18.3.27)(react@18.3.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@18.3.1))(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)))(@zerodev/webauthn-key@5.4.4(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)))(react@18.3.1)(typescript@5.9.3)(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))(wagmi@2.19.5(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@18.3.1))(@types/react@18.3.27)(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(react@18.3.1)(typescript@5.9.3)(utf-8-validate@5.0.10)(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@3.25.76))(zod@3.25.76)'
-  : dependencies:
-      '@tanstack/react-query': 5.90.11(react@18.3.1)
-      '@wagmi/core': 2.22.1(@tanstack/query-core@5.90.11)(@types/react@18.3.27)(react@18.3.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@18.3.1))(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))
-      '@zerodev/multi-chain-ecdsa-validator': 5.4.5(@zerodev/sdk@5.5.3(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)))(@zerodev/webauthn-key@5.4.4(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)))(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))
-      '@zerodev/sdk': 5.5.3(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))
-      abitype: 1.2.0(typescript@5.9.3)(zod@3.25.76)
-      axios: 1.13.2
-      lodash-es: 4.17.21
-      protobufjs: 7.5.4
-      react: 18.3.1
-      viem: 2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)
-      wagmi: 2.19.5(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@18.3.1))(@types/react@18.3.27)(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(react@18.3.1)(typescript@5.9.3)(utf-8-validate@5.0.10)(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@3.25.76)
-    transitivePeerDependencies:
-      - '@zerodev/webauthn-key'
-      - debug
-      - typescript
-      - zod
-
   '@deepsignal/core@4.1.0(@preact/signals-core@1.12.1)':
     dependencies:
       '@preact/signals-core': 1.12.1
@@ -9596,6 +9577,25 @@ snapshots:
       - encoding
       - typescript
       - utf-8-validate
+
+  ? '@ssv-labs/compose-sdk@https://codeload.github.com/compose-network/compose-sdk/tar.gz/93ca59e8612727bbff8ab443894a0bbf1d7f4be9(@tanstack/react-query@5.90.11(react@18.3.1))(@wagmi/core@2.22.1(@tanstack/query-core@5.90.11)(@types/react@18.3.27)(react@18.3.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@18.3.1))(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)))(@zerodev/webauthn-key@5.4.4(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)))(react@18.3.1)(typescript@5.9.3)(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))(wagmi@2.19.5(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@18.3.1))(@types/react@18.3.27)(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(react@18.3.1)(typescript@5.9.3)(utf-8-validate@5.0.10)(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@3.25.76))(zod@3.25.76)'
+  : dependencies:
+      '@tanstack/react-query': 5.90.11(react@18.3.1)
+      '@wagmi/core': 2.22.1(@tanstack/query-core@5.90.11)(@types/react@18.3.27)(react@18.3.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@18.3.1))(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))
+      '@zerodev/multi-chain-ecdsa-validator': 5.4.5(@zerodev/sdk@5.5.3(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)))(@zerodev/webauthn-key@5.4.4(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)))(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))
+      '@zerodev/sdk': 5.5.3(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))
+      abitype: 1.2.0(typescript@5.9.3)(zod@3.25.76)
+      axios: 1.13.2
+      lodash-es: 4.17.21
+      protobufjs: 7.5.4
+      react: 18.3.1
+      viem: 2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)
+      wagmi: 2.19.5(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@18.3.1))(@types/react@18.3.27)(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(react@18.3.1)(typescript@5.9.3)(utf-8-validate@5.0.10)(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(zod@3.25.76)
+    transitivePeerDependencies:
+      - '@zerodev/webauthn-key'
+      - debug
+      - typescript
+      - zod
 
   '@standard-schema/spec@1.0.0': {}
 

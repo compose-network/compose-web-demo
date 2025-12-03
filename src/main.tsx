@@ -14,7 +14,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { RouterProvider } from "react-router-dom";
 
 import { Toaster } from "@/components/ui/toaster";
-import { ComposeProvider } from "@compose-network/sdk/react";
+import { ComposeProvider } from "@ssv-labs/compose-sdk/react";
 
 import "@/global.css";
 import "@fontsource/manrope/400.css";

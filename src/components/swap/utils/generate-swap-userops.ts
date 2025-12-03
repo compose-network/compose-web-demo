@@ -26,8 +26,8 @@ import {
 import type {
   ComposeSmartAccount,
   ComposeUserOpsOptions,
-} from "@compose-network/sdk";
-import { composePreparedUserOps } from "@compose-network/sdk";
+} from "@ssv-labs/compose-sdk";
+import { composePreparedUserOps } from "@ssv-labs/compose-sdk";
 
 const routerV2RollupBContract = UNISWAP_V3[rollupB.id].SWAP_ROUTER02;
 
