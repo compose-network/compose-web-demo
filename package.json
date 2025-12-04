@@ -43,7 +43,6 @@
   },
   "dependencies": {
     "@chainsafe/ssz": "^0.18.0",
-    "@ssv-labs/compose-sdk": "github:compose-network/compose-sdk",
     "@deepsignal/core": "^4.0.0",
     "@deepsignal/react": "^4.0.0",
     "@fontsource/geist-mono": "^5.2.6",
@@ -68,6 +67,7 @@
     "@rainbow-me/rainbowkit": "^2.1.7",
     "@rollup/rollup-darwin-arm64": "4.52.3",
     "@sentry/react": "^8.31.0",
+    "@ssv-labs/compose-sdk": "0.0.1",
     "@tanstack/query-sync-storage-persister": "^5.51.1",
     "@tanstack/react-query": "^5.49.2",
     "@tanstack/react-query-devtools": "^5.51.1",
