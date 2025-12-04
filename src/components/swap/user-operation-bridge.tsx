@@ -47,7 +47,7 @@ import ActionRoute from "@/components/swap/actionRoute.tsx";
 import {
   composeSignedUserOps,
   toRpcUserOpCanonical,
-} from "@compose-network/sdk";
+} from "@ssv-labs/compose-sdk";
 
 const schema = z.object({
   token: z.string().refine(isAddress),

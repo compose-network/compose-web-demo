@@ -4,7 +4,7 @@ import { keepPreviousData } from "@tanstack/react-query";
 import { type Address } from "viem";
 import { useBalance } from "wagmi";
 
-import { useSmartAccount as useSmartAccountSDK } from "@compose-network/sdk/react";
+import { useSmartAccount as useSmartAccountSDK } from "@ssv-labs/compose-sdk/react";
 import { rollupA, rollupB } from "@/wagmi/config.ts";
 
 export const useSmartAccount = () => {

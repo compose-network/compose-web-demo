@@ -15,7 +15,7 @@ import {
   polygon as polygonChain,
 } from "viem/chains";
 import { createConfig } from "wagmi";
-import { createComposeConfig } from "@compose-network/sdk";
+import { createComposeConfig } from "@ssv-labs/compose-sdk";
 
 import {
   parseBlockExplorerUrl,

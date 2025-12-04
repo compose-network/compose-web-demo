@@ -4,7 +4,7 @@ import { http } from "@wagmi/core";
 import type { Chain, PublicClient } from "viem";
 import { createPublicClient, rpcSchema } from "viem";
 import type { SmartAccount } from "viem/account-abstraction";
-import type { ComposeRpcSchema } from "@compose-network/sdk";
+import type { ComposeRpcSchema } from "@ssv-labs/compose-sdk";
 
 export const createRollupPublicClient = (
   sourceChainId: keyof typeof chainsMap,

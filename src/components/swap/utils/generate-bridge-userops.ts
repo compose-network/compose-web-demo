@@ -8,7 +8,7 @@ import { getBridgeAddress } from "@/wagmi/config";
 import { config } from "@/wagmi/config";
 import { getPublicClient } from "@wagmi/core";
 import { signUserOperations } from "@zerodev/multi-chain-ecdsa-validator/actions"; //NOTE (Chris): Do not remove "actions" suffix as it breaks function
-import type { ComposeSmartAccount } from "@compose-network/sdk";
+import type { ComposeSmartAccount } from "@ssv-labs/compose-sdk";
 import { type Address, encodeFunctionData, type Hex } from "viem";
 import { prepareUserOperation } from "viem/account-abstraction";
 import { omit } from "lodash-es";
