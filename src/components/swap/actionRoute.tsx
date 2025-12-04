@@ -89,12 +89,14 @@ const ActionRoute: RouteFC = ({
       className={cn("flex select-none w-full justify-center", className)}
       {...props}
     >
-      {actions.map((preparedAction) => {
+      {actions.map((preparedAction, index) => {
+        const key = `${preparedAction.chainId}${preparedAction.type}${preparedAction.token}${index}`;
+
         if (preparedAction.type === "swap") {
           return (
             <div
               className="flex flex-col w-[30%] items-center flex-nowrap "
-              key={`${preparedAction.chainId}${preparedAction.type}${preparedAction.token}`}
+              key={key}
             >
               <Text
                 variant="caption-medium"
@@ -110,7 +112,7 @@ const ActionRoute: RouteFC = ({
           return (
             <div
               className={`flex flex-col ${type === "bridge" ? "w-full" : "w-[30%]"} items-center flex-nowrap`}
-              key={`${preparedAction.chainId}${preparedAction.type}${preparedAction.token}`}
+              key={key}
             >
               <Text
                 variant="caption-medium"
@@ -123,10 +125,7 @@ const ActionRoute: RouteFC = ({
           );
         }
         return (
-          <div
-            className="flex justify-center items-center"
-            key={`${preparedAction.chainId}${preparedAction.type}${preparedAction.token}`}
-          >
+          <div className="flex justify-center items-center" key={key}>
             <Token
               token={preparedAction?.token || "0x"}
               chainId={preparedAction?.chainId || (-1 as AppChainId)}

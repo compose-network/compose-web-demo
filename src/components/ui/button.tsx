@@ -11,7 +11,10 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        white: 'bg-white text-black [background:linear-gradient(hsl(var(--white)),hsl(var(--white)))_padding-box,linear-gradient(92deg,#14B5C099_8.16%,#2ABEC999_18.67%,#24B97999_51.94%,#F2942299_85.22%,#E6871399_95.72%)_border-box] border-[1px] border-transparent rounded-[100px]',
+        white:
+          "bg-white text-black [background:linear-gradient(hsl(var(--white)),hsl(var(--white)))_padding-box,linear-gradient(92deg,#14B5C099_8.16%,#2ABEC999_18.67%,#24B97999_51.94%,#F2942299_85.22%,#E6871399_95.72%)_border-box] border-[1px] border-transparent rounded-[100px]",
+        gradient:
+          "text-primary-500 border border-[#14B5C0] bg-[linear-gradient(92deg,_rgba(20,181,192,0.08)_8.16%,_rgba(36,185,121,0.08)_51.94%,_rgba(230,135,19,0.08)_95.72%)]",
         default:
           "text-white bg-gradient-to-r from-[#14B5C0] via-[#2ABEC9] via-[#24B979] to-[#F29422] to-[#E68713]",
         destructive:
@@ -29,8 +32,7 @@ export const buttonVariants = cva(
         disabled: "cursor-not-allowed opacity-50 bg-gray-300 text-gray-500",
       },
       colorScheme: {
-        wallet:
-          "",
+        wallet: "",
         error: "",
       },
       size: {
@@ -69,8 +71,7 @@ export const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends PropsWithAs<"button">,
-    VariantProps<typeof buttonVariants> {
+  extends PropsWithAs<"button">, VariantProps<typeof buttonVariants> {
   asChild?: boolean;
   isLoading?: boolean;
   loadingText?: string;
@@ -178,7 +179,7 @@ export const IconButton: ButtonFC = React.forwardRef<
         className={cn(
           "size-7",
           buttonVariants({
-            variant: disabled ? "disabled" : variant ?? "subtle",
+            variant: disabled ? "disabled" : (variant ?? "subtle"),
             colorScheme,
             className,
             size: "icon",

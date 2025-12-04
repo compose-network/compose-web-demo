@@ -166,7 +166,7 @@ export const TransactionModal: FCProps = ({
                       data.actions[i - 1]?.status === "success") &&
                     action.signAndSend && (
                       <div>
-                        <Button variant="white" onClick={action.signAndSend}>
+                        <Button variant="gradient" onClick={action.signAndSend}>
                           {errorMessage ? "Try again" : "Sign"}
                         </Button>
                       </div>
