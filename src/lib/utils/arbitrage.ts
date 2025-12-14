@@ -6,6 +6,8 @@ export type ArbitrageResult = {
   optimalLoanAmount: bigint;
   profit: bigint;
   direction: ArbitrageDirection;
+  from: number;
+  to: number;
 };
 
 /**
@@ -112,11 +114,13 @@ export const findOptimalLoan = (
 
   // Search up to 50% of the source pool's token1 reserve
   const sourcePool = direction === "AtoB" ? poolA : poolB;
-  const maxSearch = sourcePool.token1Reserve / 2n;
+  const from = direction === "AtoB" ? poolA.chainId : poolB.chainId;
+  const to = direction === "AtoB" ? poolB.chainId : poolA.chainId;
+  const maxSearch = sourcePool.token1Reserve / 1000000000n;
 
   let low = 0n;
   let high = maxSearch;
-  const precision =  10000n; // precision threshold
+  const precision = 10000n; // precision threshold
 
   // Ternary search for maximum profit
   while (high - low > precision) {
@@ -142,6 +146,8 @@ export const findOptimalLoan = (
       optimalLoanAmount: 0n,
       profit: 0n,
       direction,
+      from,
+      to,
     };
   }
 
@@ -149,5 +155,7 @@ export const findOptimalLoan = (
     optimalLoanAmount: bestLoan,
     profit: maxProfit,
     direction,
+    from,
+    to,
   };
 };

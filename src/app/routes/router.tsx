@@ -12,7 +12,7 @@ import { MainPage } from "@/components/swap/main";
 import { Bridge } from "@/components/swap/bridge";
 import { Navigate } from "react-router";
 import { Accounts } from "@/app/routes/accounts";
-import { Playground } from "@/app/routes/playground";
+// import { Playground } from "@/app/routes/playground";
 import { Container } from "@/components/ui/container";
 import { Flashloans } from "@/components/flashloans/flashloans.tsx";
 
@@ -70,10 +70,10 @@ const routes = [
       </DashboardLayout>
     ),
   },
-  {
-    path: "/playground",
-    element: <Playground />,
-  },
+  // {
+  //   path: "/playground",
+  //   element: <Playground />,
+  // },
   {
     path: "/maintenance",
     element: <Maintenance />,

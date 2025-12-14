@@ -35,7 +35,7 @@ export const tokens: ERC20Token[] = [
     icon: "USDC",
     address: USDC_ADDRESS,
     logoUrl: onlyTokens.USDC,
-    decimals: 6,
+    decimals: 18,
   },
   {
     id: 2,

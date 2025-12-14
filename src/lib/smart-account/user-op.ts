@@ -7,6 +7,7 @@ import type { DecodeEventLogReturnType, Log } from "viem";
 import { decodeErrorResult, decodeEventLog, erc20Abi } from "viem";
 import { WETHAbi } from "../abi/weth";
 import { UniswapV3SwapRouterV2ABI } from "@/lib/abi/uniswapv3/swap-router-v2";
+import { UniswapV3PoolABI } from "../abi/uniswapv3/pool";
 
 const abis = [
   EntryPointAbi,
@@ -16,6 +17,7 @@ const abis = [
   MailboxABI,
   WETHAbi,
   UniswapV3SwapRouterV2ABI,
+  UniswapV3PoolABI,
 ];
 export const decodeUserOperationLogs = (logs: Log[]) => {
   console.log("abis:", abis);

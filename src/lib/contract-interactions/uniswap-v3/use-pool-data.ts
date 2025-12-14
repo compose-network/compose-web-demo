@@ -23,7 +23,7 @@ export const usePoolData = ({
   chainId,
   enabled = true,
 }: UsePoolDataParams) => {
-  const { useSlot0, useLiquidity, useFee } = useUniswapV3PoolContractHooks();
+  const { useSlot0, useToken0, useToken1, useLiquidity, useFee } = useUniswapV3PoolContractHooks();
 
   const [random, setRandom] = useState(1n);
   const randomize = () => {
@@ -37,7 +37,21 @@ export const usePoolData = ({
     },
     [random],
   );
+
   const slot0 = useSlot0({
+    chainId,
+    contract,
+    enabled: enabled && !!contract,
+    placeholderData: keepPreviousData,
+  });
+
+  const token0 = useToken0({
+    chainId,
+    contract,
+    enabled: enabled && !!contract,
+    placeholderData: keepPreviousData,
+  });
+  const token1 = useToken1({
     chainId,
     contract,
     enabled: enabled && !!contract,
@@ -112,5 +126,10 @@ export const usePoolData = ({
     isLoading: slot0.isLoading || liquidity.isLoading || fee.isLoading,
     isError: slot0.isError || liquidity.isError || fee.isError,
     randomize,
+    liquidity,
+    fee,
+    slot0,
+    token0,
+    token1,
   };
 };

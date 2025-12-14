@@ -163,7 +163,7 @@ export const Accounts: FC = () => {
       address: token.address,
       abi: TokenABI,
       functionName: "balanceOf",
-      args: [smartAccountA?.account.address || zeroAddress],
+      args: [smartAccountA?.account.address],
       chainId: rollupA.id,
     })),
     query: {
@@ -177,7 +177,7 @@ export const Accounts: FC = () => {
       address: token.address,
       abi: TokenABI,
       functionName: "balanceOf",
-      args: [smartAccountB?.account.address || zeroAddress],
+      args: [smartAccountB?.account.address],
       chainId: rollupB.id,
     })),
     query: {
