@@ -9,7 +9,6 @@ import { useAccount } from "@/hooks/account/use-account";
 import {
   erc20Encoder,
   flashAdapterEncoder,
-  rollupBridgeEncoder,
   uniswapEncoders,
 } from "@/lib/contract-interactions/encoders";
 import { usePoolData } from "@/lib/contract-interactions/uniswap-v3/use-pool-data";
@@ -20,37 +19,21 @@ import { SSV_ADDRESS, USDC_ADDRESS, WETH_ADDRESS } from "@/wagmi/addresses";
 import { getBridgeAddress, rollupA, rollupB } from "@/wagmi/config.ts";
 import { UNISWAP_V3 } from "@/wagmi/uniswap";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import {
-  Address,
-  encodeFunctionData,
-  formatEther,
-  parseEther,
-  zeroAddress,
-} from "viem";
-import {
-  useBalance,
-  useReadContract,
-  useReadContracts,
-  useSimulateContract,
-  useSwitchChain,
-  useWriteContract,
-} from "wagmi";
+import { type Address, encodeFunctionData, zeroAddress, type Hex } from "viem";
+import { useSwitchChain } from "wagmi";
 import { AssetLogo } from "../ui/asset-logo";
 import { toast } from "../ui/use-toast";
 import { useUniswapV3QuoterContractHooks } from "@/lib/contract-interactions/uniswap-v3/hooks";
-import { prepareUserOperation } from "viem/account-abstraction";
-import { omit } from "lodash-es";
-import {
-  composePreparedUserOps,
-  composeUnpreparedUserOps,
-} from "@ssv-labs/compose-sdk";
+import { cloneDeep } from "lodash-es";
+import { composeUnpreparedUserOps } from "@ssv-labs/compose-sdk";
 import { useBalanceOf } from "@/lib/contract-interactions/erc-20/read/use-balance-of";
 import { globals } from "@/config";
-import { FlashAdapterABI } from "@/lib/abi/flashloan/flash-adapter";
 import { UserOperationBridgeAbi } from "@/lib/abi/swap/op-bridge";
-import { TokenABI } from "@/lib/abi/token";
-import { UniswapV3SwapRouterV2ABI } from "@/lib/abi/uniswapv3/swap-router-v2";
-import { useApprove } from "@/lib/contract-interactions/erc-20/write/use-approve";
+import {
+  TransactionModal,
+  type TransactionModalData,
+} from "@/components/swap/transaction-bridge/transaction-modal";
+import { useState } from "react";
 
 function mulDivRoundingUp(a: bigint, b: bigint, denominator: bigint): bigint {
   const result = (a * b) / denominator;
@@ -174,6 +157,9 @@ export const Flashloans = () => {
 
   const { useQuoteExactInputSingle } = useUniswapV3QuoterContractHooks();
 
+  const [transactionData, setTransactionData] =
+    useState<TransactionModalData | null>(null);
+
   const quoteSourceChain = useQuoteExactInputSingle(
     {
       params: {
@@ -223,8 +209,8 @@ export const Flashloans = () => {
   //   formatEther(quoteDestChain.data?.[0] ?? 0n),
   // );
 
-  const writeContract = useWriteContract();
-  const approve = useApprove();
+  // const writeContract = useWriteContract();
+  // const approve = useApprove();
 
   const submit = async (ev: React.FormEvent<HTMLFormElement>) => {
     ev.preventDefault();
@@ -252,6 +238,12 @@ export const Flashloans = () => {
         variant: "destructive",
       });
 
+    if (!eoa)
+      return toast({
+        title: "Please connect your wallet",
+        variant: "destructive",
+      });
+
     await switchChain.switchChainAsync({ chainId: sourceChainId });
 
     const flashAdapterContract =
@@ -260,14 +252,14 @@ export const Flashloans = () => {
         ? "0xbc28d433542d183cdba8fe9f164beca0b9f4404c"
         : "0xd8ebf5a1550bf282f17ecfd5f6780baf695c4e02"; */
 
-    const sourceBridgeContract = getBridgeAddress(sourceChainId);
-    const destBridgeContract = getBridgeAddress(destChainId);
+    // const sourceBridgeContract = getBridgeAddress(sourceChainId);
+    // const destBridgeContract = getBridgeAddress(destChainId);
 
     const sourceRouterV2Contract = UNISWAP_V3[sourceChainId].SWAP_ROUTER02;
     const destRouterV2Contract = UNISWAP_V3[destChainId].SWAP_ROUTER02;
 
-    const sourcePool = UNISWAP_V3[sourceChainId]?.WETH_USDC;
-    const destPool = UNISWAP_V3[destChainId]?.WETH_USDC;
+    // const sourcePool = UNISWAP_V3[sourceChainId]?.WETH_USDC;
+    // const destPool = UNISWAP_V3[destChainId]?.WETH_USDC;
 
     // const repay =
     //   mulDivRoundingUp(
@@ -291,6 +283,8 @@ export const Flashloans = () => {
     // const WETH_USDC_B = UNISWAP_V3[rollupB.id]?.WETH_USDC;
 
     console.log(" quoteSourceChain.data[0]:", quoteSourceChain.data[0]);
+
+    const id: Hex = `0x${Math.floor(Number(BigInt(Math.floor(Math.random() * 0xffffffff)))).toString(16)}`;
 
     const [sendWETH_from_source, receiveWETH_on_dest] = createBridgeCalldata({
       from: sourceChainId,
@@ -320,6 +314,25 @@ export const Flashloans = () => {
     console.log("repay:", formatCurrency(repay, 18));
     const profit = quoteDestChain.data?.[0] - repay;
     console.log("profit:", formatCurrency(profit, 18));
+
+    setTransactionData({
+      id,
+      actions: [
+        {
+          name: `Flash Loan ${formatCurrency(arbitrage.data?.optimalLoanAmount ?? 0n, 18)} USDC & Swap`,
+          chainId: sourceChainId,
+          status: "pending",
+          signAndSend: undefined,
+        },
+        {
+          name: `Bridge & Repay`,
+          chainId: destChainId,
+          status: "pending",
+          signAndSend: undefined,
+        },
+      ],
+    });
+
     /*
      *  Flash loan constraint: The pool you borrow from cannot be the same pool you swap in.
      */
@@ -362,7 +375,7 @@ export const Flashloans = () => {
                 target: USDC_ADDRESS, // Just so that the contract will not collect the WETH
                 value: 0n,
                 callData: erc20Encoder.transfer({
-                  recipient: testingEOA,
+                  recipient: eoa!,
                   amount: profit,
                 }),
               },
@@ -413,33 +426,48 @@ export const Flashloans = () => {
       console.log("op:", op.userOp.callGasLimit);
     });
     const { send, explorerUrls } = await composeUnpreparedUserOps(ops);
-    // const { send, explorerUrls } = await composeUnpreparedUserOps(
-    //   await Promise.all([
-    //     smartAccountA.account.createUserOp([
-    //       {
-    //         to: WETH_ADDRESS, // Flash Adapter
-    //         value: 0n,
-    //         data: erc20Encoder.transfer({
-    //           recipient: eoa!,
-    //           amount: parseEther("1.728"),
-    //         }),
-    //       },
-    //     ]),
-    //     smartAccountB.account.createUserOp([
-    //       {
-    //         to: WETH_ADDRESS, // Flash Adapter
-    //         value: 0n,
-    //         data: erc20Encoder.transfer({
-    //           recipient: eoa!,
-    //           amount: parseEther("0.3"),
-    //         }),
-    //       },
-    //     ]),
-    //   ]),
-    // );
+
+    const getHash = (url: string) => {
+      const parts = url.split("/");
+      const hash = parts[parts.length - 1];
+      return hash.startsWith("0x") ? (hash as Hex) : undefined;
+    };
+
+    setTransactionData((prev) => {
+      if (!prev) return null;
+      const clone = cloneDeep(prev);
+      const sourceHash = explorerUrls[0] ? getHash(explorerUrls[0]) : undefined;
+      const destHash = explorerUrls[1] ? getHash(explorerUrls[1]) : undefined;
+
+      if (sourceHash) {
+        clone.actions[0].hash = sourceHash;
+      }
+      if (destHash) {
+        clone.actions[1].hash = destHash;
+      }
+      return clone;
+    });
 
     explorerUrls.forEach((url) => console.log(url));
-    await send().catch(console.error);
+    try {
+      const { wait } = await send();
+      await wait().then(() => {
+        setTransactionData((prev) => {
+          if (!prev) return null;
+          const clone = cloneDeep(prev);
+          clone.actions.forEach((a) => (a.status = "success"));
+          return clone;
+        });
+      });
+    } catch (e) {
+      console.error(e);
+      setTransactionData((prev) => {
+        if (!prev) return null;
+        const clone = cloneDeep(prev);
+        clone.actions.forEach((a) => (a.status = "failed"));
+        return clone;
+      });
+    }
   };
 
   const usdc = useBalanceOf(
@@ -454,13 +482,22 @@ export const Flashloans = () => {
 
   return (
     <>
+      <TransactionModal
+        title={"Flashloan Arbitrage"}
+        data={transactionData}
+        isOpen={!!transactionData}
+        onOpenChange={(open) => {
+          if (open) return;
+          return setTransactionData(null);
+        }}
+      />
       <div>
         <Text variant={"headline4"} className="font-normal">
           Cross Chain Flashloans
         </Text>
-        <Text variant={"headline4"} className="font-normal">
+        {/* <Text variant={"headline4"} className="font-normal">
           TESTER EOA USDC Balance: {formatCurrency(usdc.data ?? 0n, 18)} USDC
-        </Text>
+        </Text> */}
         <form onSubmit={submit} className="flex flex-col gap-8">
           <div className="flex gap-4 flex-col">
             <TokenInput
